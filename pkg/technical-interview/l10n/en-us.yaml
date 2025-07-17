@@ -1,5 +1,68 @@
 interview:
   tabPage:
     title: 'Technical Interview - Tabs'
+  tabs:
+    counter: 'Counter'
+    datetime: 'Date Time'
+    jsonswap: 'Json Swap'
+    coinchange: 'Coin Change'
+    parentheses: 'Parentheses Validation'
+  counter:
+    title: 'Counter'
+    description: 'Click the button to decrement the counter.'
+    currentValue: 'Counter: {count}'
+    decrementButton: 'Decrement'
+    decrementLabel: 'Decrement counter by one'
+    resetButton: 'Reset'
+    resetLabel: 'Reset counter to 42'
+    zeroMessage: 'Counter cannot go below zero!'
+  datetime:
+    title: 'Date Time'
+    description: 'Compare current time with a custom adjusted time.'
+    currentTime: 'Current Date/Time'
+    customTime: 'Custom Date/Time'
+    adjustmentInputs: 'Time adjustment inputs'
+    hours: 'Hours'
+    minutes: 'Minutes'
+    seconds: 'Seconds'
+    hoursHelp: 'Add/subtract hours'
+    minutesHelp: 'Add/subtract minutes'
+    secondsHelp: 'Add/subtract seconds'
+    resetButton: 'Reset'
+    resetLabel: 'Reset all time adjustments to zero'
+    comparison: 'Time Comparison'
+    comparisonResult: 'Current time is {comparison} the custom time'
+  jsonswap:
+    title: 'JSON Swap Tab'
+    description: 'Upload a JSON file and swap primitive keys and values.'
+    uploadLabel: 'Upload JSON'
+    originalJson: 'Original JSON:'
+    swapButton: 'Swap Keys and Values'
+    swappedJson: 'Swapped JSON:'
+    invalidJson: "Invalid JSON format"
+  parentheses:
+    title: 'Parentheses Validation Tab'
+    description: 'Enter a string of parentheses to check if they are closed in the correct order.'
+    inputLabel: 'Enter parentheses string:'
+    inputPlaceholder: "e.g., ()[]'{}'[()]"
+    checkButton: 'Check'
+    checkButtonLabel: 'Check if the parentheses are valid'
+    resultLabel: 'Result:'
+    inputError: "Please enter only parentheses characters: ( ) [ ] '{ }'"
+  coinchange:
+    title: 'Coin Change Tab'
+    description: 'Find the minimum coins needed for a given amount.'
+    coinsLabel: 'Coins (comma separated):'
+    coinsPlaceholder: '1,2,5'
+    amountLabel: 'Amount:'
+    amountPlaceholder: '11'
+    solveButton: 'Solve'
+    resultLabel: 'Result:'
+    inputError: 'Please enter only numbers and commas.'
+    amountTooLarge: "Amount too large. Please enter a value below {max}."
+    amountNonNegative: "Amount must be non-negative."
+    calculating: "Calculating..."
+    invalidCoins: "Please enter valid coin denominations."
+    calculationFailed: "Calculation failed - input too large or invalid."
 product:
   interview: 'Technical Interview'

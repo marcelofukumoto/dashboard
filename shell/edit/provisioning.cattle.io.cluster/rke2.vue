@@ -171,7 +171,7 @@ export default {
     this.setAgentConfiguration();
   },
 
-  data() {
+  beforeCreate() {
     if (!this.value.spec.rkeConfig) {
       this.value.spec.rkeConfig = {};
     }
@@ -218,8 +218,10 @@ export default {
     if (!this.value.spec.rkeConfig.machineSelectorConfig?.length) {
       this.value.spec.rkeConfig.machineSelectorConfig = [{ config: {} }];
     }
+  },
 
-    const truncateLimit = this.value.defaultHostnameLengthLimit || 0;
+  data() {
+    const isGoogle = this.provider === GOOGLE;
 
     return {
       loadedOnce:                      false,
@@ -257,7 +259,7 @@ export default {
       }],
       harvesterVersionRange:                    {},
       complianceOverride:                       false,
-      truncateLimit,
+      truncateLimit:                            this.value.defaultHostnameLengthLimit || 0,
       busy:                                     false,
       machinePoolValidation:                    {}, // map of validation states for each machine pool
       machinePoolErrors:                        {},
@@ -270,16 +272,18 @@ export default {
       clusterAgentDefaultPC:                    null,
       clusterAgentDefaultPDB:                   null,
       activeTab:                                null,
-      isAuthenticated:                          this.provider !== GOOGLE || this.mode === _EDIT,
+      isGoogle,
+      isAuthenticated:                          !isGoogle || this.mode === _EDIT,
       projectId:                                null,
       REGISTRIES_TAB_NAME,
-      labelForAddon
-
+      labelForAddon,
+      etcdConfigValid:                          true,
     };
   },
 
   computed: {
     ...mapGetters({ features: 'features/get' }),
+
     isActiveTabRegistries() {
       return this.activeTab?.selectedName === REGISTRIES_TAB_NAME;
     },
@@ -860,8 +864,14 @@ export default {
       }
     },
     hideFooter() {
-      return this.needCredential && !this.credential;
-    }
+      return this.needCredential && !this.credentialId;
+    },
+
+    overallFormValidationPassed() {
+      return this.validationPassed &&
+            this.fvFormIsValid &&
+            this.etcdConfigValid;
+    },
   },
 
   watch: {
@@ -1022,6 +1032,9 @@ export default {
 
       if (!this.machinePools) {
         await this.initMachinePools(this.value.spec.rkeConfig.machinePools);
+        if (this.isEdit && this.isGoogle && this.machinePools?.length > 0 && this.machinePools[0]?.config?.project) {
+          this.projectId = this.machinePools[0]?.config?.project;
+        }
         if (this.mode === _CREATE && !this.machinePools.length) {
           await this.addMachinePool();
         }
@@ -1430,6 +1443,8 @@ export default {
           entry.pool.machineConfigRef.name = neu.metadata.name;
           entry.create = false;
           entry.update = true;
+
+          this.initialMachinePoolsValues[entry.config.id] = clone(neu);
         } else if (entry.update) {
           entry.config = await entry.config.save();
         }
@@ -2171,7 +2186,7 @@ export default {
 
     handleTabChange(data) {
       this.activeTab = data;
-    }
+    },
   }
 };
 </script>
@@ -2187,7 +2202,7 @@ export default {
     v-else
     ref="cruresource"
     :mode="mode"
-    :validation-passed="validationPassed && fvFormIsValid"
+    :validation-passed="overallFormValidationPassed"
     :resource="value"
     :errors="errors"
     :cancel-event="true"
@@ -2212,7 +2227,7 @@ export default {
     </div>
     <AccountAccess
       v-if="!isAuthenticated"
-      v-model:credential="credential"
+      v-model:credential="credentialId"
       v-model:project="projectId"
       v-model:is-authenticated="isAuthenticated"
       :mode="mode"
@@ -2424,6 +2439,7 @@ export default {
               @update:value="$emit('input', $event)"
               @s3-backup-changed="handleS3BackupChanged"
               @config-etcd-expose-metrics-changed="handleConfigEtcdExposeMetricsChanged"
+              @etcd-validation-changed="(val)=>etcdConfigValid = val"
             />
           </Tab>
 

@@ -4,7 +4,6 @@ import { useDefaultLabels } from '@shell/components/Resource/Detail/Metadata/Lab
 import { useDefaultAnnotations } from '@shell/components/Resource/Detail/Metadata/Annotations/composable';
 import { computed, toValue, Ref } from 'vue';
 import {
-  useCreatedBy,
   useLiveDate, useNamespace, useProject, useResourceDetails, useWorkspace
 } from '@shell/components/Resource/Detail/Metadata/IdentifyingInformation/identifying-fields';
 
@@ -15,6 +14,7 @@ export const useBasicMetadata = (resource: any) => {
 
   return computed(() => {
     return {
+      resource:            toValue(resource),
       labels:              labels.value,
       annotations:         annotations.value,
       onShowConfiguration: () => resourceValue.showConfiguration()
@@ -32,10 +32,11 @@ export const useDefaultMetadataProps = (resource: any, additionalIdentifyingInfo
 
   return computed(() => {
     return {
+      resource:               toValue(resource),
       identifyingInformation: identifyingInformation.value,
       labels:                 basicMetaData.value.labels,
       annotations:            basicMetaData.value.annotations,
-      onShowConfiguration:    () => resourceValue.showConfiguration()
+      onShowConfiguration:    (returnFocusSelector: string) => resourceValue.showConfiguration(returnFocusSelector)
     };
   });
 };
@@ -46,7 +47,6 @@ export const useDefaultMetadataForLegacyPagesProps = (resource: any) => {
   const workspace = useWorkspace(resource);
   const namespace = useNamespace(resource);
   const liveDate = useLiveDate(resource);
-  const createdBy = useCreatedBy(resource);
   const resourceValue = toValue(resource);
 
   const identifyingInformation = computed((): IdentifyingInformationRow[] => {
@@ -55,7 +55,6 @@ export const useDefaultMetadataForLegacyPagesProps = (resource: any) => {
       workspace?.value,
       namespace?.value,
       liveDate?.value,
-      createdBy?.value,
     ];
     const info = [
       ...defaultInfo,
@@ -68,10 +67,11 @@ export const useDefaultMetadataForLegacyPagesProps = (resource: any) => {
 
   return computed(() => {
     return {
+      resource:               toValue(resource),
       identifyingInformation: identifyingInformation.value,
       labels:                 basicMetaData.value.labels,
       annotations:            basicMetaData.value.annotations,
-      onShowConfiguration:    () => resourceValue.showConfiguration()
+      onShowConfiguration:    (returnFocusSelector?: string) => resourceValue.showConfiguration(returnFocusSelector)
     };
   });
 };

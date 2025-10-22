@@ -3,7 +3,7 @@ import HomePagePo from '@/cypress/e2e/po/pages/home.po';
 import { InstallChartPage } from '@/cypress/e2e/po/pages/explorer/charts/install-charts.po';
 import ProductNavPo from '@/cypress/e2e/po/side-bars/product-side-nav.po';
 import { LoggingClusterOutputCreateEditPagePo, LoggingClusteroutputListPagePo } from '@/cypress/e2e/po/other-products/logging/logging-clusteroutput.po';
-import { LoggingClusterFlowCreateEditPagePo, LoggingClusterFlowDetailPagePo, LoggingClusterFlowListPagePo } from '@/cypress/e2e/po/other-products/logging/logging-clusterflow-po';
+import { LoggingClusterFlowCreateEditPagePo, LoggingClusterFlowDetailPagePo, LoggingClusterFlowListPagePo } from '@/cypress/e2e/po/other-products/logging/logging-clusterflow.po';
 import Kubectl from '@/cypress/e2e/po/components/kubectl.po';
 import ClusterToolsPagePo from '@/cypress/e2e/po/pages/explorer/cluster-tools.po';
 import PromptRemove from '@/cypress/e2e/po/prompts/promptRemove.po';
@@ -13,6 +13,7 @@ import { CLUSTER_APPS_BASE_URL } from '@/cypress/support/utils/api-endpoints';
 
 describe('Logging Chart', { testIsolation: 'off', tags: ['@charts', '@adminUser'] }, () => {
   const kubectl = new Kubectl();
+  const chartAppDisplayName = 'Logging';
   const chartApp = 'rancher-logging';
   const chartCrd = 'rancher-logging-crd';
   const chartNamespace = 'cattle-logging-system';
@@ -122,7 +123,7 @@ describe('Logging Chart', { testIsolation: 'off', tags: ['@charts', '@adminUser'
     clusterTools.goTo();
     clusterTools.waitForPage();
     cy.wait('@getCharts', MEDIUM_TIMEOUT_OPT).its('response.statusCode').should('eq', 200);
-    clusterTools.deleteChart(chartApp);
+    clusterTools.deleteChart(chartAppDisplayName);
 
     const promptRemove = new PromptRemove();
 

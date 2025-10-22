@@ -2,6 +2,7 @@ import { LoginPagePo } from '@/cypress/e2e/po/pages/login-page.po';
 import { CreateUserParams, CreateAmazonRke2ClusterParams, CreateAmazonRke2ClusterWithoutMachineConfigParams } from '@/cypress/globals';
 import { groupByPayload } from '@/cypress/e2e/blueprints/user_preferences/group_by';
 import { CypressChainable } from '~/cypress/e2e/po/po.types';
+import { MEDIUM_API_DELAY } from '~/cypress/support/utils/api-endpoints';
 
 // This file contains commands which makes API requests to the rancher API.
 // It includes the `login` command to store the `token` to use
@@ -579,6 +580,29 @@ Cypress.Commands.add('waitForRancherResources', (prefix, resourceType, expectedR
   };
 
   return retry();
+});
+
+/**
+ * Wait for repository to be downloaded and ready
+ */
+Cypress.Commands.add('waitForRepositoryDownload', (prefix, resourceType, resourceId, retries = 20) => {
+  return cy.waitForRancherResource(prefix, resourceType, resourceId, (resp) => {
+    const conditions = resp.body.status?.conditions || [];
+
+    return conditions.some((condition) => condition.type === 'Downloaded' && condition.status === 'True'
+    );
+  }, retries);
+});
+
+/**
+ * Wait for repository to be state
+ */
+Cypress.Commands.add('waitForResourceState', (prefix, resourceType, resourceId, resourceState = 'active', retries = 20) => {
+  return cy.waitForRancherResource(prefix, resourceType, resourceId, (resp) => {
+    const state = resp.body.metadata?.state;
+
+    return state && state.transitioning === false && state.name === resourceState;
+  }, retries);
 });
 
 /**
@@ -1199,7 +1223,7 @@ Cypress.Commands.add('createService', (namespace: string, name: string, options:
 });
 
 Cypress.Commands.add('createManyNamespacedResources', ({
-  namespace, context, createResource, count = 22, wait = 500
+  namespace, context, createResource, count = 22, wait = MEDIUM_API_DELAY
 }: {
   /**
    * Used to create the namespace
@@ -1222,15 +1246,15 @@ Cypress.Commands.add('createManyNamespacedResources', ({
       // create workloads
       const workloadNames: string[] = [];
 
-      for (let i = 0; i < count; i++) {
-        createResource({ ns, i }).then((resp) => {
-          workloadNames.push(resp.body.metadata.name);
-        });
-
-        if (wait && i % 5 === 0) {
-          cy.wait(wait); // eslint-disable-line cypress/no-unnecessary-waiting
-        }
-      }
+      cy.loopProcessWait({
+        iterables: Array.from({ length: count }, () => 0),
+        process:   ({ iteration }) => {
+          return createResource({ ns, i: iteration }).then((resp) => {
+            workloadNames.push(resp.body.metadata.name);
+          });
+        },
+        wait
+      });
 
       // finish off with result
       return cy.wrap({
@@ -1249,15 +1273,43 @@ Cypress.Commands.add('deleteNamespace', (namespaces: string[]) => {
   }
 });
 
-Cypress.Commands.add('deleteManyResources', <T = any>({ toDelete, deleteFn, wait = 500 }: {
+Cypress.Commands.add('deleteManyResources', <T = any>({ toDelete, deleteFn, wait = MEDIUM_API_DELAY }: {
   toDelete: T[],
   deleteFn: (arg0: T) => CypressChainable,
   wait?: number
 }) => {
-  for (let i = 0; i < toDelete.length; i++) {
-    deleteFn(toDelete[i]);
+  return cy.loopProcessWait({
+    iterables: toDelete,
+    process:   ({ entry }) => deleteFn(entry),
+    wait
+  });
+});
+
+Cypress.Commands.add('loopProcessWait', <T = any>({ iterables, process, wait = MEDIUM_API_DELAY }: {
+  iterables: T[],
+  process: ({ entry, iteration }: {entry: T, iteration: number}) => CypressChainable
+  wait?: number
+}) => {
+  for (let i = 0; i < iterables.length; i++) {
+    process({ entry: iterables[i], iteration: i });
     if (wait && i % 5 === 0) {
       cy.wait(wait); // eslint-disable-line cypress/no-unnecessary-waiting
     }
   }
+});
+
+/**
+ * Get cluster ID by cluster name
+ */
+Cypress.Commands.add('getClusterIdByName', (clusterName: string) => {
+  return cy.getRancherResource('v3', 'clusters').then((resp: Cypress.Response<any>) => {
+    const body = resp.body;
+    const cluster = body.data.find((item: any) => item.name === clusterName);
+
+    if (cluster) {
+      return cluster.id;
+    } else {
+      throw new Error(`Cluster with name '${ clusterName }' not found`);
+    }
+  });
 });

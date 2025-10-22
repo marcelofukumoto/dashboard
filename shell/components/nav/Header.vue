@@ -29,6 +29,7 @@ import {
   RcDropdownSeparator,
   RcDropdownTrigger
 } from '@components/RcDropdown';
+import { SLO_AUTH_PROVIDERS } from '@shell/store/auth';
 
 export default {
 
@@ -99,10 +100,10 @@ export default {
       'showWorkspaceSwitcher'
     ]),
 
-    samlAuthProviderEnabled() {
+    sloAuthProviderEnabled() {
       const publicAuthProviders = this.$store.getters['rancher/all']('authProvider');
 
-      return publicAuthProviders.find((authProvider) => configType[authProvider.id] === 'saml') || {};
+      return publicAuthProviders.find((authProvider) => SLO_AUTH_PROVIDERS.includes(configType[authProvider?.id])) || {};
     },
 
     shouldShowSloLogoutModal() {
@@ -111,7 +112,7 @@ export default {
         return false;
       }
 
-      const { logoutAllSupported, logoutAllEnabled, logoutAllForced } = this.samlAuthProviderEnabled;
+      const { logoutAllSupported, logoutAllEnabled, logoutAllForced } = this.sloAuthProviderEnabled;
 
       return logoutAllSupported && logoutAllEnabled && !logoutAllForced;
     },
@@ -276,8 +277,8 @@ export default {
     showSloModal() {
       this.$store.dispatch('management/promptModal', {
         component:      'SloDialog',
-        componentProps: { authProvider: this.samlAuthProviderEnabled },
-        modalWidth:     '500px'
+        componentProps: { authProvider: this.sloAuthProviderEnabled },
+        modalWidth:     '600px'
       });
     },
     // Sizes the product area of the header such that it shrinks to ensure the whole header bar can be shown
@@ -841,17 +842,16 @@ export default {
     .side-menu-logo {
       align-items: center;
       display: flex;
-      margin-right: 8px;
       height: 55px;
-      margin-left: 5px;
+      margin-right: 8px;
       max-width: 200px;
       padding: 12px 0;
     }
 
     .side-menu-logo-img {
       object-fit: contain;
-      height: 21px;
       max-width: 200px;
+      height: 36px;
     }
 
     > * {
@@ -932,8 +932,8 @@ export default {
       :deep() div .btn.role-tertiary {
         border: 1px solid var(--header-btn-bg);
         border: none;
-        background: var(--header-btn-bg);
-        color: var(--header-btn-text);
+        background: var(--tertiary-header, var(--header-btn-bg));
+        color: var(--on-tertiary-header, var(--header-btn-text));
         padding: 0 10px;
         line-height: 32px;
         min-height: 32px;
@@ -944,8 +944,8 @@ export default {
         }
 
         &:hover {
-          background: var(--primary);
-          color: #fff;
+          background: var(--tertiary-header-hover, var(--primary));
+          color: var(--on-tertiary-header-hover, #fff);
         }
 
         &[disabled=disabled] {
@@ -1078,7 +1078,7 @@ export default {
   .user-name {
     display: flex;
     align-items: center;
-    color: var(--secondary);
+    color: var(--body-text, var(--secondary));
   }
 
   .user-menu {

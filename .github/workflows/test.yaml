@@ -19,8 +19,8 @@ env:
   TEST_USERNAME: admin
   TEST_PASSWORD: password
   CATTLE_BOOTSTRAP_PASSWORD: password
-  TEST_BASE_URL: https://127.0.0.1/dashboard
-  API: https://127.0.0.1
+  TEST_BASE_URL: https://127.0.0.1.sslip.io
+  API: https://127.0.0.1.sslip.io
   TEST_PROJECT_ID: rancher-dashboard
   TEST_DISABLE_DASHBOARD: ${{ vars.TEST_DISABLE_DASHBOARD }} # This is required to get it from the project configuration
   TEST_DISABLE_DASHBOARD_LABEL: "${{ contains(github.event.pull_request.labels.*.name, 'ci/skip-e2e-cypress-dashboard')}}"
@@ -40,7 +40,7 @@ jobs:
     if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e')"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
       - name: Setup env
@@ -88,7 +88,7 @@ jobs:
         ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
       - name: Setup env
@@ -96,6 +96,11 @@ jobs:
 
       # Installing fixed version of Chrome since latest version does not work (128 didn't work)
       # Leaving this here again in case we need to pin to a specific Chrome version in the future
+      # NOTE - If we need to pin chrome again we should...
+      # 1. create a repo gh action to install chrome (see .github/actions)
+      # 2. call it here
+      # 3. call it from `a11y-test` as well
+
       # - name: Install Chrome 127
       #   run: |
       #     sudo apt-get install -y wget libu2f-udev
@@ -106,12 +111,12 @@ jobs:
       #     google-chrome --version
 
       - name: Download e2e build
-        uses:  actions/download-artifact@v4
+        uses:  actions/download-artifact@v5
         with:
          name: ${{ env.E2E_BUILD_DIST_NAME }}
          path: ${{ env.E2E_BUILD_DIST_DIR }}
       - name: Download e2e build ember
-        uses:  actions/download-artifact@v4
+        uses:  actions/download-artifact@v5
         with:
          name: ${{ env.E2E_BUILD_DIST_EMBER_NAME }}
          path: ${{ env.E2E_BUILD_DIST_EMBER_DIR }}
@@ -135,33 +140,25 @@ jobs:
           GREP_TAGS: ${{ matrix.role.tag }}+${{ matrix.features[0] }} --@jenkins ${{ matrix.role.tag }}+${{ matrix.features[1] || matrix.features[0] }} --@jenkins
           TEST_USERNAME: ${{ matrix.role.username }}
           VAI_ENABLED: ${{ (matrix.features[0] != '@noVai') && 'true' || 'false' }}
-          
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ${{github.run_number}}-${{github.run_attempt}}-screenshots-${{ matrix.role.tag }}+${{ matrix.features[0] }}
-          path: cypress/screenshots
 
-      - name: Create Rancher Logs
+      - name: Fetch Rancher Logs
         if: ${{ failure() }}
         run: yarn docker:local:logs
-      - name: Upload Rancher logs
-        uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
-        with:
-          name: ${{github.run_number}}-${{github.run_attempt}}-rancher-logs-${{ matrix.role.tag }}${{ matrix.features[0] }}${{ matrix.features[1] }}
-          path: ${{ env.E2E_RANCHER_LOG }}
-          if-no-files-found: error
-          retention-days: 5
-          compression-level: 9
 
-      - name: Upload Cypress Logs
+      - name: Create Artifacts Folder
+        if: ${{ failure() }}
+        run: |
+          mkdir artifacts
+          cp -r cypress/screenshots artifacts
+          cp ${{ env.E2E_RANCHER_LOG }} artifacts/rancher.logs
+          cp browser-logs/out.html artifacts/browser-logs.html
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-          name: ${{github.run_number}}-${{github.run_attempt}}-browser-logs-${{ matrix.role.tag }}${{ matrix.features[0] }}${{ matrix.features[1] }}
-          path: browser-logs/out.html
+          name: ${{github.run_number}}-${{github.run_attempt}}-artifacts-${{ matrix.role.tag }}${{ matrix.features[0] }}${{ matrix.features[1] }}
+          path: artifacts/
           if-no-files-found: error
           retention-days: 5
           compression-level: 9
@@ -171,30 +168,19 @@ jobs:
     needs: e2e-ui-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
       - name: Setup env
         uses: ./.github/actions/setup
 
-      # Installing fixed version of Chrome since latest version does not work (128 didn't work)
-      # Leaving this here again in case we need to pin to a specific Chrome version in the future
-      - name: Install Chrome 127
-        run: |
-          sudo apt-get install -y wget libu2f-udev
-          cd /tmp
-          wget -q http://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_127.0.6533.72-1_amd64.deb
-          sudo dpkg -i google-chrome-stable_127.0.6533.72-1_amd64.deb
-          sudo apt-get install -y --allow-downgrades ./google-chrome-stable_127.0.6533.72-1_amd64.deb
-          google-chrome --version
-
       - name: Download e2e build
-        uses:  actions/download-artifact@v4
+        uses:  actions/download-artifact@v5
         with:
           name: ${{ env.E2E_BUILD_DIST_NAME }}
           path: ${{ env.E2E_BUILD_DIST_DIR }}
       - name: Download e2e build ember
-        uses:  actions/download-artifact@v4
+        uses:  actions/download-artifact@v5
         with:
           name: ${{ env.E2E_BUILD_DIST_EMBER_NAME }}
           path: ${{ env.E2E_BUILD_DIST_EMBER_DIR }}
@@ -228,7 +214,7 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
       
@@ -250,7 +236,7 @@ jobs:
   i18n:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -260,7 +246,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -270,10 +256,10 @@ jobs:
   check-i18n:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
       
@@ -288,10 +274,10 @@ jobs:
   check-i18n-links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
       
@@ -311,7 +297,7 @@ jobs:
   #       with:
   #         fetch-depth: 1
 
-  #     - uses: actions/setup-node@v4
+  #     - uses: actions/setup-node@v5
   #       with:
   #         node-version-file: '.nvmrc'
 
@@ -329,10 +315,10 @@ jobs:
   check-e2e-tags:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
       - name: Check e2e tags

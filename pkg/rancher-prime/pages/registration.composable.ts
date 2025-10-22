@@ -4,15 +4,18 @@ import { type Store, useStore } from 'vuex';
 import { downloadFile } from '@shell/utils/download';
 import {
   REGISTRATION_REQUEST_PREFIX, REGISTRATION_NAMESPACE, REGISTRATION_SECRET, REGISTRATION_RESOURCE_NAME, REGISTRATION_LABEL,
-  REGISTRATION_REQUEST_FILENAME
+  REGISTRATION_REQUEST_FILENAME,
+  REGISTRATION_NOTIFICATION_ID
 } from '../config/constants';
 import { SECRET } from '@shell/config/types';
 import { dateTimeFormat } from '@shell/utils/time';
+import { useI18n } from '@shell/composables/useI18n';
 
 type RegistrationStatus = 'loading' | 'registering-online' | 'registration-request' | 'registering-offline' | 'registered' | null;
 type AsyncButtonFunction = (val: boolean) => void;
 type RegistrationMode = 'online' | 'offline';
 interface RegistrationDashboard {
+  id: string;
   active: boolean;
   product: string;
   mode: RegistrationMode | '--';
@@ -20,14 +23,26 @@ interface RegistrationDashboard {
   color: 'error' | 'success';
   message: string;
   status: 'valid' | 'error' | 'none';
+  code: string | null;
   registrationLink?: string; // not generated on failure or reset
   resourceLink?: string; // not generated on empty registration
+}
+
+/**
+ * Partial of the registration condition
+ */
+interface PartialCondition {
+  reason?: string;
+  message?: string;
+  type: string;
+  status: 'True' | 'False';
 }
 
 /**
  * Partial of the registration interface used for this page
  */
 interface PartialRegistration {
+  id: string;
   metadata: {
     labels: Record<string, string>;
     namespace: string;
@@ -46,12 +61,8 @@ interface PartialRegistration {
       activated: boolean;
       systemUrl: string;
     };
-    conditions: Array<{
-      reason?: string;
-      message?: string;
-      type: string;
-      status: 'True' | 'False';
-    }>
+    conditions: PartialCondition[];
+    currentCondition: PartialCondition;
   };
 }
 
@@ -75,11 +86,13 @@ interface PartialSecret {
 }
 
 const emptyRegistration: RegistrationDashboard = {
+  id:         '--',
   active:     false,
   product:    '--',
   mode:       '--',
   expiration: '--',
   color:      'error',
+  code:       null,
   message:    'registration.list.table.badge.none',
   status:     'none'
 };
@@ -101,6 +114,7 @@ const registrationBannerCases = {
 
 export const usePrimeRegistration = (storeArg?: Store<any>) => {
   const store = storeArg ?? useStore();
+  const { t } = useI18n(store);
 
   /**
    * Registration mapped value used in the UI
@@ -235,6 +249,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
     secret.value = await createSecret('online', registrationCode.value);
     registration.value = await pollResource(originalHash, findRegistration, mapRegistration);
     registrationStatus.value = registration.value ? 'registered' : null;
+    store.dispatch('notifications/remove', REGISTRATION_NOTIFICATION_ID);
     asyncButtonResolution(true);
   };
 
@@ -254,6 +269,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
       updateSecret(secret.value, offlineRegistrationCertificate.value);
       registration.value = await pollResource(originalHash, findRegistration, mapRegistration);
       registrationStatus.value = registration.value ? 'registered' : null;
+      store.dispatch('notifications/remove', REGISTRATION_NOTIFICATION_ID);
     } catch (error) {
       onError(error);
     }
@@ -297,7 +313,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
    */
   const isRegistrationOfflineProgress = (registration: PartialRegistration): boolean => {
     const isOffline = registration.spec?.mode === 'offline';
-    const lastCondition = registration.status?.conditions[registration.status?.conditions.length - 1];
+    const lastCondition = registration.status?.currentCondition;
     const isInProgress = lastCondition.type === 'OfflineRequestReady';
     const isActive = registration.status.activationStatus.activated === true;
 
@@ -311,11 +327,14 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
    */
   const isRegistrationCompleted = (registration: PartialRegistration): boolean => {
     const mode = registration.spec?.mode;
-    const lastCondition = registration.status?.conditions[registration.status?.conditions.length - 1];
-    const isError = lastCondition.type === 'RegistrationActivated' && lastCondition.status === 'False';
-    const isError2 = lastCondition.type === 'Failure' && lastCondition.status === 'True';
-    const isCompleteOnline = mode === 'online' && lastCondition.type === 'Done' && lastCondition.status === 'True';
-    const isCompleteOffline = mode === 'offline' && lastCondition.type === 'OfflineActivationDone' && lastCondition.status === 'True';
+    const lastCondition = registration.status?.currentCondition;
+
+    if (!lastCondition.type) return false;
+
+    const isError = lastCondition.type === 'RegistrationActivated';
+    const isError2 = lastCondition.type === 'RegistrationAnnounced';
+    const isCompleteOnline = mode === 'online' && lastCondition.type === 'Done';
+    const isCompleteOffline = mode === 'offline' && lastCondition.type === 'Done';
 
     return isError || isError2 || isCompleteOnline || isCompleteOffline;
   };
@@ -325,13 +344,13 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
    * @param hash current registration hash
    */
   const findRegistration = async(hash: string | null): Promise<PartialRegistration | undefined> => {
-    const registrations: PartialRegistration[] = await store.dispatch('management/findAll', { type: REGISTRATION_RESOURCE_NAME }) || [];
-    const registration = registrations.find((registration) => registration.metadata?.labels[REGISTRATION_LABEL] === hash &&
+    const registrations: PartialRegistration[] = await store.dispatch('management/findAll', { type: REGISTRATION_RESOURCE_NAME }).catch(() => []) || [];
+    const newRegistration = registrations.find((registration) => registration.metadata?.labels[REGISTRATION_LABEL] === hash &&
       !isRegistrationOfflineProgress(registration) &&
       isRegistrationCompleted(registration)
     );
 
-    return registration;
+    return newRegistration;
   };
 
   /**
@@ -339,7 +358,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
    * @param hash current registration hash
    */
   const findOfflineRequest = async(hash: string | null): Promise<PartialSecret | null> => {
-    const secrets: PartialSecret[] = await store.dispatch('management/findAll', { type: SECRET }) || [];
+    const secrets: PartialSecret[] = await store.dispatch('management/findAll', { type: SECRET, opt: { namespaced: REGISTRATION_NAMESPACE } }).catch(() => []) || [];
     const request = secrets.find((secret) => secret.metadata?.namespace === REGISTRATION_NAMESPACE &&
       secret.metadata?.name.startsWith(REGISTRATION_REQUEST_PREFIX)) ?? null;
 
@@ -361,13 +380,15 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
       return emptyRegistration;
     } else {
       const isActive = registration.status?.activationStatus?.activated === true;
-      const resourceLink = registration.links.view.replace('/apis/scc.cattle.io/v1/registrations/', '/c/local/explorer/scc.cattle.io.registration/');
+
       // Common values for every registration
       const commonRegistration = {
+        id:               registration.id,
         active:           isActive,
         mode:             registration.spec.mode,
         registrationLink: registration.status?.activationStatus?.systemUrl,
-        resourceLink,
+        resourceLink:     registration.links.view,
+        code:             registration?.metadata?.labels[REGISTRATION_LABEL],
       };
 
       if (isActive) {
@@ -381,10 +402,13 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
         };
       } else {
         // Retrieve failure message from conditions
-        const conditions = registration.status?.conditions || [];
-        const errorMessage = conditions.find((condition) => condition.reason && condition.message);
+        const errorMessage = registration.status?.currentCondition;
 
-        onError(errorMessage);
+        if (errorMessage) {
+          onError(errorMessage);
+        } else {
+          onError(new Error(t('registration.errors.generic-registration')));
+        }
 
         return {
           ...commonRegistration,
@@ -402,7 +426,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
    * Get unique secret code with hardcoded namespace and name
    */
   const getSecret = async(): Promise<PartialSecret | null> => {
-    const secrets: PartialSecret[] = await store.dispatch('management/findAll', { type: SECRET }) || [];
+    const secrets: PartialSecret[] = await store.dispatch('management/findAll', { type: SECRET, opt: { namespaced: REGISTRATION_NAMESPACE } }).catch(() => []) || [];
 
     return secrets.find((secret) => secret.metadata?.namespace === REGISTRATION_NAMESPACE &&
       secret.metadata?.name === REGISTRATION_SECRET) ?? null;
@@ -465,6 +489,32 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
   };
 
   /**
+   * Generic fallback in case of unhandled errors based on existing resources
+   * @param polling
+   * @returns
+   */
+  const getError = (polling?: boolean): string => {
+    if (polling && !secret.value?.data?.regCode) {
+      return t('registration.errors.missing-code');
+    }
+
+    // Fallback in case of logic changes
+    if (polling && registration.value.active && secret.value?.data?.regCode !== registration.value?.code) {
+      return t('registration.errors.mismatch-code');
+    }
+
+    if (secret.value && !registration.value.active) {
+      return t('registration.errors.generic-registration');
+    }
+
+    if (polling) {
+      return t('registration.errors.timeout-registration');
+    }
+
+    return '';
+  };
+
+  /**
  * Polls periodically until a condition is met or timeout is reached.
  * @param fetchFn Function to fetch the resource (e.g., findRegistration or findOfflineRequest)
  * @param mapResult Function to map the result before resolving
@@ -479,7 +529,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
     mapResult: (resource: any) => T,
     extraConditionFn?: (resource: any) => boolean,
     frequency = 250,
-    timeout = 10000
+    timeout = 10000 // First initialization is slow, which is most of the cases
   ): Promise<T> => {
     return new Promise<T>((resolve, reject) => {
       const startTime = Date.now();
@@ -487,7 +537,7 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
       const interval = setInterval(async() => {
         if (Date.now() - startTime > timeout) {
           clearInterval(interval);
-          reject(new Error('Timeout reached while waiting for resource'));
+          reject(new Error(getError(true)));
 
           return;
         }
@@ -516,6 +566,11 @@ export const usePrimeRegistration = (storeArg?: Store<any>) => {
     secret.value = await getSecret();
     registrationCode.value = secret.value?.data?.regCode ? atob(secret.value.data.regCode) : null; // Get registration code from secret
     registrationStatus.value = await getRegistration();
+    const message = getError();
+
+    if (message) {
+      onError(new Error(message));
+    }
   };
 
   return {

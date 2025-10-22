@@ -114,6 +114,12 @@ describe('formRules', () => {
       ['git@github.com:rancher/dashboard/', undefined],
       ['git@github.com:rancher/%20dashboard/', undefined],
       ['git@github.com:rancher/dashboard/%20', undefined],
+      ['git@git.apps.local:fleet/fleet-local.git', undefined],
+      ['git@git.apps.local:33333/fleet/fleet-local.git', undefined],
+      ['ssh://git@github.com:rancher/dashboard', undefined],
+      ['ssh://git@github.com:rancher/dashboard/', undefined],
+      ['ssh://git@git.apps.local:fleet/fleet-local.git', undefined],
+      ['ssh://git@git.apps.local:33333/fleet/fleet-local.git', undefined],
 
       // Not valid HTTP(s)
       ['https://github.com/rancher/  dashboard.git', message],
@@ -140,8 +146,12 @@ describe('formRules', () => {
       ['git@githubcomrancher/dashboard', message],
       ['%20git@github.comrancher/dashboard', message],
       ['git@git%20hub.comrancher/dashboard', message],
+      ['git@git.apps.local:/fleet/fleet-local.git', message],
       ['git@.git', message],
       ['git@', message],
+      ['ssh://git@github.com:/rancher/dashboard.git ', message],
+      ['ssh://git@github.com/rancher/ dashboard.git', message],
+      ['ssh://git@github.com/rancher/ dashboard', message],
 
       [undefined, message],
       ['', message]

@@ -6,6 +6,8 @@ import routing from './routing/index';
 import { useI18n } from '@shell/composables/useI18n';
 import { usePrimeRegistration } from './pages/registration.composable';
 import { type Store } from 'vuex';
+import { NotificationLevel } from '@shell/types/notifications';
+import { REGISTRATION_NOTIFICATION_ID } from './config/constants';
 
 /**
  * Trigger notification on plugin loaded and no active registration is found.
@@ -22,7 +24,7 @@ const setNotification = (store: Store<any>) => {
       const { t } = useI18n(store);
 
       const notification = {
-        level:         'error',
+        level:         NotificationLevel.Info,
         title:         t('registration.notification.title'),
         message:       t('registration.notification.message'),
         progress:      0,
@@ -30,11 +32,12 @@ const setNotification = (store: Store<any>) => {
           label: t('registration.notification.button.primary.label'),
           route: '/c/local/settings/registration'
         },
-        id:         'rancher-prime-registration',
-        preference: 'rancher-prime-registration'
+        id: REGISTRATION_NOTIFICATION_ID,
       };
 
       store.dispatch('notifications/add', notification);
+    } else {
+      store.dispatch('notifications/remove', REGISTRATION_NOTIFICATION_ID);
     }
   });
 };
@@ -52,8 +55,8 @@ const poolRegistration = (store: Store<any>) => {
     if (store.state['managementReady']) {
       setNotification(store);
       clearInterval(id);
+      attempts -= 1;
     }
-    attempts -= 1;
   }, 1000);
 };
 

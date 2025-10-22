@@ -129,7 +129,6 @@ export const FLEET = {
   CLUSTER_NAMESPACE:            'fleet.cattle.io/cluster-namespace',
   CLUSTER:                      'fleet.cattle.io/cluster',
   CREATED_BY_USER_ID:           'fleet.cattle.io/created-by-user-id',
-  CREATED_BY_USER_NAME:         'fleet.cattle.io/created-by-display-name',
   OCI_STORAGE_SECRET_DEFAULT:   'ui-default-oci-registry',
   OCI_STORAGE_SECRET_GENERATED: 'fleet.cattle.io/bundle-internal-secret',
 };
@@ -165,6 +164,7 @@ export const HCI = {
   NETWORK_TYPE:        'network.harvesterhci.io/type',
   CLUSTER_NETWORK:     'network.harvesterhci.io/clusternetwork',
   PRIMARY_SERVICE:     'cloudprovider.harvesterhci.io/primary-service',
+  CPU_MANAGER:         'cpumanager',
 };
 
 // Annotations that can be on management.cattle.io.cluster to configure a custom badge

@@ -84,6 +84,7 @@ export default {
       OPS_PROMPT,
       UX_PROMPT,
       capturedImages:     [],
+      customPromptText:   '',
     };
   },
   watch: {
@@ -190,7 +191,11 @@ export default {
       this.showPromptModal = false;
       this.$emit('update:active', false);
     },
-    addTextToCanvas(canvas, text) {
+    addTextToCanvas(canvas, text, isCustom = false) {
+      if (!text) {
+        return canvas;
+      }
+
       const fontSize = 12;
       const padding = 10;
       const lineHeight = fontSize * 1.2;
@@ -200,7 +205,7 @@ export default {
       const tempCtx = document.createElement('canvas').getContext('2d');
 
       tempCtx.font = `${ fontSize }px sans-serif`;
-      const lines = this.wrapText(tempCtx, text, maxWidth);
+      const lines = this.wrapText(tempCtx, text, maxWidth, isCustom);
       const textBlockHeight = lines.length * lineHeight;
       const textBlockWithPadding = textBlockHeight + (padding * 2);
 
@@ -270,7 +275,7 @@ export default {
 
               croppedCanvasContext.drawImage(canvas, cropX, cropY, this.croppedImageWidth, this.croppedImageHeight, 0, 0, this.croppedImageWidth, this.croppedImageHeight);
 
-              const finalCanvas = this.addTextToCanvas(croppedCanvas, promptText);
+              const finalCanvas = this.addTextToCanvas(croppedCanvas, promptText, promptText !== this.OPS_PROMPT && promptText !== this.UX_PROMPT);
 
               finalCanvas.toBlob(async(blob) => {
                 if (blob) {
@@ -306,8 +311,12 @@ export default {
         });
       });
     },
-    wrapText(context, text, maxWidth) {
-      const words = text.split(' ');
+    wrapText(context, text, maxWidth, isCustom = false) {
+      if (isCustom) {
+        return text.split('\n');
+      }
+
+      const words = text.replace(/\n/g, ' ').split(' ');
       const lines = [];
       let currentLine = words[0];
 
@@ -389,7 +398,7 @@ export default {
       });
 
       // Reuse text adding logic from single screenshot
-      const finalCanvasWithText = this.addTextToCanvas(stitchedCanvas, promptText);
+      const finalCanvasWithText = this.addTextToCanvas(stitchedCanvas, promptText, promptText !== this.OPS_PROMPT && promptText !== this.UX_PROMPT);
 
       // Reuse download and clipboard logic
       finalCanvasWithText.toBlob(async(blob) => {
@@ -518,18 +527,41 @@ export default {
           <p>Which expert persona should analyze this screenshot?</p>
         </div>
         <div class="prompt-modal-footer">
-          <button
-            class="btn role-primary"
-            @click="selectPromptAndTakeScreenshot(OPS_PROMPT)"
-          >
-            Ops Engineer
-          </button>
-          <button
-            class="btn role-primary"
-            @click="selectPromptAndTakeScreenshot(UX_PROMPT)"
-          >
-            UX/UI Designer
-          </button>
+          <div class="prompt-section">
+            <button
+              class="btn role-primary"
+              @click="selectPromptAndTakeScreenshot(OPS_PROMPT)"
+            >
+              Ops Engineer
+            </button>
+            <button
+              class="btn role-primary"
+              @click="selectPromptAndTakeScreenshot(UX_PROMPT)"
+            >
+              UX/UI Designer
+            </button>
+          </div>
+          <div class="prompt-section custom-prompt">
+            <textarea
+              v-model="customPromptText"
+              placeholder="Or enter a custom prompt..."
+            />
+            <button
+              class="btn role-primary"
+              :disabled="!customPromptText"
+              @click="selectPromptAndTakeScreenshot(customPromptText)"
+            >
+              Custom Prompt
+            </button>
+          </div>
+          <div class="prompt-section">
+            <button
+              class="btn role-secondary"
+              @click="selectPromptAndTakeScreenshot('')"
+            >
+              No Prompt
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -748,8 +780,30 @@ export default {
     padding: 1rem;
     border-top: 1px solid var(--border);
 
-    .btn {
-      margin-left: 20px;
+    .prompt-section {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 15px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &.custom-prompt {
+        align-items: stretch;
+        textarea {
+          flex-grow: 1;
+          margin-right: 10px;
+          height: 80px;
+          resize: vertical;
+        }
+      }
+
+      .btn {
+        margin-left: 10px;
+      }
     }
   }
 }
@@ -800,4 +854,10 @@ export default {
     }
   }
 }
+
+.prompt-modal-footer {
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 </style>

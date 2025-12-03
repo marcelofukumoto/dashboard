@@ -26,6 +26,7 @@ import BrowserTabVisibility from '@shell/mixins/browser-tab-visibility';
 import { getClusterFromRoute, getProductFromRoute } from '@shell/utils/router';
 import SideNav from '@shell/components/SideNav';
 import { Layout } from '@shell/types/window-manager';
+import Screenshot from '@shell/components/templates/screenshot.vue';
 
 const SET_LOGIN_ACTION = 'set-as-login';
 
@@ -46,6 +47,7 @@ export default {
     AzureWarning,
     Inactivity,
     SideNav,
+    Screenshot,
   },
 
   mixins: [PageHeaderActions, Brand, BrowserTabVisibility],
@@ -53,9 +55,12 @@ export default {
   // Note - This will not run on route change
   data() {
     return {
-      layout:           Layout.default,
-      noLocaleShortcut: process.env.dev || false,
-      wantNavSync:      false,
+      layout:                     Layout.default,
+      noLocaleShortcut:           process.env.dev || false,
+      wantNavSync:                false,
+      screenshotActive:           false,
+      screenshotFullScreen:       false,
+      screenshotContinuousActive: false,
     };
   },
 
@@ -86,6 +91,20 @@ export default {
         });
       }
 
+      pageActions.push( { divider: true },
+        {
+          label:  'AI Area Screenshot',
+          action: 'ai-screen-assistant'
+        },
+        {
+          label:  'AI Full Page Screenshot',
+          action: 'full-page-ai-screen-assistant'
+        },
+        {
+          label:  'AI Continuous Screenshot',
+          action: 'continuous-ai-screen-assistant'
+        });
+
       return pageActions;
     },
 
@@ -108,11 +127,26 @@ export default {
 
   methods: {
 
-    handlePageAction(action) {
+    handlePageAction(action, event) {
       if (action.action === SET_LOGIN_ACTION) {
         this.afterLoginRoute = this.getLoginRoute();
         // Mark release notes as seen, so that the login route is honoured
         markSeenReleaseNotes(this.$store);
+      }
+      if (action.action === 'ai-screen-assistant') {
+        this.screenshotFullScreen = false;
+        this.screenshotContinuousActive = false;
+        this.screenshotActive = !this.screenshotActive;
+      }
+      if (action.action === 'full-page-ai-screen-assistant') {
+        this.screenshotFullScreen = true;
+        this.screenshotContinuousActive = false;
+        this.screenshotActive = !this.screenshotActive;
+      }
+      if (action.action === 'continuous-ai-screen-assistant') {
+        this.screenshotContinuousActive = !this.screenshotContinuousActive;
+        this.screenshotFullScreen = false;
+        this.screenshotActive = false;
       }
     },
 
@@ -228,5 +262,10 @@ export default {
     <GrowlManager />
     <SlideInPanelManager />
     <Inactivity />
+    <Screenshot
+      v-model:active="screenshotActive"
+      v-model:full-screen="screenshotFullScreen"
+      v-model:continuous="screenshotContinuousActive"
+    />
   </div>
 </template>

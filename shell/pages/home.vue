@@ -36,6 +36,7 @@ import paginationUtils from '@shell/utils/pagination-utils';
 import ResourceTable from '@shell/components/ResourceTable.vue';
 import Preset from '@shell/mixins/preset';
 import { PaginationFeatureHomePageClusterConfig } from '@shell/types/resources/settings';
+import Screenshot from '@shell/components/templates/screenshot.vue';
 
 export default defineComponent({
   name:       'Home',
@@ -51,6 +52,7 @@ export default defineComponent({
     ResourceTable,
     DynamicContentBanner,
     DynamicContentPanel,
+    Screenshot,
   },
 
   mixins: [PageHeaderActions, Preset],
@@ -83,6 +85,19 @@ export default defineComponent({
         {
           label:  this.t('nav.header.showHideBanner'),
           action: SHOW_HIDE_BANNER_ACTION
+        },
+        { divider: true },
+        {
+          label:  'AI Area Screenshot',
+          action: 'ai-screen-assistant'
+        },
+        {
+          label:  'AI Full Page Screenshot',
+          action: 'full-page-ai-screen-assistant'
+        },
+        {
+          label:  'AI Continuous Screenshot',
+          action: 'continuous-ai-screen-assistant'
         },
       ],
       vendor: getVendor(),
@@ -225,6 +240,10 @@ export default defineComponent({
       altClusterListFeature:  paginationUtils.getFeature<PaginationFeatureHomePageClusterConfig>({ rootGetters: this.$store.getters }, 'homePageCluster'),
 
       presetVersion: getVersionData()?.Version,
+
+      screenshotActive:           false,
+      screenshotFullScreen:       false,
+      screenshotContinuousActive: false,
     };
   },
 
@@ -429,6 +448,24 @@ export default defineComponent({
 
       case SET_LOGIN_ACTION:
         this.afterLoginRoute = 'home';
+        break;
+
+      case 'ai-screen-assistant':
+        this.screenshotFullScreen = false;
+        this.screenshotContinuousActive = false;
+        this.screenshotActive = !this.screenshotActive;
+        break;
+
+      case 'full-page-ai-screen-assistant':
+        this.screenshotFullScreen = true;
+        this.screenshotContinuousActive = false;
+        this.screenshotActive = !this.screenshotActive;
+        break;
+
+      case 'continuous-ai-screen-assistant':
+        this.screenshotContinuousActive = !this.screenshotContinuousActive;
+        this.screenshotFullScreen = false;
+        this.screenshotActive = false;
         break;
 
       // no default
@@ -949,6 +986,11 @@ export default defineComponent({
         </div>
       </div>
     </IndentedPanel>
+    <Screenshot
+      v-model:active="screenshotActive"
+      v-model:full-screen="screenshotFullScreen"
+      v-model:continuous="screenshotContinuousActive"
+    />
   </div>
 </template>
 

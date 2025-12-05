@@ -27,6 +27,8 @@ I want the best possible design, UX, and interaction analysis based only on what
 For every visible element, component, state, or pattern in the screenshot, please:
 
 Identify the UI components and their purpose within Rancher
+
+Identify the UI components and their purpose within Rancher
 Describe the visual hierarchy and whether it helps or harms clarity
 Analyze spacing, alignment, typography, color usage, and iconography
 Evaluate consistency with common Rancher design patterns
@@ -49,6 +51,60 @@ Tailor the entire analysis toward the needs of DevOps, SREs, and cloud platform 
 
 Please be precise, clear, and deeply analytical.
 Assume I am evaluating the Rancher interface to improve usabillity, navigation, visual hierarchy, and operational UX for Kubernetes users.`;
+
+const SECURITY_PROMPT = `This screenshot belongs to Rancher.
+Please analyze this screen from the perspective of an expert Security Analyst focused on hardening Kubernetes environments.
+I want the best possible security analysis and recommendations based only on what is visible in the screenshot.
+
+For every field, section, tab, option, toggle, or message in the screenshot, please:
+
+- Identify its security implications and potential risks.
+- Recommend secure defaults and best practices (e.g., RBAC, Pod Security Policies, Network Policies, CIS benchmarks).
+- Analyze how secrets, credentials, and sensitive information are handled or exposed.
+- Assess compliance with security standards like CIS, PCI-DSS, or HIPAA if applicable from the context.
+- Highlight any UI elements that could lead a user to make an insecure choice.
+- Suggest ways to reduce the attack surface.
+- Point out any missing security features or information.
+- Describe what a security engineer should verify before applying these settings.
+
+Focus on identifying vulnerabilities, misconfigurations, and areas for security hardening.
+Assume I am responsible for the security and compliance of this Rancher-managed cluster.`;
+
+const DEV_PROMPT = `This screenshot belongs to Rancher.
+Please analyze this screen from the perspective of an Application Developer who uses Rancher to deploy and manage their applications.
+The developer may not be a Kubernetes expert. The goal is to evaluate the developer experience (DevEx).
+
+For every visible UI element, please:
+
+- Evaluate the simplicity and clarity of the workflow for a developer.
+- Assess the cognitive load. Is the terminology accessible, or is it heavy on infrastructure jargon?
+- Identify how the UI helps or hinders common developer tasks (e.g., deploying an app, viewing logs, scaling, setting environment variables).
+- Suggest abstractions or simplifications that would improve the developer experience.
+- Point out areas of potential confusion or friction for someone not deeply familiar with Kubernetes internals.
+- Analyze the discoverability of features a developer would need.
+- Recommend changes to make the UI more intuitive and self-service for development teams.
+
+Focus on developer productivity, ease of use, and reducing the need for deep infrastructure knowledge.
+Assume I am a developer trying to get my application running on Kubernetes using Rancher.`;
+
+const ARCHITECT_PROMPT = `This screenshot belongs to Rancher.
+Please analyze this screen from a high-level, Solutions Architect perspective.
+Focus on how the features shown fit into a larger enterprise ecosystem and solve broader business or architectural problems.
+
+For the features and configurations visible, please:
+
+- Analyze how they integrate with other systems (e.g., CI/CD, GitOps, monitoring, identity providers, cloud services).
+- Evaluate the strategic value of the feature for an organization. Does it enable key business outcomes?
+- Discuss the scalability, availability, and reliability implications of the choices presented.
+- Compare the functionality shown to offerings from major cloud providers (AWS, Azure, GCP) or other competitors in the ecosystem.
+- Identify key use cases, architectural patterns, and anti-patterns.
+- Discuss the total cost of ownership (TCO) or operational cost implications.
+- Explain how this part of Rancher contributes to a comprehensive platform strategy.
+
+Focus on the "big picture," strategic fit, and architectural best practices.
+Assume I am an architect designing a complete cloud-native platform for an enterprise.`;
+
+const CUSTOM_PROMPT_STORAGE_KEY = 'rancher-screenshot-custom-prompt';
 
 export default {
   props: {
@@ -83,6 +139,9 @@ export default {
       showPromptModal:    false,
       OPS_PROMPT,
       UX_PROMPT,
+      SECURITY_PROMPT,
+      DEV_PROMPT,
+      ARCHITECT_PROMPT,
       capturedImages:     [],
       customPromptText:   '',
     };
@@ -111,6 +170,13 @@ export default {
         partial:    ['shift', 'ctrl', 'a'],
         fullScreen: ['shift', 'ctrl', 's'],
       };
+    }
+  },
+  mounted() {
+    const savedPrompt = localStorage.getItem(CUSTOM_PROMPT_STORAGE_KEY);
+
+    if (savedPrompt) {
+      this.customPromptText = savedPrompt;
     }
   },
   methods: {
@@ -275,7 +341,7 @@ export default {
 
               croppedCanvasContext.drawImage(canvas, cropX, cropY, this.croppedImageWidth, this.croppedImageHeight, 0, 0, this.croppedImageWidth, this.croppedImageHeight);
 
-              const finalCanvas = this.addTextToCanvas(croppedCanvas, promptText, promptText !== this.OPS_PROMPT && promptText !== this.UX_PROMPT);
+              const finalCanvas = this.addTextToCanvas(croppedCanvas, promptText, ![this.OPS_PROMPT, this.UX_PROMPT, this.SECURITY_PROMPT, this.DEV_PROMPT, this.ARCHITECT_PROMPT].includes(promptText));
 
               finalCanvas.toBlob(async(blob) => {
                 if (blob) {
@@ -398,7 +464,7 @@ export default {
       });
 
       // Reuse text adding logic from single screenshot
-      const finalCanvasWithText = this.addTextToCanvas(stitchedCanvas, promptText, promptText !== this.OPS_PROMPT && promptText !== this.UX_PROMPT);
+      const finalCanvasWithText = this.addTextToCanvas(stitchedCanvas, promptText, ![this.OPS_PROMPT, this.UX_PROMPT, this.SECURITY_PROMPT, this.DEV_PROMPT, this.ARCHITECT_PROMPT].includes(promptText));
 
       // Reuse download and clipboard logic
       finalCanvasWithText.toBlob(async(blob) => {
@@ -426,6 +492,12 @@ export default {
       document.body.removeChild(link);
 
       this.cancelContinuous();
+    },
+
+    saveCustomPrompt() {
+      if (this.customPromptText) {
+        localStorage.setItem(CUSTOM_PROMPT_STORAGE_KEY, this.customPromptText);
+      }
     },
 
   }
@@ -540,19 +612,46 @@ export default {
             >
               UX/UI Designer
             </button>
+            <button
+              class="btn role-primary"
+              @click="selectPromptAndTakeScreenshot(SECURITY_PROMPT)"
+            >
+              Security Analyst
+            </button>
+            <button
+              class="btn role-primary"
+              @click="selectPromptAndTakeScreenshot(DEV_PROMPT)"
+            >
+              App Developer
+            </button>
+            <button
+              class="btn role-primary"
+              @click="selectPromptAndTakeScreenshot(ARCHITECT_PROMPT)"
+            >
+              Solutions Architect
+            </button>
           </div>
           <div class="prompt-section custom-prompt">
             <textarea
               v-model="customPromptText"
               placeholder="Or enter a custom prompt..."
             />
-            <button
-              class="btn role-primary"
-              :disabled="!customPromptText"
-              @click="selectPromptAndTakeScreenshot(customPromptText)"
-            >
-              Custom Prompt
-            </button>
+            <div class="custom-prompt-actions">
+              <button
+                class="btn btn-sm role-secondary"
+                :disabled="!customPromptText"
+                @click="saveCustomPrompt"
+              >
+                Save
+              </button>
+              <button
+                class="btn role-primary"
+                :disabled="!customPromptText"
+                @click="selectPromptAndTakeScreenshot(customPromptText)"
+              >
+                Custom Prompt
+              </button>
+            </div>
           </div>
           <div class="prompt-section">
             <button
@@ -783,6 +882,7 @@ export default {
     .prompt-section {
       display: flex;
       justify-content: flex-end;
+      flex-wrap: wrap;
       align-items: center;
       width: 100%;
       margin-bottom: 15px;
@@ -793,16 +893,22 @@ export default {
 
       &.custom-prompt {
         align-items: stretch;
+        flex-direction: column;
         textarea {
           flex-grow: 1;
-          margin-right: 10px;
+          margin-bottom: 10px;
           height: 80px;
           resize: vertical;
+        }
+        .custom-prompt-actions {
+          display: flex;
+          justify-content: flex-end;
         }
       }
 
       .btn {
         margin-left: 10px;
+        margin-bottom: 5px;
       }
     }
   }

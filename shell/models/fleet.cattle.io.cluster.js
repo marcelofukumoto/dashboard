@@ -86,6 +86,18 @@ export default class FleetCluster extends SteveModel {
     return false;
   }
 
+  get glance() {
+    const glance = [...this._glance];
+
+    const namespaceIndex = glance.findIndex((item) => item.name === 'namespace');
+
+    if (namespaceIndex > -1) {
+      glance.splice(namespaceIndex, 1);
+    }
+
+    return glance;
+  }
+
   get canChangeWorkspace() {
     // https://github.com/rancher/dashboard/issues/7745
     if (this.isLocal) {

@@ -120,6 +120,7 @@ export default {
     select(value: PointerEvent) {
       const elem = value?.target as HTMLElement;
 
+      // Ignore the click on the card if clicking any of the elements specified.
       if (elem?.tagName === 'A' || elem?.tagName === 'BUTTON' || elem?.className.includes('icon icon-actions')) {
         return;
       }
@@ -159,9 +160,10 @@ export default {
     </template>
     <template #item-card-content>
       <ResourceCardSummary
-        v-clean-tooltip="{content: resourcesTooltip, triggers: ['hover']}"
         :value="value"
         :no-clusters="noClusters"
+        :resources-tooltip="{content: resourcesTooltip, triggers: ['hover']}"
+        :resources-default-states="resourcesDefaultStates"
       />
     </template>
   </RcItemCard>

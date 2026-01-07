@@ -1909,7 +1909,7 @@ export default class Resource {
           to: {
             name:     `c-cluster-product-resource-id`,
             product:  this.$rootGetters['currentProduct'].id,
-            cluster:  this.$rootGetters['currentCluster'].id,
+            cluster:  this.$rootGetters['currentCluster']?.id ?? '',
             resource: this.type
           },
           row:     {},

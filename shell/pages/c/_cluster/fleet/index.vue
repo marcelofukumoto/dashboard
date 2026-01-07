@@ -321,7 +321,8 @@ export default {
 
       this.selectedCard = selected;
 
-      this.$shell.slideIn.open(ResourceDetails, {
+      this.$store.commit('slideInPanel/open', {
+        component:      ResourceDetails,
         componentProps: {
           showHeader: false,
           width:      window.innerWidth / 3 > 530 ? `${ window.innerWidth / 3 }px` : '530px',
@@ -718,7 +719,7 @@ export default {
                         :data-testid="`resource-card-${ item.id }`"
                         :value="item"
                         :state-panel="state.statePanel"
-                        @click="showResourceDetails(item, state.statePanel, workspace, `${ item.id }-${ y }`)"
+                        @click="() => showResourceDetails(item, state.statePanel, workspace, `${ item.id }-${ y }`)"
                       />
                     </div>
                   </div>

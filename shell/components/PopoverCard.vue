@@ -1,6 +1,6 @@
 <script lang="ts">
 import Card from '@shell/components/Resource/Detail/Card/index.vue';
-import { ref, watch } from 'vue';
+import { Ref, ref, watch } from 'vue';
 import {
   DEFAULT_FOCUS_TRAP_OPTS,
   useWatcherBasedSetupFocusTrapWithDestroyIncluded
@@ -11,13 +11,20 @@ export interface Props {
   cardTitle: string;
   fallbackFocus?: string;
   showPopoverAriaLabel?: string;
+  clickStopPropagation?: boolean;
 }
+
+interface PopoverRefs {
+  card: InstanceType<typeof Card> | null;
+  popoverContainer: HTMLElement | null;
+}
+
 </script>
 
 <script setup lang="ts">
 const props = withDefaults(defineProps<Props>(), { fallbackFocus: 'body', showPopoverAriaLabel: 'Show more' });
-const card = ref<any>(null);
-const popoverContainer = ref(null);
+const card: Ref<PopoverRefs['card']> = ref(null);
+const popoverContainer: Ref<PopoverRefs['popoverContainer']> = ref(null);
 const showPopover = ref<boolean>(false);
 const focusOpen = ref<boolean>(false);
 
@@ -36,6 +43,12 @@ watch(
     }
   }
 );
+
+function handleClick(event: MouseEvent): void {
+  if (props.clickStopPropagation) {
+    event.stopPropagation();
+  }
+}
 </script>
 
 <template>
@@ -77,12 +90,16 @@ watch(
       <template
         #popper
       >
-        <slot name="card">
+        <slot
+          name="card"
+        >
           <Card
             id="popover-card"
             ref="card"
             class="popover-card"
+            :class="{ 'cursor-auto': props.clickStopPropagation }"
             :title="props.cardTitle"
+            @click="handleClick"
           >
             <template #heading-action>
               <slot
@@ -113,6 +130,10 @@ watch(
     right: 0;
     top: 0;
     bottom: 0;
+  }
+
+  .cursor-auto {
+    cursor: auto;
   }
 
   .display {

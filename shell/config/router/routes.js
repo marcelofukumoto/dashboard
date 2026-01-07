@@ -252,6 +252,12 @@ export default [
           detailLocation: 'c-cluster-fleet-application-resource-namespace-id',
           doneOverride:   'c-cluster-fleet-application'
         },
+        beforeEnter: (to, from, next) => {
+          if (!to.params.product) {
+            to.params.product = 'fleet';
+          }
+          next();
+        }
       }, {
         path:      '/c/:cluster/gatekeeper',
         component: () => interopDefault(import('@shell/pages/c/_cluster/gatekeeper/index.vue')),

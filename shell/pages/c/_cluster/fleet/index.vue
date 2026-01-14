@@ -1,11 +1,11 @@
-<script>
+<script lang="ts">
 import debounce from 'lodash/debounce';
 import { getVersionData } from '@shell/config/version';
 import { mapState, mapGetters } from 'vuex';
 import { isEmpty } from '@shell/utils/object';
 import { FLEET } from '@shell/config/types';
 import { WORKSPACE } from '@shell/store/prefs';
-import Loading from '@shell/components/Loading';
+import Loading from '@shell/components/Loading.vue';
 import { checkPermissions, checkSchemasForFindAllHash } from '@shell/utils/auth';
 import { WORKSPACE_ANNOTATION } from '@shell/config/labels-annotations';
 import { filterBy } from '@shell/utils/array';
@@ -15,7 +15,7 @@ import ResourcePanel from '@shell/components/fleet/dashboard/ResourcePanel.vue';
 import ResourceCard from '@shell/components/fleet/dashboard/ResourceCard.vue';
 import ResourceDetails from '@shell/components/fleet/dashboard/ResourceDetails.vue';
 import EmptyDashboard from '@shell/components/fleet/dashboard/Empty.vue';
-import ButtonGroup from '@shell/components/ButtonGroup';
+import ButtonGroup from '@shell/components/ButtonGroup.vue';
 import Checkbox from '@components/Form/Checkbox/Checkbox.vue';
 import FleetApplications from '@shell/components/fleet/FleetApplications.vue';
 import FleetUtils from '@shell/utils/fleet';
@@ -321,15 +321,20 @@ export default {
 
       this.selectedCard = selected;
 
-      this.$store.commit('slideInPanel/open', {
-        component:      ResourceDetails,
-        componentProps: {
-          showHeader: false,
-          width:      window.innerWidth / 3 > 530 ? `${ window.innerWidth / 3 }px` : '530px',
+      this.$shell.slideIn.open(ResourceDetails, {
+        showHeader: false,
+        props:      {
           value,
           statePanel,
           workspace
-        }
+        },
+        width:              '73%',
+        // We want this to be full viewport height top to bottom
+        height:             '100vh',
+        top:                '0',
+        'z-index':          101, // We want this to be above the main side menu
+        closeOnRouteChange: ['name', 'params', 'query'], // We want to ignore hash changes, tables in extensions can trigger the drawer to close while opening
+        triggerFocusTrap:   false,
       });
     },
 

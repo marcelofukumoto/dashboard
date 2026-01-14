@@ -1731,6 +1731,7 @@ cluster:
         addVolume: Add Volume
         addVMImage: Add VM Image
         storageClass: Storage Class
+      reservedMemory: Reserved Memory
       sshUser: SSH User
       userData:
         label: User Data Template
@@ -1776,6 +1777,8 @@ cluster:
         placeholder: e.g. 2
       memory:
         placeholder: e.g. 4
+      reservedMemory:
+        placeholder: e.g. 256
       disk:
         placeholder: e.g. 4
       namespace:
@@ -1805,6 +1808,7 @@ cluster:
     current: (current)
     experimental: (experimental)
     deprecated: (deprecated)
+    manual: (manually upgraded)
     deprecatedPatches: Show deprecated Kubernetes patch versions
     deprecatedPatchWarning: We recommend using the latest patch version for each minor Kubernetes version. Deprecated patch versions can be useful for migration purposes.
   legacyWarning: The legacy feature flag is enabled and not all legacy features are supported in Kubernetes 1.21+.
@@ -2953,6 +2957,10 @@ fleet:
     expandAll: Expand All
     collapseAll: Collapse All
     state: State
+    resourceDetails:
+      clusters: Clusters
+      resources: Resources
+      source: Source
     viewMode:
       table: Show table
       cards: Show cards
@@ -4617,6 +4625,7 @@ moveModal:
   description: 'You are moving the following namespaces:'
   moveButtonLabel: Move
   targetProject: Target Project
+  noProject: None (remove from any project)
 
 nameNsDescription:
   name:

@@ -164,7 +164,7 @@ export default {
           <td :colspan="fullColspan-2">
             <span
               v-if="row.customLabels && row.customLabels.length"
-              class="mt-5"
+              class="mt-10"
             > {{ t('fleet.cluster.labels') }}:
               <span
                 v-for="(label, i) in row.customLabels"

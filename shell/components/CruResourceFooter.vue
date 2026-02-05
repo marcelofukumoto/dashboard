@@ -81,7 +81,7 @@ export default {
 </script>
 
 <template>
-  <div class="cru-resource-footer">
+  <div class="cru-resource-footer 4">
     <slot name="footer-prefix" />
     <slot name="cancel">
       <button

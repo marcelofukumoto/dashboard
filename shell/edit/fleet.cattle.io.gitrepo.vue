@@ -23,6 +23,8 @@ import FleetClusterTargets from '@shell/components/fleet/FleetClusterTargets/ind
 import { toSeconds } from '@shell/utils/duration';
 import FleetGitRepoPaths from '@shell/components/fleet/FleetGitRepoPaths.vue';
 import FleetOCIStorageSecret from '@shell/components/fleet/FleetOCIStorageSecret.vue';
+import Tab from '@shell/components/Tabbed/Tab.vue';
+import Tabbed from '@shell/components/Tabbed/index.vue';
 
 const MINIMUM_POLLING_INTERVAL = 15;
 const DEFAULT_POLLING_INTERVAL = 60;
@@ -53,6 +55,8 @@ export default {
     SelectOrCreateAuthSecret,
     FleetClusterTargets,
     UnitInput,
+    Tabbed,
+    Tab,
   },
 
   mixins: [CreateEditView, FormValidation],
@@ -417,6 +421,7 @@ export default {
 
 <template>
   <Loading v-if="$fetchState.pending" />
+  <!-- :steps="!isView ? steps : undefined" -->
 
   <CruResource
     v-else
@@ -429,6 +434,7 @@ export default {
     :steps="steps"
     :finish-mode="'finish'"
     class="wizard"
+    :inline-steps="isView"
     @cancel="done"
     @error="e=>errors = e"
     @finish="save"

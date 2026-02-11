@@ -1,11 +1,11 @@
 import { CATALOG, CLUSTER_BADGE } from '@shell/config/labels-annotations';
-import { NODE, FLEET, MANAGEMENT, CAPI } from '@shell/config/types';
+import {
+  NODE, FLEET, MANAGEMENT, CAPI, EXT
+} from '@shell/config/types';
 import { insertAt, addObject, removeObject } from '@shell/utils/array';
 import { downloadFile } from '@shell/utils/download';
 import { parseSi } from '@shell/utils/units';
 import { parseColor, textColor } from '@shell/utils/color';
-import jsyaml from 'js-yaml';
-import { eachLimit } from '@shell/utils/promise';
 import { addParams } from '@shell/utils/url';
 import { isEmpty } from '@shell/utils/object';
 import { HARVESTER_NAME as HARVESTER } from '@shell/config/features';
@@ -15,6 +15,7 @@ import { LINUX, WINDOWS } from '@shell/store/catalog';
 import { KONTAINER_TO_DRIVER } from './management.cattle.io.kontainerdriver';
 import { PINNED_CLUSTERS } from '@shell/store/prefs';
 import { copyTextToClipboard } from '@shell/utils/clipboard';
+import { isHostedProvider } from '@shell/utils/provider';
 
 const DEFAULT_BADGE_COLOR = '#707070';
 
@@ -49,6 +50,12 @@ export default class MgmtCluster extends SteveModel {
     return out;
   }
 
+  get canCreateKubeconfig() {
+    const schema = this.$rootGetters['management/schemaFor'](EXT.KUBECONFIG);
+
+    return (schema?.collectionMethods || []).includes('POST');
+  }
+
   get _availableActions() {
     const out = super._availableActions;
 
@@ -65,14 +72,14 @@ export default class MgmtCluster extends SteveModel {
       label:      this.t('nav.kubeconfig.download'),
       icon:       'icon icon-download',
       bulkable:   true,
-      enabled:    this.$rootGetters['isRancher'] && this.hasAction('generateKubeconfig'),
+      enabled:    this.$rootGetters['isRancher'] && this.canCreateKubeconfig,
     });
 
     insertAt(out, 2, {
       action:   'copyKubeConfig',
       label:    this.t('cluster.copyConfig'),
       bulkable: false,
-      enabled:  this.$rootGetters['isRancher'] && this.hasAction('generateKubeconfig'),
+      enabled:  this.$rootGetters['isRancher'] && this.canCreateKubeconfig,
       icon:     'icon icon-copy',
     });
 
@@ -171,9 +178,20 @@ export default class MgmtCluster extends SteveModel {
     return this.isCondition('Ready');
   }
 
+  get config() {
+    if (!this.spec?.[`${ this.provisioner }Config`]) {
+      const allKeys = Object.keys(this.spec);
+      const configKey = allKeys.find( (k) => k.endsWith('Config'));
+
+      return this.spec[configKey];
+    }
+
+    return this.spec?.[`${ this.provisioner }Config`];
+  }
+
   get kubernetesVersionRaw() {
     const fromStatus = this.status?.version?.gitVersion;
-    const fromSpec = this.spec?.[`${ this.provisioner }Config`]?.kubernetesVersion;
+    const fromSpec = this.config?.kubernetesVersion;
 
     return fromStatus || fromSpec;
   }
@@ -239,9 +257,15 @@ export default class MgmtCluster extends SteveModel {
   }
 
   get isHostedKubernetesProvider() {
-    const providers = ['AKS', 'EKS', 'GKE'];
+    const context = {
+      dispatch:   this.$dispatch,
+      getters:    this.$getters,
+      axios:      this.$axios,
+      $extension: this.$extension,
+      t:          (...args) => this.t.apply(this, args),
+    };
 
-    return providers.includes(this.provisioner);
+    return isHostedProvider(context, this.provisioner);
   }
 
   get providerLogo() {
@@ -363,10 +387,15 @@ export default class MgmtCluster extends SteveModel {
     }, { root: true });
   }
 
-  async generateKubeConfig() {
-    const res = await this.doAction('generateKubeconfig');
+  async generateKubeConfig(clusters = [this.id]) {
+    const memoryResource = await this.$dispatch('management/create', {
+      type: EXT.KUBECONFIG,
+      spec: { clusters }
+    }, { root: true });
 
-    return res.config;
+    const res = await memoryResource.save();
+
+    return res.status?.value;
   }
 
   async downloadKubeConfig() {
@@ -376,29 +405,10 @@ export default class MgmtCluster extends SteveModel {
   }
 
   async downloadKubeConfigBulk(items) {
-    let obj = {};
-    let first = true;
+    const clusters = items.map((item) => item.mgmt?.id || item.id);
+    const config = await this.generateKubeConfig(clusters);
 
-    await eachLimit(items, 10, (item, idx) => {
-      return item.generateKubeConfig().then((config) => {
-        const entry = jsyaml.load(config);
-
-        if ( first ) {
-          obj = entry;
-          first = false;
-        } else {
-          obj.clusters.push(...entry.clusters);
-          obj.users.push(...entry.users);
-          obj.contexts.push(...entry.contexts);
-        }
-      });
-    });
-
-    delete obj['current-context'];
-
-    const out = jsyaml.dump(obj);
-
-    downloadFile('kubeconfig.yaml', out, 'application/yaml');
+    downloadFile('kubeconfig.yaml', config, 'application/yaml');
   }
 
   async copyKubeConfig() {

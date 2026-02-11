@@ -8,14 +8,21 @@ import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
 import RcButton from '@components/RcButton/RcButton.vue';
 import TabTitle from '@shell/components/TabTitle';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, VueElement, watch } from 'vue';
 import { _CONFIG, AS } from '@shell/config/query-params';
 import { ExtensionPoint, PanelLocation } from '@shell/core/types';
 import ExtensionPanel from '@shell/components/ExtensionPanel.vue';
+import { ButtonVariantNewProps, ButtonSizeNewProps } from '~/pkg/rancher-components/src/components/RcButton/types';
+import { isArray } from 'lodash';
 
 export interface Badge {
   color: 'bg-success' | 'bg-error' | 'bg-warning' | 'bg-info';
   label: string;
+}
+
+export interface AdditionalActionButton extends ButtonVariantNewProps, ButtonSizeNewProps {
+  label: string;
+  onClick: () => void;
 }
 
 export interface TitleBarProps {
@@ -27,18 +34,18 @@ export interface TitleBarProps {
   description?: string;
   badge?: Badge;
 
+  additionalActions?: VueElement | AdditionalActionButton[];
+
   // This should be replaced with a list of menu items we want to render.
   // I don't have the time right now to swap this out though.
   actionMenuResource?: any;
   onShowConfiguration?: (returnFocusSelector: string) => void;
 }
-
-const showConfigurationIcon = require(`@shell/assets/images/icons/document.svg`);
 </script>
 
 <script setup lang="ts">
 const {
-  resource, resourceTypeLabel, resourceTo, resourceName, description, badge, onShowConfiguration,
+  additionalActions, resource, resourceTypeLabel, resourceTo, resourceName, description, badge, onShowConfiguration,
 } = defineProps<TitleBarProps>();
 
 const store = useStore();
@@ -57,6 +64,8 @@ watch(
     router.push({ query: { [AS]: currentView.value } });
   }
 );
+
+const showAdditionalActionButtons = computed(() => isArray(additionalActions));
 </script>
 
 <template>
@@ -84,31 +93,50 @@ watch(
         </span>
         <BadgeState
           v-if="badge"
+          v-ui-context="{ store: store, icon: 'icon-folder', hookable: true, value: resource, tag: '__details-state', description: 'Details' }"
           class="badge-state"
           :color="badge.color"
           :label="badge.label"
         />
       </Title>
       <div class="actions">
-        <slot name="additional-actions" />
+        <slot name="additional-actions">
+          <template v-if="additionalActions">
+            <template v-if="showAdditionalActionButtons">
+              <RcButton
+                v-for="(actionButtonProps, i) in (additionalActions as AdditionalActionButton[])"
+                :key="`action-button-${i}`"
+                :variant="actionButtonProps.variant"
+                :size="actionButtonProps.size"
+                @click="actionButtonProps.onClick"
+              >
+                {{ actionButtonProps.label }}
+              </RcButton>
+            </template>
+            <component
+              :is="additionalActions"
+              v-else
+            />
+          </template>
+        </slot>
         <RcButton
           v-if="onShowConfiguration"
           :data-testid="showConfigurationDataTestId"
           class="show-configuration"
-          :primary="true"
+          variant="primary"
+          size="large"
           :aria-label="i18n.t('component.resource.detail.titleBar.ariaLabel.showConfiguration', { resource: resourceName })"
           @click="() => emit('show-configuration', showConfigurationReturnFocusSelector)"
         >
-          <img
-            :src="showConfigurationIcon"
-            class="mmr-3"
+          <i
+            class="icon icon-document"
             aria-hidden="true"
-          >
+          />
           {{ i18n.t('component.resource.detail.titleBar.showConfiguration') }}
         </RcButton>
         <ActionMenu
           v-if="actionMenuResource"
-          button-role="multiAction"
+          button-variant="multiAction"
           :resource="actionMenuResource"
           data-testid="masthead-action-menu"
           :button-aria-label="i18n.t('component.resource.detail.titleBar.ariaLabel.actionMenu', { resource: resourceName })"
@@ -139,7 +167,18 @@ watch(
     position: relative;
   }
 
-  .show-configuration {
+  .icon-document {
+    width: 15px;
+    font-size: 16px;
+    margin-right: 10px;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+  }
+
+  .show-configuration, &:deep() .actions button {
     margin-left: 16px;
   }
 

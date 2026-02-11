@@ -166,10 +166,10 @@ export default {
     } else if (this.$route.query[FROM_CLUSTER] === _FLAGGED) {
       /* For Fleet, use the fleet-default namespace. */
       this.forceNamespace = DEFAULT_WORKSPACE;
-    } else if ( this.chart?.targetNamespace ) {
+    } else if ( this.version?.annotations?.[CATALOG_ANNOTATIONS.NAMESPACE] ) {
       /* If a target namespace is defined in the chart,
       set the target namespace as default. */
-      this.forceNamespace = this.chart.targetNamespace;
+      this.forceNamespace = this.version.annotations[CATALOG_ANNOTATIONS.NAMESPACE];
     } else if ( this.query.appNamespace ) {
       /* If a namespace is defined in the URL query,
        use that namespace as default. */
@@ -219,13 +219,13 @@ export default {
         The target name indicates the name of the cluster
         group that the chart is meant to be installed in.
       */
-      if ( this.chart?.targetName ) {
+      if ( this.version?.annotations?.[CATALOG_ANNOTATIONS.RELEASE_NAME] ) {
         /*
           Set the name of the chartInstallAction
           to the name of the cluster group
           where the chart should be installed.
         */
-        this.value.metadata.name = this.chart.targetName;
+        this.value.metadata.name = this.version.annotations[CATALOG_ANNOTATIONS.RELEASE_NAME];
         this.nameDisabled = true;
       } else if ( this.query.appName ) {
         this.value.metadata.name = this.query.appName;
@@ -310,6 +310,7 @@ export default {
           two different Helm chart versions is a "user value," or
           a user-selected customization.
         */
+        this.preserveCustomRegistryValue();
         userValues = diff(this.loadedVersionValues, this.chartValues);
       } else if ( this.existing ) {
         await this.existing.fetchValues(); // In theory this has already been called, but do again to be safe
@@ -824,6 +825,35 @@ export default {
   },
 
   methods: {
+    /**
+     * The custom registry UI fields (checkbox and input) are not directly bound to chartValues.
+     * Before calculating the diff to carry over user customizations, we must
+     * first synchronize the state of these UI fields with chartValues. This
+     * ensures any user changes to the custom registry settings are
+     * included in the diff and preserved when changing versions.
+     */
+    preserveCustomRegistryValue() {
+      if (!this.showCustomRegistry) {
+        return;
+      }
+
+      if (this.showCustomRegistryInput) {
+        set(this.chartValues, 'global.systemDefaultRegistry', this.customRegistrySetting);
+        set(this.chartValues, 'global.cattle.systemDefaultRegistry', this.customRegistrySetting);
+      } else {
+        // Note: Using `delete` here is safe because this is not a reactive property update
+        // that the UI needs to track. This is a one-time mutation before a diff.
+        if (get(this.chartValues, 'global.systemDefaultRegistry')) {
+          delete this.chartValues.global.systemDefaultRegistry;
+        }
+        if (get(this.chartValues, 'global.cattle.systemDefaultRegistry')) {
+          // It's possible `this.chartValues.global.cattle` doesn't exist,
+          // but `get` ensures we only proceed if the full path exists.
+          delete this.chartValues.global.cattle.systemDefaultRegistry;
+        }
+      }
+    },
+
     async getClusterRegistry() {
       const hasPermissionToSeeProvCluster = this.$store.getters[`management/schemaFor`](CAPI.RANCHER_CLUSTER);
 
@@ -1203,7 +1233,7 @@ export default {
         const { allValues, values: crdValues } = versionInfo;
 
         // only save crd values that differ from the defaults defined in chart values.yaml
-        const customizedCrdValues = diff(crdValues, allValues);
+        const customizedCrdValues = diff(crdValues, allValues, true);
 
         // CRD globals should be overwritten by main chart globals
         // we want to avoid including globals present on crd values and not main chart values
@@ -1367,6 +1397,7 @@ export default {
               <!-- We have a chart for the app, let the user select a new version -->
               <LabeledSelect
                 v-if="chart"
+                data-testid="chart-version-selector"
                 :label="t('catalog.install.version')"
                 :value="query.versionName"
                 :options="filteredVersions"
@@ -1435,6 +1466,7 @@ export default {
             v-if="showCustomRegistry"
             v-model:value="showCustomRegistryInput"
             class="mb-20"
+            data-testid="custom-registry-checkbox"
             :label="t('catalog.chart.registry.custom.checkBoxLabel')"
             :tooltip="t('catalog.chart.registry.tooltip')"
           />
@@ -1443,6 +1475,7 @@ export default {
               <LabeledInput
                 v-if="showCustomRegistryInput"
                 v-model:value="customRegistrySetting"
+                data-testid="custom-registry-input"
                 label-key="catalog.chart.registry.custom.inputLabel"
                 placeholder-key="catalog.chart.registry.custom.placeholder"
                 :min-height="30"

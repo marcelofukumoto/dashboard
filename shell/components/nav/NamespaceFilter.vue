@@ -673,9 +673,16 @@ export default {
     },
 
     removeOption(ns, event) {
-      this.selectOption(ns);
       event.preventDefault();
       event.stopPropagation();
+
+      this.selectOption(ns);
+
+      if (event.type !== 'keydown' || this.value.length !== 0) {
+        return;
+      }
+
+      this.$refs.namespaceFilterInput.focus();
     },
 
     defaultOption() {
@@ -778,10 +785,11 @@ export default {
           <!-- block user from removing the last selection if ns forced filtering is on -->
           <RcButton
             v-if="!namespaceFilterMode || value.length > 1"
-            small
-            ghost
+            size="small"
+            variant="ghost"
             class="ns-chip-button"
             :data-testid="`namespaces-values-close-${j}`"
+            :aria-label="t('namespaceFilter.removeNamespace', { name: ns.label })"
             @click="removeOption(ns, $event)"
             @keydown.enter.space.stop="removeOption(ns, $event)"
             @mousedown="handleValueMouseDown(ns, $event)"
@@ -833,13 +841,14 @@ export default {
             tabindex="0"
             class="ns-filter-input"
             :aria-label="t('namespaceFilter.input')"
+            @mousedown.stop
             @click="focusFilter"
             @keydown="inputKeyHandler($event)"
           >
           <RcButton
             v-if="hasFilter"
-            small
-            ghost
+            size="small"
+            variant="ghost"
             class="ns-filter-clear"
             :aria-label="t('namespaceFilter.button.clearFilter')"
             @click="clearFilter"
@@ -861,8 +870,8 @@ export default {
         </div>
         <RcButton
           v-else
-          small
-          ghost
+          size="small"
+          variant="ghost"
           class="ns-clear"
           :aria-label="t('namespaceFilter.button.clear')"
           @click="clear"
@@ -950,6 +959,10 @@ export default {
     width: 280px;
     display: inline-block;
     border-radius: var(--border-radius);
+
+    &:focus, &.focused {
+      @include focus-outline;
+    }
 
     .ns-glass {
       top: 0;

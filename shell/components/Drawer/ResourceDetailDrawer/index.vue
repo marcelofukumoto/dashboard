@@ -1,25 +1,19 @@
-<script lang="ts">
+<script setup lang="ts">
 import Drawer from '@shell/components/Drawer/Chrome.vue';
 import { useI18n } from '@shell/composables/useI18n';
 import { useStore } from 'vuex';
 import Tabbed from '@shell/components/Tabbed/index.vue';
 import YamlTab, { Props as YamlProps } from '@shell/components/Drawer/ResourceDetailDrawer/YamlTab.vue';
-import { useDefaultConfigTabProps, useDefaultYamlTabProps } from '@shell/components/Drawer/ResourceDetailDrawer/composables';
+import { useDefaultConfigTabProps, useDefaultYamlTabProps, useResourceDetailDrawerProvider } from '@shell/components/Drawer/ResourceDetailDrawer/composables';
 import ConfigTab from '@shell/components/Drawer/ResourceDetailDrawer/ConfigTab.vue';
 import { computed, ref } from 'vue';
 import RcButton from '@components/RcButton/RcButton.vue';
 import StateDot from '@shell/components/StateDot/index.vue';
+import { ResourceDetailDrawerProps } from '@shell/components/Drawer/ResourceDetailDrawer/types';
 
-export interface Props {
-  resource: any;
-
-  onClose?: () => void;
-}
-</script>
-<script setup lang="ts">
 const editBttnDataTestId = 'save-configuration-bttn';
 const componentTestid = 'configuration-drawer-tabbed';
-const props = defineProps<Props>();
+const props = defineProps<ResourceDetailDrawerProps>();
 const emit = defineEmits(['close']);
 const store = useStore();
 const i18n = useI18n(store);
@@ -60,10 +54,11 @@ const canEdit = computed(() => {
   return isConfig.value ? props.resource.canEdit : props.resource.canEditYaml;
 });
 
+useResourceDetailDrawerProvider();
+
 </script>
 <template>
   <Drawer
-    class="resource-detail-drawer"
     :ariaTarget="title"
     @close="emit('close')"
   >
@@ -76,15 +71,16 @@ const canEdit = computed(() => {
     </template>
     <template #body>
       <Tabbed
-        class="tabbed"
         :useHash="false"
         :showExtensionTabs="false"
         :componentTestid="componentTestid"
+        :remove-borders="true"
         @changed="({selectedName}) => {activeTab = selectedName;}"
       >
         <ConfigTab
           v-if="configTabProps"
           v-bind="configTabProps"
+          :default-tab="props.defaultTab"
         />
         <YamlTab
           v-if="yamlTabProps"
@@ -95,7 +91,8 @@ const canEdit = computed(() => {
     <template #additional-actions>
       <RcButton
         v-if="canEdit"
-        :primary="true"
+        variant="primary"
+        size="large"
         :aria-label="action.ariaLabel"
         :data-testid="editBttnDataTestId"
         @click="action.action"
@@ -105,20 +102,3 @@ const canEdit = computed(() => {
     </template>
   </Drawer>
 </template>
-
-<style lang="scss" scoped>
-.resource-detail-drawer {
-  :deep() .tabbed {
-    & > .tabs {
-      border: none;
-    }
-
-    & > .tab-container {
-      border: none;
-      border-top: 1px solid var(--border);
-      padding: 0;
-      padding-top: 24px;
-    }
-  }
-}
-</style>

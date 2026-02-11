@@ -10,7 +10,7 @@ import { TableColumn } from '@shell/types/store/type-map';
 import { mapGetters } from 'vuex';
 import { GROUP_RESOURCES, mapPref } from '@shell/store/prefs';
 import { DEFAULT_PROJECT, SYSTEM_PROJECT, UI_PROJECT_SECRET, UI_PROJECT_SECRET_COPY } from '@shell/config/labels-annotations';
-import { RancherKubeMetadata } from '@shell/types/kube/kube-api';
+import { RancherKubeMetadata } from '@shell/types/rancher/steve.api';
 import {
   AGE, SECRET_DATA, STATE, SUB_TYPE, NAME as NAME_COL,
 } from '@shell/config/table-headers';
@@ -170,7 +170,7 @@ export default {
     createLocation() {
       return {
         name:   'c-cluster-product-resource-create',
-        params: { resource: SECRET },
+        params: { resource: VIRTUAL_TYPES.PROJECT_SECRETS },
         query:  { [SECRET_SCOPE]: SECRET_QUERY_PARAMS.PROJECT_SCOPED }
       };
     },

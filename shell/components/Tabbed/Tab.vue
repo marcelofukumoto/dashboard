@@ -15,6 +15,10 @@ export default {
       default: null,
       type:    String
     },
+    labelIcon: {
+      type:    String,
+      default: null
+    },
     name: {
       required: true,
       type:     String
@@ -137,6 +141,7 @@ export default {
     :id="name"
     :aria-hidden="!active"
     role="tabpanel"
+    :aria-labelledby="`tab-${name}`"
   >
     <div
       v-if="shouldShowHeader"

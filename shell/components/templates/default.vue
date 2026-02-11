@@ -18,15 +18,13 @@ import Inactivity from '@shell/components/Inactivity';
 import Brand from '@shell/mixins/brand';
 import FixedBanner from '@shell/components/FixedBanner';
 import AwsComplianceBanner from '@shell/components/AwsComplianceBanner';
-import AzureWarning from '@shell/components/auth/AzureWarning';
-import DraggableZone from '@shell/components/DraggableZone';
 import { MANAGEMENT } from '@shell/config/types';
 import { markSeenReleaseNotes } from '@shell/utils/version';
 import PageHeaderActions from '@shell/mixins/page-actions';
 import BrowserTabVisibility from '@shell/mixins/browser-tab-visibility';
 import { getClusterFromRoute, getProductFromRoute } from '@shell/utils/router';
-import { BOTTOM } from '@shell/utils/position';
 import SideNav from '@shell/components/SideNav';
+import { Layout } from '@shell/types/window-manager';
 
 const SET_LOGIN_ACTION = 'set-as-login';
 
@@ -44,8 +42,6 @@ export default {
     WindowManager,
     FixedBanner,
     AwsComplianceBanner,
-    AzureWarning,
-    DraggableZone,
     Inactivity,
     SideNav,
   },
@@ -55,11 +51,9 @@ export default {
   // Note - This will not run on route change
   data() {
     return {
+      layout:           Layout.default,
       noLocaleShortcut: process.env.dev || false,
       wantNavSync:      false,
-      unwatchPin:       undefined,
-      wmPin:            null,
-      draggable:        false,
     };
   },
 
@@ -108,25 +102,6 @@ export default {
       return this.clusterReady &&
         this.clusterId === getClusterFromRoute(this.$route) && routeReady;
     },
-
-    pinClass() {
-      return `pin-${ this.wmPin }`;
-    },
-
-  },
-
-  mounted() {
-    this.wmPin = window.localStorage.getItem('wm-pin') || BOTTOM;
-
-    // two-way binding this.wmPin <-> draggableZone.pin
-    this.$refs.draggableZone.pin = this.wmPin;
-    this.unwatchPin = this.$watch('$refs.draggableZone.pin', (pin) => {
-      this.wmPin = pin;
-    });
-  },
-
-  unmounted() {
-    this.unwatchPin();
   },
 
   methods: {
@@ -186,11 +161,10 @@ export default {
   <div class="dashboard-root">
     <FixedBanner :header="true" />
     <AwsComplianceBanner v-if="managementReady" />
-    <AzureWarning v-if="managementReady" />
     <div
       v-if="managementReady"
       class="dashboard-content"
-      :class="{[pinClass]: true, 'dashboard-padding-left': showTopLevelMenu}"
+      :class="{'dashboard-padding-left': showTopLevelMenu}"
     >
       <Header />
       <SideNav
@@ -245,24 +219,11 @@ export default {
           class="outlet"
         />
       </main>
-      <div
-        v-if="$refs.draggableZone"
-        class="wm"
-        :class="{
-          'drag-end': !$refs.draggableZone.drag.active,
-          'drag-start': $refs.draggableZone.drag.active,
-        }"
-        :draggable="draggable"
-        @dragstart="$refs.draggableZone.onDragStart($event)"
-        @dragend="$refs.draggableZone.onDragEnd($event)"
-      >
-        <WindowManager @draggable="draggable=$event" />
-      </div>
+      <WindowManager :layout="layout" />
     </div>
     <FixedBanner :footer="true" />
     <GrowlManager />
     <SlideInPanelManager />
     <Inactivity />
-    <DraggableZone ref="draggableZone" />
   </div>
 </template>

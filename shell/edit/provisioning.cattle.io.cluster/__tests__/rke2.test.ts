@@ -112,8 +112,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) }
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) }
         },
 
         stubs: defaultStubs,
@@ -143,8 +143,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
 
         stubs: defaultStubs,
@@ -174,8 +174,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
 
         stubs: defaultStubs,
@@ -231,7 +231,7 @@ describe('component: rke2', () => {
             },
             getters: defaultGetters
           },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
 
         stubs: defaultStubs,
@@ -275,7 +275,7 @@ describe('component: rke2', () => {
                 'management/findAll': () => ([]),
               }
             },
-            $plugin: { getDynamic: jest.fn(() => undefined ) },
+            $extension: { getDynamic: jest.fn(() => undefined ) },
           },
 
           stubs: defaultStubs,
@@ -324,7 +324,7 @@ describe('component: rke2', () => {
                 'management/findAll': () => ([]),
               }
             },
-            $plugin: { getDynamic: jest.fn(() => undefined ) },
+            $extension: { getDynamic: jest.fn(() => undefined ) },
           },
 
           stubs: defaultStubs,
@@ -369,8 +369,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
         stubs: defaultStubs
       }
@@ -409,8 +409,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
         stubs: defaultStubs
       }
@@ -441,8 +441,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
         stubs: defaultStubs
       }
@@ -475,21 +475,22 @@ describe('component: rke2', () => {
         },
         provider: 'custom'
       },
-      data: () => ({
-        agentArgs: {
+      computed: {
+        ...rke2.computed,
+        agentArgs: () => ({
           'cloud-provider-name': {
             options: [
               'azure',
               'amazon'
             ]
           }
-        }
-      }),
+        })
+      },
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
         stubs: defaultStubs
       }
@@ -519,9 +520,10 @@ describe('component: rke2', () => {
         },
         provider: 'custom'
       },
-      data: () => ({
-        canAzureMigrateOnEdit: true,
-        agentArgs:             {
+      computed: {
+        ...rke2.computed,
+        canAzureMigrateOnEdit: () => true,
+        agentArgs:             () => ({
           'cloud-provider-name': {
             options: [
               'azure',
@@ -529,13 +531,13 @@ describe('component: rke2', () => {
               'external'
             ]
           }
-        }
-      }),
+        })
+      },
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
         stubs: defaultStubs
       }
@@ -598,8 +600,8 @@ describe('component: rke2', () => {
       global: {
         mocks: {
           ...defaultMocks,
-          $store:  { dispatch: () => jest.fn(), getters: defaultGetters },
-          $plugin: { getDynamic: jest.fn(() => undefined ) },
+          $store:     { dispatch: () => jest.fn(), getters: defaultGetters },
+          $extension: { getDynamic: jest.fn(() => undefined ) },
         },
 
         stubs: defaultStubs,

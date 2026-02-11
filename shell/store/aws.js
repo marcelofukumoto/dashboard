@@ -2,6 +2,7 @@ import { sortBy } from '@shell/utils/sort';
 import { randomStr } from '@shell/utils/string';
 import { FetchHttpHandler } from '@smithy/fetch-http-handler';
 import { isArray, addObjects } from '@shell/utils/array';
+import { formatAWSError } from '@shell/utils/error';
 
 export const state = () => {
   return {
@@ -213,18 +214,20 @@ export const actions = {
 
       list.push({
         apiName,
-        currentGeneration:     row.CurrentGeneration || false,
+        currentGeneration:      row.CurrentGeneration || false,
         groupLabel,
         instanceClass,
-        memoryBytes:           row.MemoryInfo.SizeInMiB * 1024 * 1024,
-        supportedUsageClasses: row.SupportedUsageClasses,
-        label:                 rootGetters['i18n/t']('cluster.machineConfig.aws.sizeLabel', {
+        memoryBytes:            row.MemoryInfo.SizeInMiB * 1024 * 1024,
+        supportedUsageClasses:  row.SupportedUsageClasses,
+        supportedArchitectures: row.ProcessorInfo.SupportedArchitectures || [],
+        label:                  rootGetters['i18n/t']('cluster.machineConfig.aws.sizeLabel', {
           apiName,
-          cpu:    row.VCpuInfo.DefaultVCpus,
-          memory: row.MemoryInfo.SizeInMiB / 1024,
+          cpu:          row.VCpuInfo.DefaultVCpus,
+          memory:       row.MemoryInfo.SizeInMiB / 1024,
           storageSize,
           storageUnit,
           storageType,
+          architecture: (row.ProcessorInfo.SupportedArchitectures || []).map((a) => (a === 'arm64' ? 'ARM' : a)).join(', ')
         }),
       });
     }
@@ -245,21 +248,26 @@ export const actions = {
     opt = opt || {};
 
     while ( hasNext ) {
-      const res = await client[cmd](opt);
+      try {
+        const res = await client[cmd](opt);
 
-      if ( !key ) {
-        key = Object.keys(res).find((x) => isArray(res[x]));
-      }
+        if ( !key ) {
+          key = Object.keys(res).find((x) => isArray(res[x]));
+        }
 
-      addObjects(out, res[key]);
-      if (res.NextToken) {
-        opt.NextToken = res.NextToken;
-        hasNext = true;
-      } else if (res.Marker) {
-        opt.Marker = res.Marker;
-        hasNext = true;
-      } else {
+        addObjects(out, res[key]);
+        if (res.NextToken) {
+          opt.NextToken = res.NextToken;
+          hasNext = true;
+        } else if (res.Marker) {
+          opt.Marker = res.Marker;
+          hasNext = true;
+        } else {
+          hasNext = false;
+        }
+      } catch (err) {
         hasNext = false;
+        throw formatAWSError(err);
       }
     }
 

@@ -64,6 +64,42 @@ jobs:
           retention-days: 10
           compression-level: 9
 
+  auto-retry:
+    if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e') && always()"
+    needs: e2e-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup GitHub CLI
+        run: |
+          # GitHub CLI is pre-installed on Ubuntu runners, just verify
+          gh --version
+          
+      - name: Check for failures and retry
+        run: |
+          # Check if any e2e-test jobs failed
+          if [ "${{ needs.e2e-test.result }}" == "failure" ]; then
+            echo "E2E tests failed, checking if this is a retry attempt..."
+            
+            # Only retry once - check if this is already a retry
+            if [ "${{ github.run_attempt }}" == "1" ]; then
+              echo "First attempt failed, triggering automatic retry..."
+              
+              # Wait a bit for jobs to fully complete
+              sleep 60
+              
+              # Trigger retry of failed jobs only
+              gh run rerun --failed ${{ github.run_id }}
+              echo "Retry triggered successfully"
+            else
+              echo "This is already a retry attempt (${{ github.run_attempt }}), not retrying again"
+              exit 1
+            fi
+          else
+            echo "No failures detected, no retry needed"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   e2e-test:
     if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e')"
     needs: e2e-ui-build
@@ -86,9 +122,7 @@ jobs:
           ['@components'],
           ['@noVai']
         ]
-        attempt: [1, 2, 3]  # Allow up to 3 attempts
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.attempt < 3 }}  # Don't fail workflow until final attempt
     steps:
       - uses: actions/checkout@v6
         with:
@@ -126,31 +160,8 @@ jobs:
           TEST_ONLY: setup
       - name: Run user tests
         run: |
-          # First attempt
-          if yarn e2e:prod; then
-            echo "Tests passed on first attempt"
-            [ "$BUILD_DASHBOARD" != "false" ] || exit 0
-            exit 0
-          fi
-          
-          echo "First attempt failed, retrying in 30 seconds..."
-          sleep 30
-          
-          # Second attempt - only retry if we're on attempt 1
-          if [ "${{ matrix.attempt }}" = "1" ]; then
-            echo "Running second attempt..."
-            if yarn e2e:prod; then
-              echo "Tests passed on second attempt"
-              [ "$BUILD_DASHBOARD" != "false" ] || exit 0
-              exit 0
-            fi
-            
-            echo "Second attempt failed"
-            exit 1
-          fi
-          
-          # For attempts 2 and 3, just fail immediately
-          exit 1
+          yarn e2e:prod
+          [ "$BUILD_DASHBOARD" != "false" ] || exit 0
         env: 
           TEST_SKIP: setup
           GREP_TAGS: ${{ matrix.role.tag }}+${{ matrix.features[0] }} --@jenkins ${{ matrix.role.tag }}+${{ matrix.features[1] || matrix.features[0] }} --@jenkins

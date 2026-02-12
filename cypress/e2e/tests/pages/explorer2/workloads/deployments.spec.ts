@@ -109,12 +109,21 @@ describe('Deployments', { testIsolation: 'off', tags: ['@explorer2', '@adminUser
     it('Should be able to scale the number of pods', () => {
       const workloadDetailsPage = new WorkloadsDeploymentsDetailsPagePo(scaleTestDeploymentName, localCluster, 'apps.deployment' as any, scaleTestNamespace);
 
+      // Set up intercepts for scaling operations and validate responses
+      cy.intercept('GET', `/v1/pods/${ scaleTestNamespace }?*`).as('getPodsAfterScale');
+
       workloadDetailsPage.goTo();
       workloadDetailsPage.waitForDetailsPage(scaleTestDeploymentName);
 
       workloadDetailsPage.replicaCount().should('contain', '1', MEDIUM_TIMEOUT_OPT);
 
       workloadDetailsPage.podScaleUp().should('be.enabled').click();
+
+      // Wait for the deployment scale request to complete and verify it shows 2 replicas
+      cy.wait('@getPodsAfterScale').then(({ response }) => {
+        expect(response.statusCode).to.eq(200);
+        expect(response.body.data[1].metadata.state.transitioning).to.eq(false);
+      });
 
       workloadDetailsPage.waitForScaleButtonsEnabled();
       workloadDetailsPage.waitForPendingOperationsToComplete();

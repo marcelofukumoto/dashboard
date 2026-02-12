@@ -15,6 +15,10 @@ on:
         type: environment
         required: true
 
+permissions:
+  actions: write
+  contents: read
+
 env:
   TEST_USERNAME: admin
   TEST_PASSWORD: password
@@ -160,6 +164,9 @@ jobs:
     if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e') && always()"
     needs: e2e-test
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

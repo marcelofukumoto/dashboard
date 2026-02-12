@@ -64,42 +64,6 @@ jobs:
           retention-days: 10
           compression-level: 9
 
-  auto-retry:
-    if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e') && always()"
-    needs: e2e-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup GitHub CLI
-        run: |
-          # GitHub CLI is pre-installed on Ubuntu runners, just verify
-          gh --version
-          
-      - name: Check for failures and retry
-        run: |
-          # Check if any e2e-test jobs failed
-          if [ "${{ needs.e2e-test.result }}" == "failure" ]; then
-            echo "E2E tests failed, checking if this is a retry attempt..."
-            
-            # Only retry once - check if this is already a retry
-            if [ "${{ github.run_attempt }}" == "1" ]; then
-              echo "First attempt failed, triggering automatic retry..."
-              
-              # Wait a bit for jobs to fully complete
-              sleep 60
-              
-              # Trigger retry of failed jobs only
-              gh run rerun --failed ${{ github.run_id }}
-              echo "Retry triggered successfully"
-            else
-              echo "This is already a retry attempt (${{ github.run_attempt }}), not retrying again"
-              exit 1
-            fi
-          else
-            echo "No failures detected, no retry needed"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   e2e-test:
     if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e')"
     needs: e2e-ui-build
@@ -191,6 +155,42 @@ jobs:
           if-no-files-found: error
           retention-days: 5
           compression-level: 9
+
+  auto-retry:
+    if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e') && always()"
+    needs: e2e-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          
+      - name: Check for failures and retry
+        run: |
+          # Check if any e2e-test jobs failed
+          if [ "${{ needs.e2e-test.result }}" == "failure" ]; then
+            echo "E2E tests failed, checking if this is a retry attempt..."
+            
+            # Only retry once - check if this is already a retry
+            if [ "${{ github.run_attempt }}" == "1" ]; then
+              echo "First attempt failed, triggering automatic retry..."
+              
+              # Wait a bit for jobs to fully complete
+              sleep 60
+              
+              # Trigger retry of failed jobs only
+              gh run rerun --failed ${{ github.run_id }}
+              echo "Retry triggered successfully"
+            else
+              echo "This is already a retry attempt (${{ github.run_attempt }}), not retrying again"
+              exit 1
+            fi
+          else
+            echo "No failures detected, no retry needed"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   a11y-test:
     if: "!contains( github.event.pull_request.labels.*.name, 'ci/skip-e2e')"

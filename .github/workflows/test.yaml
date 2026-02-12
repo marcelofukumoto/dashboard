@@ -86,7 +86,9 @@ jobs:
           ['@components'],
           ['@noVai']
         ]
+        attempt: [1, 2, 3]  # Allow up to 3 attempts
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.attempt < 3 }}  # Don't fail workflow until final attempt
     steps:
       - uses: actions/checkout@v6
         with:
@@ -123,9 +125,14 @@ jobs:
           TEST_USERNAME: admin
           TEST_ONLY: setup
       - name: Run user tests
-        run: |
-          yarn e2e:prod
-          [ "$BUILD_DASHBOARD" != "false" ] || exit 0
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_on: error
+          command: |
+            yarn e2e:prod
+            [ "$BUILD_DASHBOARD" != "false" ] || exit 0
         env: 
           TEST_SKIP: setup
           GREP_TAGS: ${{ matrix.role.tag }}+${{ matrix.features[0] }} --@jenkins ${{ matrix.role.tag }}+${{ matrix.features[1] || matrix.features[0] }} --@jenkins

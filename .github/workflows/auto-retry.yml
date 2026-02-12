@@ -1,0 +1,45 @@
+name: Auto-Retry Failed Run
+
+# Trigger this workflow only when the "Tests" workflow completes
+on:
+  workflow_run:
+    workflows: ["Tests"] # Match the exact name from your test.yaml workflow
+    types:
+      - completed
+
+permissions:
+  actions: write # Required to modify/rerun workflows
+  contents: read
+
+jobs:
+  rerun-on-failure:
+    # Only run if the triggering workflow failed AND it's the first attempt
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt == 1 }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check workflow details
+        run: |
+          echo "Workflow: ${{ github.event.workflow_run.name }}"
+          echo "Run ID: ${{ github.event.workflow_run.id }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Attempt: ${{ github.event.workflow_run.run_attempt }}"
+          echo "Repository: ${{ github.repository }}"
+          
+      - name: Rerun failed jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Attempting to rerun failed jobs for run ID $RUN_ID in $REPO..."
+          
+          # Wait a moment for the workflow to fully complete
+          sleep 30
+          
+          # Run the command against the ID of the workflow that just finished
+          if gh run rerun $RUN_ID --failed --repo $REPO; then
+            echo "Successfully triggered retry for failed jobs"
+          else
+            echo "Failed to trigger retry. This might be due to permissions or the workflow run state."
+            exit 1
+          fi

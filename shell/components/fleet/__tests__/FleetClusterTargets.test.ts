@@ -1811,4 +1811,401 @@ describe('component: FleetClusterTargets', () => {
       expect(wrapper.vm.selectedClusterGroups).toStrictEqual([]);
     });
   });
+
+  describe('areHarvesterHostsVisible feature flag', () => {
+    describe('when areHarvesterHostsVisible is false (harvester clusters are hidden)', () => {
+      const mockedStoreHarvesterHidden = () => {
+        return {
+          getters: {
+            'i18n/t':       (text: string) => text,
+            'features/get': (feature: string) => feature === 'HARVESTER_CONTAINER' ? false : false,
+          },
+        };
+      };
+
+      it('should filter out harvester clusters from clustersOptions', async() => {
+        const allClusters = [
+          {
+            metadata:    { namespace: 'fleet-default', name: 'regular-cluster' },
+            nameDisplay: 'Regular Cluster',
+            spec:        { kubernetesVersion: '1.25.0' }
+          },
+          {
+            metadata:    { namespace: 'fleet-default', name: 'harvester-cluster' },
+            nameDisplay: 'Harvester Cluster',
+            spec:        { kubernetesVersion: 'v1.24.0+rke2r1' },
+            status:      { provider: { toLowerCase: () => 'harvester' } }
+          }
+        ];
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterHidden() } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        wrapper.vm.allClusters = allClusters;
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.vm.clustersOptions;
+
+        expect(options).toHaveLength(1);
+        expect(options[0].value).toBe('regular-cluster');
+      });
+
+      it('should return excludeHarvesterRule when targetMode is "all"', async() => {
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterHidden() } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        wrapper.vm.targetMode = 'all';
+        await wrapper.vm.$nextTick();
+
+        const targets = wrapper.vm.toTargets();
+
+        expect(targets).toStrictEqual([{
+          clusterSelector: {
+            matchExpressions: [{
+              key:      'provider.cattle.io',
+              operator: 'NotIn',
+              values:   ['harvester']
+            }]
+          }
+        }]);
+      });
+
+      it('should set targetMode to "all" when targets contain only excludeHarvesterRule', async() => {
+        const targets = [{
+          clusterSelector: {
+            matchExpressions: [{
+              key:      'provider.cattle.io',
+              operator: 'NotIn',
+              values:   ['harvester']
+            }]
+          }
+        }];
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterHidden() } },
+          props:  {
+            targets,
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.targetMode).toBe('all');
+      });
+    });
+
+    describe('when areHarvesterHostsVisible is true (harvester clusters are visible)', () => {
+      const mockedStoreHarvesterVisible = () => {
+        return {
+          getters: {
+            'i18n/t':       (text: string) => text,
+            'features/get': (feature: string) => feature === 'HARVESTER_CONTAINER' ? true : false,
+          },
+        };
+      };
+
+      it('should include harvester clusters in clustersOptions', async() => {
+        const allClusters = [
+          {
+            metadata:    { namespace: 'fleet-default', name: 'regular-cluster' },
+            nameDisplay: 'Regular Cluster',
+            spec:        { kubernetesVersion: '1.25.0' }
+          },
+          {
+            metadata:    { namespace: 'fleet-default', name: 'harvester-cluster' },
+            nameDisplay: 'Harvester Cluster',
+            spec:        { kubernetesVersion: 'v1.24.0+rke2r1' },
+            status:      { provider: { toLowerCase: () => 'harvester' } }
+          }
+        ];
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterVisible() } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        wrapper.vm.allClusters = allClusters;
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.vm.clustersOptions;
+
+        expect(options).toHaveLength(2);
+        expect(options[0].value).toBe('regular-cluster');
+        expect(options[1].value).toBe('harvester-cluster');
+      });
+
+      it('should return includeAllWorkgroupRule when targetMode is "all"', async() => {
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterVisible() } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        wrapper.vm.targetMode = 'all';
+        await wrapper.vm.$nextTick();
+
+        const targets = wrapper.vm.toTargets();
+
+        expect(targets).toStrictEqual([{
+          clusterSelector: { matchExpressions: [] }
+        }]);
+      });
+
+      it('should set targetMode to "clusters" when targets contain excludeHarvesterRule', async() => {
+        const targets = [{
+          clusterSelector: {
+            matchExpressions: [{
+              key:      'provider.cattle.io',
+              operator: 'NotIn',
+              values:   ['harvester']
+            }]
+          }
+        }];
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterVisible() } },
+          props:  {
+            targets,
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.targetMode).toBe('clusters');
+      });
+
+      it('should populate clusterSelectors with harvester exclude rule when visible', async() => {
+        const targets = [{
+          clusterSelector: {
+            matchExpressions: [{
+              key:      'provider.cattle.io',
+              operator: 'NotIn',
+              values:   ['harvester']
+            }]
+          }
+        }];
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterVisible() } },
+          props:  {
+            targets,
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.clusterSelectors).toHaveLength(0);
+        expect(wrapper.vm.targetMode).toBe('clusters');
+      });
+
+      it('should set targetMode to "all" when targets contain includeAllWorkgroupRule', async() => {
+        const targets = [{
+          clusterSelector: { matchExpressions: [] }
+        }];
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterVisible() } },
+          props:  {
+            targets,
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.targetMode).toBe('all');
+      });
+    });
+
+    describe('switching between harvester visibility modes', () => {
+      it('should correctly transition from hidden to visible when feature flag changes', async() => {
+        const mockStore = {
+          getters: {
+            'i18n/t':       (text: string) => text,
+            'features/get': jest.fn(() => false),
+          },
+        };
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockStore } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        expect(wrapper.vm.areHarvesterHostsVisible).toBe(false);
+
+        // Simulate feature flag change
+        mockStore.getters['features/get'] = jest.fn(() => true);
+        wrapper.vm.areHarvesterHostsVisible = true;
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.areHarvesterHostsVisible).toBe(true);
+      });
+    });
+
+    describe('edge cases with harvester rules', () => {
+      it('should handle targets with harvester rule and additional match expressions when hidden', async() => {
+        const targets = [{
+          clusterSelector: {
+            matchExpressions: [
+              {
+                key:      'provider.cattle.io',
+                operator: 'NotIn',
+                values:   ['harvester']
+              },
+              {
+                key:      'env',
+                operator: 'In',
+                values:   ['prod']
+              }
+            ]
+          }
+        }];
+
+        const mockedStoreHarvesterHidden = () => {
+          return {
+            getters: {
+              'i18n/t':       (text: string) => text,
+              'features/get': () => false,
+            },
+          };
+        };
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterHidden() } },
+          props:  {
+            targets,
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.vm.targetMode).toBe('clusters');
+        expect(wrapper.vm.clusterSelectors).toHaveLength(1);
+        expect(wrapper.vm.clusterSelectors[0].matchExpressions).toHaveLength(1);
+        expect(wrapper.vm.clusterSelectors[0].matchExpressions[0].key).toBe('env');
+      });
+
+      it('should handle empty clusters list when harvester is hidden', async() => {
+        const allClusters = [
+          {
+            metadata:    { namespace: 'fleet-default', name: 'harvester-cluster-1' },
+            nameDisplay: 'Harvester Cluster 1',
+            spec:        { kubernetesVersion: 'v1.24.0+rke2r1' },
+            status:      { provider: { toLowerCase: () => 'harvester' } }
+          },
+          {
+            metadata:    { namespace: 'fleet-default', name: 'harvester-cluster-2' },
+            nameDisplay: 'Harvester Cluster 2',
+            spec:        { kubernetesVersion: 'v1.24.0+rke2r1' },
+            status:      { provider: { toLowerCase: () => 'harvester' } }
+          }
+        ];
+
+        const mockedStoreHarvesterHidden = () => {
+          return {
+            getters: {
+              'i18n/t':       (text: string) => text,
+              'features/get': () => false,
+            },
+          };
+        };
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterHidden() } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        wrapper.vm.allClusters = allClusters;
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.vm.clustersOptions;
+
+        expect(options).toHaveLength(0);
+      });
+
+      it('should handle mixed cluster types when harvester is hidden', async() => {
+        const allClusters = [
+          {
+            metadata:    { namespace: 'fleet-default', name: 'regular-1' },
+            nameDisplay: 'Regular 1',
+            spec:        { kubernetesVersion: '1.25.0' }
+          },
+          {
+            metadata:    { namespace: 'fleet-default', name: 'harvester-1' },
+            nameDisplay: 'Harvester 1',
+            spec:        { kubernetesVersion: 'v1.24.0+rke2r1' },
+            status:      { provider: { toLowerCase: () => 'harvester' } }
+          },
+          {
+            metadata:    { namespace: 'fleet-default', name: 'regular-2' },
+            nameDisplay: 'Regular 2',
+            spec:        { kubernetesVersion: '1.26.0' }
+          }
+        ];
+
+        const mockedStoreHarvesterHidden = () => {
+          return {
+            getters: {
+              'i18n/t':       (text: string) => text,
+              'features/get': () => false,
+            },
+          };
+        };
+
+        const wrapper = mount(FleetClusterTargets, {
+          global: { mocks: { $store: mockedStoreHarvesterHidden() } },
+          props:  {
+            targets:   [],
+            namespace: 'fleet-default',
+            mode:      _EDIT
+          },
+        });
+
+        wrapper.vm.allClusters = allClusters;
+        await wrapper.vm.$nextTick();
+
+        const options = wrapper.vm.clustersOptions;
+
+        expect(options).toHaveLength(2);
+        expect(options[0].value).toBe('regular-1');
+        expect(options[1].value).toBe('regular-2');
+      });
+    });
+  });
 });

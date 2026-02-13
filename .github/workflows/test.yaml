@@ -15,6 +15,10 @@ on:
         type: environment
         required: true
 
+permissions:
+  actions: write
+  contents: read
+
 env:
   TEST_USERNAME: admin
   TEST_PASSWORD: password

@@ -178,13 +178,16 @@ describe('Apps', () => {
         chartsPage.resetAllFilters();
 
         // Wait for charts to load and search for the specific chart
-        cy.get('[data-testid="app-chart-cards-container"]', { timeout: 10000 }).should('be.visible');
+        cy.get('[data-testid="app-chart-cards-container"]', MEDIUM_TIMEOUT_OPT).should('be.visible');
 
         // Search for the chart to ensure it's available
         chartsPage.chartsSearchFilterInput().clear().type('Rancher Backups');
 
         // Wait for search to complete and ensure chart is visible
         chartsPage.getChartByName('Rancher Backups').self().should('be.visible');
+
+        // Wait for search to filter down to only one chart card
+        cy.get('.item-card', MEDIUM_TIMEOUT_OPT).should('have.length', 1);
 
         chartsPage.clickChart('Rancher Backups');
         chartPage.waitForPage();

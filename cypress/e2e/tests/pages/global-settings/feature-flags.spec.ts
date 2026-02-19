@@ -117,12 +117,12 @@ describe('Feature Flags', { testIsolation: 'off' }, () => {
     featureFlagsPage.list().clickRowActionMenuItem('token-hashing', 'Activate');
     featureFlagsPage.clickCardActionButtonAndWait('Activate', 'token-hashing', true);
 
-    // Wait for the UI state to actually change to Active
+    // Check Updated State: should be active
     featureFlagsPage.list().details('token-hashing', 0).should('include.text', 'Active');
 
-    // Check - No actions available after activation (feature cannot be toggled back)
+    // Check - No actions available
     cy.reload();
-    featureFlagsPage.list().getRowActionMenuItem('token-hashing', 'No actions available');
+    featureFlagsPage.list().getRowNoActionMenu('token-hashing');
     featureFlagsPage.list().details('token-hashing', 1).find('i.icon-lock').should('be.visible');
   });
 

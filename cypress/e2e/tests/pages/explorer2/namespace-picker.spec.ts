@@ -58,7 +58,7 @@ describe('Namespace picker', { testIsolation: 'off' }, () => {
     namespacePicker.isChecked('cattle-fleet-system');
     namespacePicker.closeDropdown();
     // Wait for dropdown to close completely before proceeding
-    cy.get('[data-testid="namespaces-filter"]').should('be.visible');
+    namespacePicker.self().should('be.visible');
     namespacePicker.getOptions().should('not.exist');
 
     // Wait for API call to complete and table to update after namespace filter change
@@ -83,7 +83,7 @@ describe('Namespace picker', { testIsolation: 'off' }, () => {
     namespacePicker.isChecked('Project: System');
     namespacePicker.closeDropdown();
     // Wait for dropdown to close completely
-    cy.get('[data-testid="namespaces-filter"]').should('be.visible');
+    namespacePicker.self().should('be.visible');
     namespacePicker.getOptions().should('not.exist');
 
     // Wait for API call to complete and table to update after project filter change
@@ -279,45 +279,7 @@ describe('Namespace picker', { testIsolation: 'off' }, () => {
 
   after('clean up', () => {
     // Use try-catch pattern to handle potential race conditions in namespace filter cleanup
-    cy.getRancherResource('v3', 'users?me=true').then((userResp: Cypress.Response<any>) => {
-      const userId = userResp.body.data[0].id.trim();
-
-      // Try to reset namespace filter, but don't fail the test if it conflicts
-      cy.request({
-        method:           'GET',
-        url:              `${ Cypress.env('api') }/v1/userpreferences/${ userId }`,
-        failOnStatusCode: false
-      }).then((resp: Cypress.Response<any>) => {
-        if (resp.status === 200) {
-          const userPreference = resp.body;
-          const updatedData = {
-            ...userPreference,
-            data: {
-              ...userPreference.data,
-              cluster:         'local',
-              'group-by':      'none',
-              'ns-by-cluster': '{"local":["all://user"]}'
-            }
-          };
-
-          cy.request({
-            method:           'PUT',
-            url:              `${ Cypress.env('api') }/v1/userpreferences/${ userId }`,
-            body:             updatedData,
-            failOnStatusCode: false,
-            timeout:          10000
-          }).then((updateResp: Cypress.Response<any>) => {
-            if (updateResp.status >= 400) {
-              cy.log(`Namespace filter cleanup failed with status ${ updateResp.status }, but continuing with test cleanup`);
-            } else {
-              cy.log('Namespace filter successfully reset during cleanup');
-            }
-          });
-        } else {
-          cy.log('Could not retrieve user preferences for cleanup, but continuing with test cleanup');
-        }
-      });
-    });
+    cy.updateNamespaceFilter('local', 'none', '{"local":["all://user"]}');
 
     if (removeProjectAndNs) {
       // delete project and ns

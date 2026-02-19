@@ -13,7 +13,9 @@ describe('Registries for RKE2', { tags: ['@manager', '@adminUser'] }, () => {
     cy.login();
     cy.createE2EResourceName('cluster').as('clusterName');
     cy.createE2EResourceName('cluster2').as('clusterName2');
+  });
 
+  after(() => {
     // Handle uncaught exceptions during cleanup to prevent test failures
     Cypress.on('uncaught:exception', (err, runnable) => {
       // Allow resource not found errors during cleanup
@@ -23,9 +25,7 @@ describe('Registries for RKE2', { tags: ['@manager', '@adminUser'] }, () => {
 
       return true;
     });
-  });
 
-  after(() => {
     // Clean up clusters with error handling - don't fail on 404s
     clusters.forEach((name) => {
       cy.deleteRancherResource('v1', `provisioning.cattle.io.clusters/fleet-default`, `${ name }`, false);

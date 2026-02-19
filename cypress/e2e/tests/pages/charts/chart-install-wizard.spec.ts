@@ -76,14 +76,14 @@ describe('Charts Wizard', { testIsolation: 'off', tags: ['@charts', '@adminUser'
     const chartPage = new ChartPage();
     const chartName = 'Rancher Backups';
     const customRegistry = 'my.custom.registry:5000';
+    const chartNamespace = 'cattle-resources-system';
+    const chartApp = 'rancher-backup';
+    const chartCrd = 'rancher-backup-crd';
 
     it('should persist custom registry when changing chart version', () => {
       const installedAppsPage = new ChartInstalledAppsListPagePo('local', 'apps');
 
-      const chartNamespace = 'cattle-resources-system';
-      const chartApp = 'rancher-backup';
-      const chartCrd = 'rancher-backup-crd';
-
+      // Trigger uninstall for both charts (these requests will return before uninstall completes)
       cy.createRancherResource('v1', `catalog.cattle.io.apps/${ chartNamespace }/${ chartApp }?action=uninstall`, '{}', false);
       cy.createRancherResource('v1', `catalog.cattle.io.apps/${ chartNamespace }/${ chartCrd }?action=uninstall`, '{}', false);
       cy.updateNamespaceFilter('local', 'none', '{"local":["all://user"]}');
@@ -132,10 +132,6 @@ describe('Charts Wizard', { testIsolation: 'off', tags: ['@charts', '@adminUser'
     });
 
     after('clean up', () => {
-      const chartNamespace = 'cattle-resources-system';
-      const chartApp = 'rancher-backup';
-      const chartCrd = 'rancher-backup-crd';
-
       cy.createRancherResource('v1', `catalog.cattle.io.apps/${ chartNamespace }/${ chartApp }?action=uninstall`, '{}');
       cy.createRancherResource('v1', `catalog.cattle.io.apps/${ chartNamespace }/${ chartCrd }?action=uninstall`, '{}');
       cy.updateNamespaceFilter('local', 'none', '{"local":["all://user"]}');

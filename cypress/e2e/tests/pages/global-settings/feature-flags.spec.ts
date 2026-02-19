@@ -119,6 +119,11 @@ describe('Feature Flags', { testIsolation: 'off' }, () => {
 
     // Wait for the UI state to actually change to Active
     featureFlagsPage.list().details('token-hashing', 0).should('include.text', 'Active');
+
+    // Check - No actions available after activation (feature cannot be toggled back)
+    cy.reload();
+    featureFlagsPage.list().getRowActionMenuItem('token-hashing', 'No actions available');
+    featureFlagsPage.list().details('token-hashing', 1).find('i.icon-lock').should('be.visible');
   });
 
   it('can toggle unsupported-storage-drivers feature flag', { tags: ['@globalSettings', '@adminUser'] }, () => {

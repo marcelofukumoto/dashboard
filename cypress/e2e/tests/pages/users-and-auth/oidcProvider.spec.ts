@@ -136,7 +136,7 @@ describe('Rancher as an OIDC Provider', { testIsolation: 'off', tags: ['@globalS
     oidcClientDetailPage.waitForPage();
 
     // Wait for the secret element to appear before trying to interact with it
-    cy.get('[data-testid="oidc-client-secret-1-copy-full-secret"]', MEDIUM_TIMEOUT_OPT).should('be.visible');
+    oidcClientDetailPage.clientFullSecretCopy(1).checkVisible();
 
     oidcClientDetailPage.clientFullSecretCopy(1).exists();
     oidcClientDetailPage.clientFullSecretCopy(1).copyToClipboard();

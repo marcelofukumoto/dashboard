@@ -214,28 +214,23 @@ export default class SortableTablePo extends ComponentPo {
     });
   }
 
-  /**
-   * For a row with the given name open it's action menu and return the drop down
-   */
   rowActionMenuOpen(name: string, skipNoActionAvailableCheck?: boolean) {
     this.rowWithName(name).actionBtn()
       .click().then((el) => {
         expect(el).to.have.attr('aria-expanded', 'true');
       });
 
-    const actionMenu = this.rowActionMenu();
-
     // Wait for the dropdown menu to appear and be populated with actual content
-    actionMenu.self().should('exist');
+    cy.get('[dropdown-menu-collection]:visible').should('exist');
 
     // Wait for the dropdown to finish loading (not show "No actions available")
     if (!skipNoActionAvailableCheck) {
-      actionMenu.self().should('not.contain', 'No actions available');
+      cy.get('[dropdown-menu-collection]:visible').should('not.contain', 'No actions available');
       // Ensure at least one non-disabled menu item is present
-      actionMenu.self().find('[dropdown-menu-item]:not([disabled])').should('exist');
+      cy.get('[dropdown-menu-collection]:visible [dropdown-menu-item]:not([disabled])').should('exist');
     }
 
-    return actionMenu;
+    return this.rowActionMenu();
   }
 
   rowActionMenuClose(name: string) {

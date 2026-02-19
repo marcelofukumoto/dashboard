@@ -129,16 +129,7 @@ describe('User Retention', { testIsolation: 'off' }, () => {
     it('verify the user account has countdown timers', () => {
       const usersPo = new UsersPo();
 
-      // Disable session management and force complete logout
-      Cypress.session.clearAllSavedSessions();
-      cy.logout();
-
-      // Clear all possible session storage
-      cy.clearCookies();
-      cy.clearLocalStorage();
-      cy.window().then((win) => {
-        win.sessionStorage.clear();
-      });
+      cy.clearAllSessions();
       cy.login();
       usersPo.goTo();
       usersPo.waitForPage();
@@ -172,18 +163,7 @@ describe('User Retention', { testIsolation: 'off' }, () => {
     it('standard user should not have access to user retention page', () => {
       const usersPo = new UsersPo();
 
-      // Disable session management and force complete logout
-      Cypress.session.clearAllSavedSessions();
-      cy.logout();
-
-      // Clear all possible session storage
-      cy.clearCookies();
-      cy.clearLocalStorage();
-      cy.window().then((win) => {
-        win.sessionStorage.clear();
-      });
-
-      // Now login fresh
+      cy.clearAllSessions();
       cy.login();
       usersPo.goTo();
       usersPo.waitForPage();

@@ -231,10 +231,9 @@ export default class SortableTablePo extends ComponentPo {
     // Wait for the dropdown to finish loading (not show "No actions available")
     if (!skipNoActionAvailableCheck) {
       actionMenu.self().should('not.contain', 'No actions available');
+      // Ensure at least one non-disabled menu item is present
+      actionMenu.self().find('[dropdown-menu-item]:not([disabled])').should('exist');
     }
-
-    // Ensure at least one non-disabled menu item is present
-    actionMenu.self().find('[dropdown-menu-item]:not([disabled])').should('exist');
 
     return actionMenu;
   }

@@ -143,14 +143,22 @@ export default class ClusterRepo extends SteveModel {
     return this.metadata?.state?.name === 'active';
   }
 
+  get isSuseAppCollection() {
+    return this.metadata?.annotations?.[CATALOG.SUSE_APP_COLLECTION];
+  }
+
   get typeDisplay() {
+    if (this.isSuseAppCollection) {
+      return 'SUSE AppCo';
+    }
     if ( this.spec.gitRepo ) {
       return 'git';
-    } else if ( this.spec.url ) {
-      return this.isOciType ? 'oci' : 'http';
-    } else {
-      return '?';
     }
+    if ( this.spec.url ) {
+      return this.isOciType ? 'oci' : 'http';
+    }
+
+    return '?';
   }
 
   get nameDisplay() {
@@ -219,5 +227,18 @@ export default class ClusterRepo extends SteveModel {
         id:   operationId
       });
     }, `catalog operation fetch`, timeout, interval);
+  }
+
+  async save() {
+    // Add annotation only if the type is SUSE_APP_COLLECTION
+    if (this.spec.clientSecret?.name?.search('clusterrepo-appco-auth-') === 0) {
+      if (!this.metadata.annotations) {
+        this.metadata.annotations = {};
+      }
+      this.metadata.annotations[CATALOG.SUSE_APP_COLLECTION] = 'true';
+    }
+
+    // Call the parent save method
+    return super.save();
   }
 }

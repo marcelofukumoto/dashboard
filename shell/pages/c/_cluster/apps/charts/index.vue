@@ -14,10 +14,11 @@ import debounce from 'lodash/debounce';
 import { mapGetters } from 'vuex';
 import { SHOW_PRE_RELEASE } from '@shell/store/prefs';
 import { CATALOG } from '@shell/config/labels-annotations';
+import { CATALOG as CATALOG_TYPES, CATALOG_SORT_OPTIONS, CLUSTER_REPO_TYPES } from '@shell/config/types';
+
 import { isUIPlugin } from '@shell/config/uiplugins';
 import { RcItemCard } from '@components/RcItemCard';
 import { get } from '@shell/utils/object';
-import { CATALOG as CATALOG_TYPES, CATALOG_SORT_OPTIONS } from '@shell/config/types';
 import FilterPanel from '@shell/components/FilterPanel';
 import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader';
 import AppChartCardFooter from '@shell/pages/c/_cluster/apps/charts/AppChartCardFooter';
@@ -26,6 +27,7 @@ import StatusLabel from '@shell/pages/c/_cluster/apps/charts/StatusLabel';
 import RichTranslation from '@shell/components/RichTranslation.vue';
 import { getLatestCompatibleVersion } from '@shell/utils/chart';
 import Select from '@shell/components/form/Select';
+import { getVersionData } from '@shell/config/version';
 
 const createInitialFilters = () => ({
   repos:      [],
@@ -130,7 +132,9 @@ export default {
       ],
       initialVisibleChartsCount: 30,
       visibleChartsCount:        20,
-      hasOverflow:               false
+      hasOverflow:               false,
+      getVersionData,
+      CLUSTER_REPO_TYPES,
     };
   },
 
@@ -156,6 +160,13 @@ export default {
         component:      markRaw(AddRepoLink),
         componentProps: { clusterId: this.clusterId }
       });
+
+      return out;
+    },
+
+    suseAppCollectionRepo() {
+      const suseRepos = this.$store.getters['catalog/repos'].filter((r) => r.isSuseAppCollection);
+      const out = suseRepos.map((r) => r.metadata.name);
 
       return out;
     },
@@ -284,7 +295,7 @@ export default {
         pill:   chart.featured ? { label: { key: 'generic.shortFeatured' }, tooltip: { key: 'generic.featured' } } : undefined,
         header: {
           title:    { text: chart.chartNameDisplay },
-          statuses: chart.cardContent.statuses
+          statuses: this.addStatusesToCharts(chart),
         },
         subHeaderItems: chart.cardContent.subHeaderItems,
         image:          { src: chart.latestCompatibleVersion.icon, alt: { text: this.t('catalog.charts.iconAlt', { app: get(chart, 'chartNameDisplay') }) } },
@@ -514,6 +525,16 @@ export default {
         this.observer.observe(sentinel);
         this.observerInitialized = true;
       }
+    },
+
+    addStatusesToCharts(chart) {
+      if (this.suseAppCollectionRepo.includes(chart.repoName)) {
+        return [{
+          icon: 'icon-notify-info', color: 'info', tooltip: { key: 'catalog.charts.isFromSuseAppCoRepository' }
+        }, ...chart.cardContent.statuses];
+      }
+
+      return chart.cardContent.statuses;
     }
   },
 };
@@ -570,6 +591,28 @@ export default {
       color="error"
       :label="err"
     />
+    <Banner
+      v-if="suseAppCollectionRepo && !getVersionData()?.RancherPrime"
+      :key="i"
+      color="info"
+      closable
+    >
+      <RichTranslation
+        k="catalog.charts.appCollectionRepoMissing"
+        tag="div"
+        :raw="true"
+      >
+        <template #repoCreate="{ content }">
+          <router-link
+            :to="{ name: 'c-cluster-product-resource-create', params: { resource: 'catalog.cattle.io.clusterrepo', cluster: $route.params.cluster, product: $store.getters['productId'] }, query: { target: CLUSTER_REPO_TYPES.SUSE_APP_COLLECTION } }"
+            class="secondary-text-link"
+            tabindex="0"
+          >
+            {{ content }}
+          </router-link>
+        </template>
+      </RichTranslation>
+    </Banner>
 
     <div class="wrapper">
       <FilterPanel

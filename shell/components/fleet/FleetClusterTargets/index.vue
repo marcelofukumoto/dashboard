@@ -3,6 +3,7 @@ import { PropType } from 'vue';
 import { isEmpty } from 'lodash';
 import { checkSchemasForFindAllHash } from '@shell/utils/auth';
 import { isHarvesterCluster } from '@shell/utils/cluster';
+import { HARVESTER_CONTAINER } from '@shell/store/features';
 import { FLEET } from '@shell/config/types';
 import FleetUtils from '@shell/utils/fleet';
 import { Expression, Selector, Target, TargetMode } from '@shell/types/fleet';
@@ -28,9 +29,11 @@ interface DataType {
   selectedClusterGroups: string[],
   clusterSelectors: Selector[],
   key: number,
+  areHarvesterHostsVisible: boolean,
 }
 
 const excludeHarvesterRule = FleetUtils.Application.excludeHarvesterRule;
+const includeAllWorkgroupRule = FleetUtils.Application.includeAllWorkgroupRule;
 
 export default {
 
@@ -92,17 +95,23 @@ export default {
 
   data(): DataType {
     return {
-      targetMode:            'all',
-      allClusters:           [],
-      allClusterGroups:      [],
-      selectedClusters:      [],
-      selectedClusterGroups: [],
-      clusterSelectors:      [],
-      key:                   0 // Generates a unique key to handle Targets
+      targetMode:               'all',
+      allClusters:              [],
+      allClusterGroups:         [],
+      selectedClusters:         [],
+      selectedClusterGroups:    [],
+      clusterSelectors:         [],
+      key:                      0, // Generates a unique key to handle Targets
+      /**
+       * Are host harvesters treated as normal clusters... or are they hidden
+       */
+      areHarvesterHostsVisible: false,
     };
   },
 
   mounted() {
+    this.areHarvesterHostsVisible = this.$store.getters['features/get'](HARVESTER_CONTAINER);
+
     this.fromTargets();
 
     if (this.mode === _CREATE) {
@@ -110,7 +119,7 @@ export default {
       this.targetMode = this.created || 'all';
       this.update();
     } else {
-      this.targetMode = FleetUtils.Application.getTargetMode(this.targets || [], this.namespace);
+      this.targetMode = FleetUtils.Application.getTargetMode(this.targets || [], this.namespace, this.areHarvesterHostsVisible);
     }
   },
 
@@ -158,7 +167,7 @@ export default {
 
     clustersOptions() {
       return this.allClusters
-        .filter((x) => x.metadata.namespace === this.namespace && !isHarvesterCluster(x))
+        .filter((x) => x.metadata.namespace === this.namespace && (this.areHarvesterHostsVisible || !isHarvesterCluster(x)))
         .map((x) => ({ label: x.nameDisplay, value: x.metadata.name }));
     },
 
@@ -276,9 +285,14 @@ export default {
 
     toTargets(): Target[] | undefined {
       switch (this.targetMode) {
-      case 'none':
+      case 'none': // No clusters
         return undefined;
-      case 'all':
+      case 'all': // All clusters in workspace
+        if (this.areHarvesterHostsVisible) {
+          // set it to empty to clear any previous and hidden harvester omission
+          return [includeAllWorkgroupRule];
+        }
+
         return [excludeHarvesterRule];
       case 'clusters':
         return this.normalizeTargets(this.selectedClusters, this.clusterSelectors, this.selectedClusterGroups);

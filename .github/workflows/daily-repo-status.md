@@ -24,10 +24,9 @@ tools:
     lockdown: false
 
 safe-outputs:
-  create-discussion:
+  create-issue:
     title-prefix: "[repo-status] "
     labels: [report, daily-status]
-    category: "ideas"
 source: marcelofukumoto/githubnext-agentics/workflows/daily-repo-status.md@ec99708f62ae93414ec456dcc7509ac80f7e5e49
 ---
 

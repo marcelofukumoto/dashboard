@@ -9,6 +9,14 @@ describe('Diagnostics Page', { tags: ['@generic', '@adminUser'] }, () => {
   });
 
   it('User should be able to download the diagnostics package JSON', () => {
+    // Ignore the focus-trap error that fires when the modal closes immediately
+    // after the download is triggered (known cosmetic side-effect of the dialog)
+    cy.on('uncaught:exception', (err) => {
+      if (err.message.includes('focus-trap')) {
+        return false;
+      }
+    });
+
     const diagnosticsPage = new DiagnosticsPagePo();
 
     diagnosticsPage.goTo();

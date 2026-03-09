@@ -96,6 +96,11 @@ class Application {
       mode = 'all';
     }
 
+    // Check if targets contains only includeAllWorkgroupRule after name normalizing
+    if (areHarvesterHostsVisible && isEqual(normalized, [this.includeAllWorkgroupRule])) {
+      mode = 'all';
+    }
+
     return mode;
   }
 }

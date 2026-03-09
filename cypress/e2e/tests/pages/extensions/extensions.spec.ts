@@ -407,6 +407,10 @@ describe('Extensions page', { tags: ['@extensions', '@adminUser'] }, () => {
 
     extensionsPo.extensionTabAvailableClick();
     extensionsPo.waitForPage(null, 'available');
+    extensionsPo.loading().should('not.exist');
+
+    // Wait for the large-extension card to appear before interacting
+    extensionsPo.extensionCard(DISABLED_CACHE_EXTENSION_NAME, { timeout: 30000 }).self().should('be.visible');
 
     // click on install button on card
     extensionsPo.extensionCardInstallClick(DISABLED_CACHE_EXTENSION_NAME);

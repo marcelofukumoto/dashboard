@@ -64,8 +64,7 @@ You're a triage assistant for GitHub issues. Your task is to analyze issue #${{ 
 
    - Choose labels that accurately reflect the issue's nature
    - Be specific but comprehensive
-   - Select priority labels if you can determine urgency (high-priority, med-priority, or low-priority)
-   - Consider platform labels (android, ios) if applicable
+   - Select priority labels if you can determine urgency (`priority/0` for critical, `priority/1` for high, `priority/2` for normal). Only add a priority label if the issue does not already have one — do not override an existing priority label.
    - Search for similar issues, and if you find similar issues consider using a "duplicate" label if appropriate. Only do so if the issue is a duplicate of another OPEN issue.
    - Only select labels from the provided list above
    - It's okay to not add any labels if none are clearly applicable

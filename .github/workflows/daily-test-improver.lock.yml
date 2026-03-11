@@ -31,7 +31,7 @@
 # - Updates a monthly activity summary for maintainer visibility
 # Always thoughtful, quality-focused, and mindful of test maintainability.
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"0e4cb54c2b0aa9f8a18b4453104f4bfbd8d94079f68a95e4edcf550887cc553a","compiler_version":"v0.56.2","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"6a860c5eb069581399dccbd5baadc929bf9872823e343c5f9954aee979067945","compiler_version":"v0.56.2","strict":true}
 
 name: "Daily Test Improver"
 "on":

@@ -27,7 +27,7 @@
 # findings and remediation recommendations. Helps maintain accessibility standards
 # continuously throughout the development cycle.
 #
-# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"005bd5e46e1febe0e4cb0e0f4198c993bcb7161022edfb65838039a93bbcc8da","compiler_version":"v0.56.2","strict":true}
+# gh-aw-metadata: {"schema_version":"v2","frontmatter_hash":"de79f534bb948c72b1eb100075198840c74985ecb5cf6eafd84a56e3d6b0abb3","compiler_version":"v0.56.2","strict":true}
 
 name: "Daily Accessibility Review"
 "on":
@@ -272,7 +272,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Build and run app in background
-        run: "# This step should set up the runtime environment for your app, \n# including installing any necessary dependencies, and it should\n# start your app in the background (e.g., using `&` at the end of the command).\necho \"Building and running the app in background...\""
+        run: "# Spin up Rancher using a head image (includes both the backend and the latest UI)\n# Note: ports 80/443 are reserved by the MCP Gateway, so we map to 8080/8443\ndocker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 \\\n  -e CATTLE_UI_OFFLINE_PREFERRED=true \\\n  -e CATTLE_BOOTSTRAP_PASSWORD=password \\\n  -e CATTLE_PASSWORD_MIN_LENGTH=3 \\\n  -e CATTLE_SERVER_URL=\"https://172.17.0.1:8443\" \\\n  --name rancher \\\n  --privileged \\\n  rancher/rancher:v2.14-head\n\n# Wait for the dashboard UI to be reachable\necho \"Waiting for dashboard UI to be reachable...\"\nfor i in $(seq 1 60); do\n  STATUS=$(curl --silent --head -k https://127.0.0.1:8443/dashboard/ | awk '/^HTTP/{print $2}')\n  echo \"Attempt $i - Status: $STATUS\"\n  if [ \"$STATUS\" = \"200\" ]; then break; fi\n  sleep 5\ndone\nif [ \"$STATUS\" != \"200\" ]; then echo \"Dashboard did not become available\"; exit 1; fi\necho \"Dashboard UI is ready\""
 
       - name: Configure Git credentials
         env:

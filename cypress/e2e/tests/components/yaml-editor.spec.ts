@@ -13,7 +13,9 @@ describe('Yaml Editor', () => {
   beforeEach(() => {
     cy.login();
     cy.viewport(1280, 720);
-    name = `${ name }-${ +new Date() }`; // ensure unique name for each test run to reduce flakiness on retries
+    cy.createE2EResourceName(name).then((uniqueName) => {
+      name = uniqueName;
+    });
 
     // Create a new deployment resource
     deploymentsCreatePage.goTo();

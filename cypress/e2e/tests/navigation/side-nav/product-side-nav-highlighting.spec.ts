@@ -6,7 +6,6 @@ import UsersPo from '@/cypress/e2e/po/pages/users-and-auth/users.po';
 import RolesPo from '@/cypress/e2e/po/pages/users-and-auth/roles.po';
 import ClusterProjectMembersPo from '@/cypress/e2e/po/pages/explorer/cluster-project-members.po';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
-import { MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
 
 Cypress.config();
 describe('Side navigation: Highlighting ', { tags: ['@navigation', '@adminUser'] }, () => {
@@ -51,7 +50,7 @@ describe('Side navigation: Highlighting ', { tags: ['@navigation', '@adminUser']
     productNavPo.activeNavItem().should('equal', 'Charts');
 
     // Wait for charts page to load - check for chart container to appear
-    chartsPage.self().find('[data-testid="app-chart-cards-container"]', MEDIUM_TIMEOUT_OPT).should('be.visible');
+    chartsPage.chartCards().should('be.visible');
 
     // Search for the chart to ensure it's available
     chartsPage.chartsSearchFilterInput().type(CHART.name);

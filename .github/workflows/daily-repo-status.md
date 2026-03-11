@@ -24,11 +24,12 @@ tools:
     lockdown: false
 
 safe-outputs:
+  mentions: false
+  allowed-github-references: []
   create-discussion:
     title-prefix: "[repo-status] "
     labels: [report, daily-status]
-    category: "ideas"
-source: marcelofukumoto/githubnext-agentics/workflows/daily-repo-status.md@ec99708f62ae93414ec456dcc7509ac80f7e5e49
+    close-older-discussions: true
 ---
 
 # Daily Repo Status

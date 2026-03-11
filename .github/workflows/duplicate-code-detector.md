@@ -1,4 +1,4 @@
-    ---
+---
 name: Duplicate Code Detector
 description: Identifies duplicate code patterns across the codebase and suggests refactoring opportunities
 on:
@@ -18,7 +18,6 @@ safe-outputs:
     max: 3
 timeout-minutes: 15
 strict: true
-source: marcelofukumoto/githubnext-agentics/workflows/duplicate-code-detector.md@dc62762d9293dcaf26b270ba1a1f0054bed9cc0d
 ---
 
 # Duplicate Code Detection

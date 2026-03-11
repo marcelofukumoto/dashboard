@@ -41,11 +41,12 @@ steps:
   - name: Build and run app in background
     run: |
       # Spin up Rancher using a head image (includes both the backend and the latest UI)
-      docker run -d --restart=unless-stopped -p 80:80 -p 443:443 \
+      # Note: ports 80/443 are reserved by the MCP Gateway, so we map to 8080/8443
+      docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 \
         -e CATTLE_UI_OFFLINE_PREFERRED=true \
         -e CATTLE_BOOTSTRAP_PASSWORD=password \
         -e CATTLE_PASSWORD_MIN_LENGTH=3 \
-        -e CATTLE_SERVER_URL="https://172.17.0.1" \
+        -e CATTLE_SERVER_URL="https://172.17.0.1:8443" \
         --name rancher \
         --privileged \
         rancher/rancher:v2.14-head
@@ -53,7 +54,7 @@ steps:
       # Wait for the dashboard UI to be reachable
       echo "Waiting for dashboard UI to be reachable..."
       for i in $(seq 1 60); do
-        STATUS=$(curl --silent --head -k https://127.0.0.1/dashboard/ | awk '/^HTTP/{print $2}')
+        STATUS=$(curl --silent --head -k https://127.0.0.1:8443/dashboard/ | awk '/^HTTP/{print $2}')
         echo "Attempt $i - Status: $STATUS"
         if [ "$STATUS" = "200" ]; then break; fi
         sleep 5
@@ -86,7 +87,7 @@ still contains a placeholder, then:
    d. Also instruct them to remove this section from the markdown. 
    e. Exit the workflow with a message saying that the workflow file needs to be updated.
 
-1. Use the Playwright MCP tool to browse to `https://127.0.0.1/dashboard/`. Review the website for accessibility problems by navigating around, clicking
+1. Use the Playwright MCP tool to browse to `https://127.0.0.1:8443/dashboard/`. Review the website for accessibility problems by navigating around, clicking
   links, pressing keys, taking snapshots and/or screenshots to review, etc. using the appropriate Playwright MCP commands.
 
 2. Review the source code of the application to look for accessibility issues in the code.  Use the Grep, LS, Read, etc. tools.

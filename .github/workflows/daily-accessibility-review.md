@@ -15,12 +15,13 @@ permissions: read-all
 network: defaults
 
 safe-outputs:
+  mentions: false
+  allowed-github-references: []
   create-discussion:
     title-prefix: "${{ github.workflow }}"
     category: "q-a"
     max: 5
   add-comment:
-    discussion: true
     max: 5
 
 tools:
@@ -33,14 +34,16 @@ timeout-minutes: 15
 
 steps:
   - name: Checkout repository
-    uses: actions/checkout@v4
+    uses: actions/checkout@v6
+    with:
+      fetch-depth: 0
+      persist-credentials: false
   - name: Build and run app in background
     run: |
       # This step should set up the runtime environment for your app, 
       # including installing any necessary dependencies, and it should
       # start your app in the background (e.g., using `&` at the end of the command).
       echo "Building and running the app in background..."
-source: githubnext/agentics/workflows/daily-accessibility-review.md@69b5e3ae5fa7f35fa555b0a22aee14c36ab57ebb
 ---
 
 # Daily Accessibility Review

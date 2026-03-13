@@ -13,7 +13,7 @@ describe('Yaml Editor', () => {
   beforeEach(() => {
     cy.login();
     cy.viewport(1280, 720);
-    cy.createE2EResourceName(name).then((uniqueName) => {
+    cy.createE2EResourceName('deployment').then((uniqueName) => {
       name = uniqueName;
     });
 

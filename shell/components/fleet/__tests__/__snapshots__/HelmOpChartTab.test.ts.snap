@@ -1,0 +1,116 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`component: HelmOpChartTab should render correctly with sourceType "oci" in mode "create" 1`] = `
+<div>
+  <h2>%fleet.helmOp.source.release.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.release.placeholder%" labelkey="fleet.helmOp.source.release.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="my-release"></labeled-input-stub>
+    </div>
+  </div>
+  <h2>%fleet.helmOp.source.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-select-stub appendtobody="true" clearable="false" disabled="false" required="false" hovertooltip="true" loading="false" localizedlabel="false" optionkey="value" optionlabel="label" reduce="[Function]" selectable="[Function]" options="[object Object],[object Object],[object Object]" closeonselect="true" nooptionslabelkey="labelSelect.noOptions.empty" mode="create" label="%fleet.helmOp.source.selectLabel%" value="oci"></labeled-select-stub>
+    </div>
+  </div>
+  <!--v-if-->
+  <!--v-if-->
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.oci.chart.placeholder%" labelkey="fleet.helmOp.source.oci.chart.label" mode="create" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="https://charts.rancher.io"></labeled-input-stub>
+    </div>
+    <div class="col span-4">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.version.placeholder%" labelkey="fleet.helmOp.source.version.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="1.0.0"></labeled-input-stub>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`component: HelmOpChartTab should render correctly with sourceType "repo" in mode "create" 1`] = `
+<div>
+  <h2>%fleet.helmOp.source.release.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.release.placeholder%" labelkey="fleet.helmOp.source.release.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="my-release"></labeled-input-stub>
+    </div>
+  </div>
+  <h2>%fleet.helmOp.source.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-select-stub appendtobody="true" clearable="false" disabled="false" required="false" hovertooltip="true" loading="false" localizedlabel="false" optionkey="value" optionlabel="label" reduce="[Function]" selectable="[Function]" options="[object Object],[object Object],[object Object]" closeonselect="true" nooptionslabelkey="labelSelect.noOptions.empty" mode="create" label="%fleet.helmOp.source.selectLabel%" value="repo"></labeled-select-stub>
+    </div>
+  </div>
+  <!--v-if-->
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.repo.repo.placeholder%" labelkey="fleet.helmOp.source.repo.repo.label" mode="create" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="https://charts.rancher.io"></labeled-input-stub>
+    </div>
+  </div>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.repo.chart.placeholder%" labelkey="fleet.helmOp.source.repo.chart.label" mode="create" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="rancher"></labeled-input-stub>
+    </div>
+    <div class="col span-4">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.version.placeholder%" labelkey="fleet.helmOp.source.version.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="1.0.0"></labeled-input-stub>
+    </div>
+  </div>
+  <!--v-if-->
+</div>
+`;
+
+exports[`component: HelmOpChartTab should render correctly with sourceType "repo" in mode "view" 1`] = `
+<div>
+  <h2>%fleet.helmOp.source.release.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.release.placeholder%" labelkey="fleet.helmOp.source.release.label" mode="view" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="my-release"></labeled-input-stub>
+    </div>
+  </div>
+  <h2>%fleet.helmOp.source.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-select-stub appendtobody="true" clearable="false" disabled="false" required="false" hovertooltip="true" loading="false" localizedlabel="false" optionkey="value" optionlabel="label" reduce="[Function]" selectable="[Function]" options="[object Object],[object Object],[object Object]" closeonselect="true" nooptionslabelkey="labelSelect.noOptions.empty" mode="view" label="%fleet.helmOp.source.selectLabel%" value="repo"></labeled-select-stub>
+    </div>
+  </div>
+  <!--v-if-->
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.repo.repo.placeholder%" labelkey="fleet.helmOp.source.repo.repo.label" mode="view" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="https://charts.rancher.io"></labeled-input-stub>
+    </div>
+  </div>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.repo.chart.placeholder%" labelkey="fleet.helmOp.source.repo.chart.label" mode="view" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="rancher"></labeled-input-stub>
+    </div>
+    <div class="col span-4">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.version.placeholder%" labelkey="fleet.helmOp.source.version.label" mode="view" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="1.0.0"></labeled-input-stub>
+    </div>
+  </div>
+  <!--v-if-->
+</div>
+`;
+
+exports[`component: HelmOpChartTab should render correctly with sourceType "tarball" in mode "create" 1`] = `
+<div>
+  <h2>%fleet.helmOp.source.release.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.release.placeholder%" labelkey="fleet.helmOp.source.release.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="my-release"></labeled-input-stub>
+    </div>
+  </div>
+  <h2>%fleet.helmOp.source.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-select-stub appendtobody="true" clearable="false" disabled="false" required="false" hovertooltip="true" loading="false" localizedlabel="false" optionkey="value" optionlabel="label" reduce="[Function]" selectable="[Function]" options="[object Object],[object Object],[object Object]" closeonselect="true" nooptionslabelkey="labelSelect.noOptions.empty" mode="create" label="%fleet.helmOp.source.selectLabel%" value="tarball"></labeled-select-stub>
+    </div>
+  </div>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <labeled-input-stub placeholder="%fleet.helmOp.source.tarball.placeholder%" labelkey="fleet.helmOp.source.tarball.label" mode="create" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="rancher"></labeled-input-stub>
+    </div>
+  </div>
+  <!--v-if-->
+  <!--v-if-->
+</div>
+`;

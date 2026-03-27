@@ -239,6 +239,55 @@ describe.each([
   it.todo('test paths and subpaths');
 });
 
+describe('view: fleet.cattle.io.gitrepo, step ready conditions', () => {
+  it('should have stepMetadata always ready', () => {
+    const wrapper = mount(GitRepoComponent, {
+      ...initGitRepo({ mode: _CREATE }),
+      computed: {
+        ...GitRepoComponent.computed,
+        // No steps override — use real computed
+      },
+    });
+
+    const metadataStep = wrapper.vm.steps.find((s: any) => s.name === 'stepMetadata');
+
+    expect(metadataStep!.ready).toBe(true);
+  });
+
+  it('should have stepAdvanced not ready when name is empty', () => {
+    const config = initGitRepo({ mode: _CREATE });
+
+    config.props.value.metadata.name = '';
+
+    const wrapper = mount(GitRepoComponent, {
+      ...config,
+      computed: { ...GitRepoComponent.computed },
+    });
+
+    const advancedStep = wrapper.vm.steps.find((s: any) => s.name === 'stepAdvanced');
+
+    expect(advancedStep!.ready).toBe(false);
+  });
+
+  it('should have stepAdvanced ready when name is set and form is valid', () => {
+    const config = initGitRepo({ mode: _CREATE });
+
+    config.props.value.metadata.name = 'my-repo';
+
+    const wrapper = mount(GitRepoComponent, {
+      ...config,
+      computed: {
+        ...GitRepoComponent.computed,
+        fvFormIsValid: () => true,
+      },
+    });
+
+    const advancedStep = wrapper.vm.steps.find((s: any) => s.name === 'stepAdvanced');
+
+    expect(advancedStep!.ready).toBe(true);
+  });
+});
+
 describe('view: fleet.cattle.io.gitrepo, GitHub password banner - should', () => {
   it('show GitHub password banner when GitHub.com repository and basic auth is selected', async() => {
     const wrapper = mount(GitRepoComponent, initGitRepo({ mode: _CREATE }, { spec: { repo: 'https://github.com/rancher/fleet-examples' } }));

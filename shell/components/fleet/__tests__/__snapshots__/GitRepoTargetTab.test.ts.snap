@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`component: GitRepoTargetTab should render correctly in mode "create" 1`] = `
+<div>
+  <h2>%fleet.gitRepo.target.label%</h2>
+  <fleet-cluster-targets-stub targets="[object Object]" matching="" namespace="fleet-default" mode="create" created=""></fleet-cluster-targets-stub>
+  <h3 class="mmt-16">%fleet.gitRepo.target.additionalOptions%</h3>
+  <div class="row mt-20">
+    <div class="col span-6">
+      <anonymous-stub placeholder="" placeholderkey="fleet.gitRepo.serviceAccount.placeholder" labelkey="fleet.gitRepo.serviceAccount.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value=""></anonymous-stub>
+    </div>
+    <div class="col span-6">
+      <anonymous-stub placeholder="Optional: Require all resources to be in this namespace" placeholderkey="fleet.gitRepo.targetNamespace.placeholder" label="Target Namespace" labelkey="fleet.gitRepo.targetNamespace.label" mode="create" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value=""></anonymous-stub>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`component: GitRepoTargetTab should render correctly in mode "view" 1`] = `
+<div>
+  <h2>%fleet.gitRepo.target.label%</h2>
+  <fleet-cluster-targets-stub targets="[object Object]" matching="" namespace="fleet-default" mode="view" created=""></fleet-cluster-targets-stub>
+  <h3 class="mmt-16">%fleet.gitRepo.target.additionalOptions%</h3>
+  <div class="row mt-20">
+    <div class="col span-6">
+      <anonymous-stub placeholder="" placeholderkey="fleet.gitRepo.serviceAccount.placeholder" labelkey="fleet.gitRepo.serviceAccount.label" mode="view" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value=""></anonymous-stub>
+    </div>
+    <div class="col span-6">
+      <anonymous-stub placeholder="Optional: Require all resources to be in this namespace" placeholderkey="fleet.gitRepo.targetNamespace.placeholder" label="Target Namespace" labelkey="fleet.gitRepo.targetNamespace.label" mode="view" rules="" required="false" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value=""></anonymous-stub>
+    </div>
+  </div>
+</div>
+`;

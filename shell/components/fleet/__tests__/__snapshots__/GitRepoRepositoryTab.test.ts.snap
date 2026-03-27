@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`component: GitRepoRepositoryTab should render correctly in mode "create" 1`] = `
+<div>
+  <h2>%fleet.gitRepo.repo.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <anonymous-stub placeholder="%fleet.gitRepo.repo.placeholder%" labelkey="fleet.gitRepo.repo.label" mode="create" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="https://github.com/rancher/fleet-examples"></anonymous-stub>
+    </div>
+    <div class="col span-6">
+      <input-with-select-stub options="[object Object],[object Object]" disabled="false" searchable="true" taggable="false" selectlabel="%fleet.gitRepo.ref.label%" selectvalue="branch" optionlabel="label" selectbeforetext="true" textlabel="%fleet.gitRepo.ref.branchLabel%" textrequired="true" textdisabled="false" textvalue="master" placeholder="" textrules="" selectrules="" data-testid="gitrepo-branch" mode="create" text-placeholder="%fleet.gitRepo.ref.branchPlaceholder%"></input-with-select-stub>
+    </div>
+  </div>
+  <fleet-git-repo-paths-stub mode="create" value="[object Object]"></fleet-git-repo-paths-stub>
+</div>
+`;
+
+exports[`component: GitRepoRepositoryTab should render correctly in mode "view" 1`] = `
+<div>
+  <h2>%fleet.gitRepo.repo.title%</h2>
+  <div class="row mb-20">
+    <div class="col span-6">
+      <anonymous-stub placeholder="%fleet.gitRepo.repo.placeholder%" labelkey="fleet.gitRepo.repo.label" mode="view" rules="" required="true" disabled="false" requiredirty="true" type="text" hovertooltip="true" ignorepasswordmanagers="false" hidearrows="false" delay="0" class="" arialabel="" value="https://github.com/rancher/fleet-examples"></anonymous-stub>
+    </div>
+    <div class="col span-6">
+      <input-with-select-stub options="[object Object],[object Object]" disabled="false" searchable="true" taggable="false" selectlabel="%fleet.gitRepo.ref.label%" selectvalue="branch" optionlabel="label" selectbeforetext="true" textlabel="%fleet.gitRepo.ref.branchLabel%" textrequired="true" textdisabled="false" textvalue="master" placeholder="" textrules="" selectrules="" data-testid="gitrepo-branch" mode="view" text-placeholder="%fleet.gitRepo.ref.branchPlaceholder%"></input-with-select-stub>
+    </div>
+  </div>
+  <fleet-git-repo-paths-stub mode="view" value="[object Object]"></fleet-git-repo-paths-stub>
+</div>
+`;

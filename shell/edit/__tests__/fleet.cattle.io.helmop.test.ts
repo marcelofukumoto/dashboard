@@ -361,3 +361,50 @@ describe.each([
     });
   }
 });
+
+describe('view: fleet.cattle.io.helmop, step ready conditions', () => {
+  it('should have basics step always ready', () => {
+    const config = initHelmOp({ mode: _CREATE });
+
+    config.props.value.metadata.name = '';
+
+    const wrapper = mount(HelmOpComponent, {
+      ...config,
+      computed: { ...HelmOpComponent.computed },
+    });
+
+    const basicsStep = wrapper.vm.steps.find((s: any) => s.name === 'basics');
+
+    expect(basicsStep!.ready).toBe(true);
+  });
+
+  it('should have advanced step not ready when name is empty', () => {
+    const config = initHelmOp({ mode: _CREATE });
+
+    config.props.value.metadata.name = '';
+
+    const wrapper = mount(HelmOpComponent, {
+      ...config,
+      computed: { ...HelmOpComponent.computed },
+    });
+
+    const advancedStep = wrapper.vm.steps.find((s: any) => s.name === 'advanced');
+
+    expect(advancedStep!.ready).toBe(false);
+  });
+
+  it('should have advanced step ready when name is set', () => {
+    const config = initHelmOp({ mode: _CREATE });
+
+    config.props.value.metadata.name = 'my-helmop';
+
+    const wrapper = mount(HelmOpComponent, {
+      ...config,
+      computed: { ...HelmOpComponent.computed },
+    });
+
+    const advancedStep = wrapper.vm.steps.find((s: any) => s.name === 'advanced');
+
+    expect(advancedStep!.ready).toBe(true);
+  });
+});

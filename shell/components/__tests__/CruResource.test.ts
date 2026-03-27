@@ -3,6 +3,21 @@ import CruResource from '@shell/components/CruResource.vue';
 import { _CREATE, _EDIT, _VIEW, _YAML } from '@shell/config/query-params';
 import TextAreaAutoGrow from '@components/Form/TextArea/TextAreaAutoGrow.vue';
 
+const defaultMocks = {
+  $store: {
+    getters: {
+      currentStore:              () => 'current_store',
+      'current_store/schemaFor': jest.fn(),
+      'current_store/all':       jest.fn(),
+      'i18n/t':                  jest.fn(),
+      'i18n/exists':             jest.fn(),
+    },
+    dispatch: jest.fn(),
+  },
+  $route:  { query: { AS: _YAML } },
+  $router: { applyQuery: jest.fn() },
+};
+
 describe('component: CruResource', () => {
   it('should hide Cancel button', () => {
     const wrapper = mount(CruResource, {
@@ -248,5 +263,120 @@ describe('component: CruResource', () => {
     await textAreaField.trigger('keydown.enter', event);
 
     expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('should render topHeader slot content', () => {
+    const wrapper = mount(CruResource, {
+      props: {
+        canYaml:  false,
+        mode:     _EDIT,
+        resource: {}
+      },
+      slots:  { topHeader: '<div data-testid="top-header-content">Top Header</div>' },
+      global: { mocks: defaultMocks },
+    });
+
+    const topHeader = wrapper.find('[data-testid="top-header-content"]');
+
+    expect(topHeader.exists()).toBe(true);
+    expect(topHeader.text()).toBe('Top Header');
+  });
+
+  it('should render topHeader slot before wizard steps', () => {
+    const wrapper = mount(CruResource, {
+      props: {
+        canYaml:  false,
+        mode:     _CREATE,
+        resource: {},
+        steps:    [{
+          name:  'step1',
+          label: 'Step 1',
+          ready: true,
+        }],
+      },
+      slots: {
+        topHeader: '<div data-testid="top-header-slot">Header Content</div>',
+        step1:     '<div>Step Content</div>',
+      },
+      global: { mocks: defaultMocks },
+    });
+
+    const topHeader = wrapper.find('[data-testid="top-header-slot"]');
+
+    expect(topHeader.exists()).toBe(true);
+  });
+
+  describe('wizard: Create/Finish button disabled state', () => {
+    it('should disable Create button when not all steps are ready', () => {
+      const wrapper = mount(CruResource, {
+        props: {
+          canYaml:          false,
+          mode:             _CREATE,
+          resource:         {},
+          validationPassed: true,
+          steps:            [
+            {
+              name: 'step1', label: 'Step 1', ready: true
+            },
+            {
+              name: 'step2', label: 'Step 2', ready: false
+            },
+          ],
+        },
+        slots: {
+          step1: '<div>Step 1</div>',
+          step2: '<div>Step 2</div>',
+        },
+        global: { mocks: defaultMocks },
+      });
+
+      expect(wrapper.vm.canSave).toBe(false);
+    });
+
+    it('should enable Create button when all steps are ready', () => {
+      const wrapper = mount(CruResource, {
+        props: {
+          canYaml:          false,
+          mode:             _CREATE,
+          resource:         {},
+          validationPassed: true,
+          steps:            [
+            {
+              name: 'step1', label: 'Step 1', ready: true
+            },
+            {
+              name: 'step2', label: 'Step 2', ready: true
+            },
+          ],
+        },
+        slots: {
+          step1: '<div>Step 1</div>',
+          step2: '<div>Step 2</div>',
+        },
+        global: { mocks: defaultMocks },
+      });
+
+      expect(wrapper.vm.canSave).toBe(true);
+    });
+
+    it('should disable Create button when validationPassed is false even if all steps are ready', () => {
+      const wrapper = mount(CruResource, {
+        props: {
+          canYaml:          false,
+          mode:             _CREATE,
+          resource:         {},
+          validationPassed: false,
+          steps:            [
+            {
+              name: 'step1', label: 'Step 1', ready: true
+            },
+          ],
+        },
+        slots:  { step1: '<div>Step 1</div>' },
+        global: { mocks: defaultMocks },
+      });
+
+      expect(wrapper.vm.canSave).toBe(false);
+    });
   });
 });

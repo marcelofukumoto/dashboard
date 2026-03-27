@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`component: GitRepoMetadataTab should render Labels with correct props in mode "create" 1`] = `
+<div>
+  <anonymous-stub mode="create" displaysidebyside="false" defaultcontainerclass="" defaultsectionclass="" labeltitletooltip="" annotationtitletooltip="" showannotations="true" showlabeltitle="true" addicon="icon-plus" value="[object Object]"></anonymous-stub>
+</div>
+`;
+
+exports[`component: GitRepoMetadataTab should render Labels with correct props in mode "view" 1`] = `
+<div>
+  <anonymous-stub mode="view" displaysidebyside="false" defaultcontainerclass="" defaultsectionclass="" labeltitletooltip="" annotationtitletooltip="" showannotations="true" showlabeltitle="true" addicon="icon-plus" value="[object Object]"></anonymous-stub>
+</div>
+`;

@@ -123,7 +123,7 @@ export default {
           label:          this.t('fleet.helmOp.add.steps.metadata.label'),
           subtext:        this.t('fleet.helmOp.add.steps.metadata.subtext'),
           descriptionKey: 'fleet.helmOp.add.steps.metadata.description',
-          ready:          this.isView || !!this.value.metadata.name,
+          ready:          true,
           weight:         1
         },
         {
@@ -159,7 +159,7 @@ export default {
           label:          this.t('fleet.helmOp.add.steps.advanced.label'),
           subtext:        this.t('fleet.helmOp.add.steps.advanced.subtext'),
           descriptionKey: 'fleet.helmOp.add.steps.advanced.description',
-          ready:          true,
+          ready:          !!this.value.metadata.name,
           weight:         1,
         },
       ];
@@ -483,6 +483,15 @@ export default {
     @error="e=>errors = e"
     @finish="save"
   >
+    <template #topHeader>
+      <NameNsDescription
+        :class="{ 'name-description': !isView }"
+        :value="value"
+        :namespaced="false"
+        :mode="mode"
+        @update:value="$emit('input', $event)"
+      />
+    </template>
     <template #basics>
       <HelmOpMetadataTab
         :value="value"
@@ -567,13 +576,6 @@ export default {
       v-if="isView && steps.length === 5"
       #single
     >
-      <NameNsDescription
-        :value="value"
-        :namespaced="false"
-        :mode="mode"
-        @update:value="$emit('input', $event)"
-      />
-
       <Tabbed
         v-if="isView"
         :side-tabs="true"
@@ -684,6 +686,11 @@ export default {
 </template>
 
 <style lang="scss" scoped>
+  .name-description {
+    padding-bottom: 20px;
+    border-bottom: var(--header-border-size) solid var(--header-border);
+  }
+
   .yaml-form-controls {
     display: flex;
     margin-bottom: 15px;

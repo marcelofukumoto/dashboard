@@ -1,5 +1,4 @@
 <script setup>
-import NameNsDescription from '@shell/components/form/NameNsDescription';
 import Labels from '@shell/components/form/Labels';
 
 defineProps({
@@ -17,22 +16,10 @@ defineProps({
   }
 });
 
-const emit = defineEmits(['update:value']);
-
-const updateValue = (value) => {
-  emit('update:value', value);
-};
 </script>
 
 <template>
   <div>
-    <NameNsDescription
-      v-if="!isView"
-      :value="value"
-      :namespaced="false"
-      :mode="mode"
-      @update:value="updateValue"
-    />
     <Labels
       :value="value"
       :mode="mode"

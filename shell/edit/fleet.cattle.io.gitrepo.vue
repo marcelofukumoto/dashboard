@@ -129,7 +129,7 @@ export default {
           label:          this.t('fleet.gitRepo.add.steps.metadata.label'),
           subtext:        this.t('fleet.gitRepo.add.steps.metadata.subtext'),
           descriptionKey: 'fleet.gitRepo.add.steps.metadata.description',
-          ready:          this.isView || !!this.value.metadata.name,
+          ready:          true,
           weight:         1
         },
         {
@@ -156,7 +156,7 @@ export default {
           label:          this.t('fleet.gitRepo.add.steps.advanced.label'),
           subtext:        this.t('fleet.gitRepo.add.steps.advanced.subtext'),
           descriptionKey: 'fleet.gitRepo.add.steps.advanced.description',
-          ready:          !!this.fvFormIsValid,
+          ready:          !!this.fvFormIsValid && !!this.value.metadata.name,
           weight:         1,
         },
       ];
@@ -437,6 +437,15 @@ export default {
     @error="e=>errors = e"
     @finish="save"
   >
+    <template #topHeader>
+      <NameNsDescription
+        :class="{ 'name-description': !isView }"
+        :value="value"
+        :namespaced="false"
+        :mode="mode"
+        @update:value="$emit('input', $event)"
+      />
+    </template>
     <template #stepMetadata>
       <GitRepoMetadataTab
         :value="value"
@@ -505,13 +514,6 @@ export default {
       v-if="isView"
       #single
     >
-      <NameNsDescription
-        :value="value"
-        :namespaced="false"
-        :mode="mode"
-        @update:value="$emit('input', $event)"
-      />
-
       <Tabbed
         v-if="isView && steps.length === 4"
         :side-tabs="true"
@@ -601,6 +603,11 @@ export default {
 </template>
 
 <style lang="scss" scoped>
+  .name-description {
+    padding-bottom: 20px;
+    border-bottom: var(--header-border-size) solid var(--header-border);
+  }
+
   :deep() .input-container .in-input.labeled-select {
     min-width: 110px;
     width: 20%;

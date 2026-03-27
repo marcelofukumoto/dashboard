@@ -1,7 +1,7 @@
 <script lang="ts">
 import { useRouter } from 'vue-router';
 import { computed, ref, watch } from 'vue';
-import { _CONFIG, _GRAPH } from '@shell/config/query-params';
+import { _DETAIL, _GRAPH } from '@shell/config/query-params';
 import ButtonGroup from '@shell/components/ButtonGroup';
 import { useCurrentView } from '@shell/components/Resource/Detail/ViewOptions/composable';
 </script>
@@ -14,8 +14,8 @@ const view = ref(currentView.value);
 const viewOptions = computed(() => {
   return [
     {
-      labelKey: 'resourceDetail.masthead.config',
-      value:    _CONFIG,
+      labelKey: 'resourceDetail.masthead.detail',
+      value:    _DETAIL,
     },
     {
       labelKey: 'resourceDetail.masthead.graph',

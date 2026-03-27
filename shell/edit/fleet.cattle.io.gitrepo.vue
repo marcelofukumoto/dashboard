@@ -439,7 +439,7 @@ export default {
   >
     <template #topHeader>
       <NameNsDescription
-        :class="{ 'name-description': !isView }"
+        :class="{ 'name-description mb-10': !isView }"
         :value="value"
         :namespaced="false"
         :mode="mode"

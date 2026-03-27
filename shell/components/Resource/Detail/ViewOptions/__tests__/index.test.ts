@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils';
 import ViewOptions from '@shell/components/Resource/Detail/ViewOptions/index.vue';
 import ButtonGroup from '@shell/components/ButtonGroup.vue';
-import { _DETAIL, _GRAPH } from '@shell/config/query-params';
+import { _CONFIG, _GRAPH } from '@shell/config/query-params';
 
 const mockPush = jest.fn();
-const mockQuery = { view: _DETAIL };
+const mockQuery = { view: _CONFIG };
 
 jest.mock('vue-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -14,7 +14,7 @@ jest.mock('vue-router', () => ({
 describe('component: ViewOptions/index', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockQuery.view = _DETAIL;
+    mockQuery.view = _CONFIG;
   });
 
   const createWrapper = () => {
@@ -33,7 +33,7 @@ describe('component: ViewOptions/index', () => {
     const options = buttonGroup.props('options');
 
     expect(options).toHaveLength(2);
-    expect(options[0].value).toStrictEqual(_DETAIL);
+    expect(options[0].value).toStrictEqual(_CONFIG);
     expect(options[1].value).toStrictEqual(_GRAPH);
   });
 
@@ -41,7 +41,7 @@ describe('component: ViewOptions/index', () => {
     const wrapper = createWrapper();
     const buttonGroup = wrapper.findComponent(ButtonGroup);
 
-    expect(buttonGroup.props('value')).toStrictEqual(_DETAIL);
+    expect(buttonGroup.props('value')).toStrictEqual(_CONFIG);
   });
 
   it('should push to router when view changes', async() => {

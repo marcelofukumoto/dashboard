@@ -84,18 +84,18 @@ describe('component: Header', () => {
     });
   }
 
-  describe('showWorkspaceSwitcherOnRoute', () => {
-    it('should return true on a list page', () => {
+  describe('disableWorkspaceSwitcher', () => {
+    it('should return false on a list page', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-resource',
         path:   '/c/local/fleet/application/fleet.cattle.io.gitrepo',
         params: { resource: 'fleet.cattle.io.gitrepo' },
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(true);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(false);
     });
 
-    it('should return false on a detail page (route has an id param)', () => {
+    it('should return true on a detail page (route has an id param)', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-resource-namespace-id',
         path:   '/c/local/fleet/application/fleet.cattle.io.gitrepo/fleet-default/my-repo',
@@ -104,27 +104,27 @@ describe('component: Header', () => {
         },
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(false);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(true);
     });
 
-    it('should return false on a create page (route name ends with -create)', () => {
+    it('should return true on a create page (route name ends with -create)', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-resource-create',
         path:   '/c/local/fleet/application/fleet.cattle.io.gitrepo/create',
         params: { resource: 'fleet.cattle.io.gitrepo' },
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(false);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(true);
     });
 
-    it('should return false on the application create page', () => {
+    it('should return true on the application create page', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-create',
         path:   '/c/local/fleet/application/create',
         params: {},
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(false);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(true);
     });
 
     it('should return false on the Workspaces list page', () => {
@@ -134,20 +134,20 @@ describe('component: Header', () => {
         params: { resource: FLEET.WORKSPACE },
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(false);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(false);
     });
 
-    it('should return true on a non-workspace resource list page', () => {
+    it('should return false on a non-workspace resource list page', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-resource',
         path:   '/c/local/fleet/application/fleet.cattle.io.cluster',
         params: { resource: 'fleet.cattle.io.cluster' },
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(true);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(false);
     });
 
-    it('should return false on an edit page (route has an id param)', () => {
+    it('should return true on an edit page (route has an id param)', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-resource-namespace-id',
         path:   '/c/local/fleet/application/fleet.cattle.io.gitrepo/fleet-default/my-repo?mode=edit',
@@ -156,7 +156,7 @@ describe('component: Header', () => {
         },
       });
 
-      expect((wrapper.vm as any).showWorkspaceSwitcherOnRoute).toBe(false);
+      expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(true);
     });
   });
 
@@ -174,7 +174,7 @@ describe('component: Header', () => {
       expect((wrapper.vm as any).showFilter).toBe(true);
     });
 
-    it('should return false when showWorkspaceSwitcher is enabled but route is a detail page', () => {
+    it('should return true when showWorkspaceSwitcher is enabled on a detail page (switcher visible but disabled)', () => {
       const wrapper = createWrapper(
         {
           name:   'c-cluster-fleet-application-resource-namespace-id',
@@ -186,10 +186,10 @@ describe('component: Header', () => {
         { currentProduct: { showWorkspaceSwitcher: true } },
       );
 
-      expect((wrapper.vm as any).showFilter).toBe(false);
+      expect((wrapper.vm as any).showFilter).toBe(true);
     });
 
-    it('should return false when showWorkspaceSwitcher is enabled but route is a create page', () => {
+    it('should return true when showWorkspaceSwitcher is enabled on a create page (switcher visible but disabled)', () => {
       const wrapper = createWrapper(
         {
           name:   'c-cluster-fleet-application-resource-create',
@@ -199,10 +199,10 @@ describe('component: Header', () => {
         { currentProduct: { showWorkspaceSwitcher: true } },
       );
 
-      expect((wrapper.vm as any).showFilter).toBe(false);
+      expect((wrapper.vm as any).showFilter).toBe(true);
     });
 
-    it('should return false when showWorkspaceSwitcher is enabled but route is the Workspaces page', () => {
+    it('should return false when showWorkspaceSwitcher is enabled on the Workspaces page (switcher hidden)', () => {
       const wrapper = createWrapper(
         {
           name:   'c-cluster-fleet-application-resource',

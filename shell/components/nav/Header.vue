@@ -190,34 +190,35 @@ export default {
       // Don't show if the header is in 'simple' mode
       const notSimple = !this.simple;
       // One of these must be enabled, otherwise there's no component to show
-      const showNamespaceFilter = this.currentProduct?.showNamespaceFilter;
-      const showWorkspace = this.currentProduct?.showWorkspaceSwitcher && this.showWorkspaceSwitcherOnRoute;
-      const validFilterSettings = showNamespaceFilter || showWorkspace;
+      const showWorkspace = this.currentProduct?.showWorkspaceSwitcher && !this.isWorkspacesPage;
+      const validFilterSettings = this.currentProduct?.showNamespaceFilter || showWorkspace;
 
       return validClusterOrProduct && notSimple && validFilterSettings;
     },
 
     /**
-     * The workspace switcher should only be visible on list pages and not on the Workspaces page itself.
-     * Detail, edit and create pages should not show it.
+     * Whether the current route is the Workspaces list page.
      */
-    showWorkspaceSwitcherOnRoute() {
-      // Hide on detail/edit pages (route has an id param)
+    isWorkspacesPage() {
+      return this.$route?.params?.resource === FLEET.WORKSPACE;
+    },
+
+    /**
+     * The workspace switcher should be disabled on detail, edit and create pages.
+     * Only list pages should allow changing the workspace.
+     */
+    disableWorkspaceSwitcher() {
+      // Disable on detail/edit pages (route has an id param)
       if (this.$route?.params?.id) {
-        return false;
+        return true;
       }
 
-      // Hide on create pages (route names end with '-create')
+      // Disable on create pages (route names end with '-create')
       if (this.$route?.name?.endsWith('-create')) {
-        return false;
+        return true;
       }
 
-      // Hide on the Workspaces list page
-      if (this.$route?.params?.resource === FLEET.WORKSPACE) {
-        return false;
-      }
-
-      return true;
+      return false;
     },
 
     featureRancherDesktop() {
@@ -581,7 +582,10 @@ export default {
         class="top"
       >
         <NamespaceFilter v-if="clusterReady && currentProduct && (currentProduct.showNamespaceFilter || isExplorer)" />
-        <WorkspaceSwitcher v-else-if="clusterReady && currentProduct && currentProduct.showWorkspaceSwitcher && showWorkspaceSwitcher && showWorkspaceSwitcherOnRoute" />
+        <WorkspaceSwitcher
+          v-else-if="clusterReady && currentProduct && currentProduct.showWorkspaceSwitcher && showWorkspaceSwitcher"
+          :disabled="disableWorkspaceSwitcher"
+        />
       </div>
       <div
         v-if="currentCluster && !simple"

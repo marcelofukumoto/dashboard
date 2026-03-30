@@ -68,8 +68,6 @@ describe('Git Repo', { testIsolation: 'off', tags: ['@fleet', '@adminUser'] }, (
         repo, branch, paths, helmRepoURLRegex
       } = gitRepoCreateRequest.spec;
 
-      headerPo.selectWorkspace(workspace);
-
       // Metadata step
       gitRepoCreatePage.resourceDetail().createEditView().nameNsDescription()
         .name()

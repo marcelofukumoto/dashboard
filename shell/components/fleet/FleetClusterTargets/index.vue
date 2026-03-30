@@ -159,7 +159,7 @@ export default {
     clustersOptions() {
       return this.allClusters
         .filter((x) => x.metadata.namespace === this.namespace && !isHarvesterCluster(x))
-        .map((x) => ({ label: x.nameDisplay, value: x.metadata.name }));
+        .map((x) => ({ label: x.nameDisplay, value: x.nameDisplay }));
     },
 
     clusterGroupsOptions() {

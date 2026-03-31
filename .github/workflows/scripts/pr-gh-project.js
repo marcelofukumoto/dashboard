@@ -1,10 +1,20 @@
 #!/usr/bin/env node
 
+console.log('SCRIPT START');
+
 /**
  * PR workflow to move issues to the appropriate lanes on the Github project board
  */
 
+try {
+  console.log('Loading request module...');
+} catch(e) {
+  console.error('Early error:', e);
+}
+
 const request = require('./request');
+
+console.log('REQUIRE OK');
 
 const TECH_DEBT_LABEL = 'kind/tech-debt';
 const DEV_VALIDATE_LABEL = 'status/dev-validate';
@@ -50,7 +60,15 @@ if (ghProjectId.length !== 2) {
 }
 
 // The event object
-const event = require(process.env.GITHUB_EVENT_PATH);
+console.log('Loading event from:', process.env.GITHUB_EVENT_PATH);
+console.log('CWD:', process.cwd());
+const path = require('path');
+const eventPath = path.resolve(process.cwd(), process.env.GITHUB_EVENT_PATH);
+console.log('Resolved event path:', eventPath);
+const event = require(eventPath);
+console.log('Event action:', event.action);
+console.log('Event PR number:', event.pull_request?.number);
+console.log('Event PR merged:', event.pull_request?.merged);
 
 function getReferencedIssues(body) {
   // https://docs.github.com/en/github/managing-your-work-on-github/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword

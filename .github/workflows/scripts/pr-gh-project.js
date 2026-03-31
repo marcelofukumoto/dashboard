@@ -115,8 +115,9 @@ async function processClosedAction() {
   // Get the Github project data
   const ghProject = await request.ghProject(ghProjectId[0], ghProjectId[1]);
 
-  if (!ghProject || ghProject.errors) {
+  if (!ghProject || ghProject.errors || !ghProject.id) {
     console.log('Error: Can not fetch GitHub Project metadata');
+    console.log(JSON.stringify(ghProject, null, 2));
   
     return; 
   }
@@ -257,8 +258,9 @@ async function processOpenOrEditAction() {
   // Get the Github project data
   const ghProject = await request.ghProject(ghProjectId[0], ghProjectId[1]);
 
-  if (!ghProject || ghProject.errors) {
+  if (!ghProject || ghProject.errors || !ghProject.id) {
     console.log('Error: Can not fetch GitHub Project metadata');
+    console.log(JSON.stringify(ghProject, null, 2));
   
     return; 
   }

@@ -50,8 +50,10 @@ async function ghProject(org, num) {
 
   const prj = {};
 
-  if (res.data?.organization?.projectV2) {
-    const v2Project = res.data?.organization?.projectV2;
+  const v2ProjectData = res.data?.organization?.projectV2 || res.data?.user?.projectV2;
+
+  if (v2ProjectData) {
+    const v2Project = v2ProjectData;
 
     prj.id = v2Project.id;
 

@@ -353,11 +353,18 @@ async function processOpenOrEditAction() {
 // console.log(JSON.stringify(event, null, 2));
 
 // Look at the action
-if (event.action === 'opened' || event.action === 'reopened') {
-  processOpenAction();
-  processOpenOrEditAction();
-} else if (event.action === 'edited') {
-  processOpenOrEditAction();
-} else if (event.action === 'closed') {
-  processClosedAction();
-}
+(async () => {
+  try {
+    if (event.action === 'opened' || event.action === 'reopened') {
+      await processOpenAction();
+      await processOpenOrEditAction();
+    } else if (event.action === 'edited') {
+      await processOpenOrEditAction();
+    } else if (event.action === 'closed') {
+      await processClosedAction();
+    }
+  } catch (e) {
+    console.error('Error running pr-gh-project script:', e);
+    process.exit(1);
+  }
+})();

@@ -30,7 +30,7 @@ jobs:
         github-token: ${{ github.token }}
     - name: script
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
         PR_PROJECT: ${{ secrets.PR_PROJECT }}
         PR_EVENT_PATH: pr-gh-project-event/event.json
       run: node .github/workflows/scripts/pr-gh-project.js

@@ -175,7 +175,7 @@ async function processClosedAction() {
   // GitHub will do the closing, so we expect each issue to already be closed
   // We will fetch each issue in turn, expecting it to be closed
   // We will re-open the issue and label it as ready to test
-  for (const i of fixed) {
+  fixed.forEach(async (i) => {
     const detail = event.repository.url + '/issues/' + i;
     const iss = await request.fetch(detail);
     console.log('')
@@ -235,7 +235,7 @@ async function processClosedAction() {
     }
 
     console.log('');
-  }
+  });
 }
 
 async function processOpenAction() {
@@ -358,18 +358,11 @@ async function processOpenOrEditAction() {
 // console.log(JSON.stringify(event, null, 2));
 
 // Look at the action
-(async () => {
-  try {
-    if (event.action === 'opened' || event.action === 'reopened') {
-      await processOpenAction();
-      await processOpenOrEditAction();
-    } else if (event.action === 'edited') {
-      await processOpenOrEditAction();
-    } else if (event.action === 'closed') {
-      await processClosedAction();
-    }
-  } catch (e) {
-    console.error('Error running pr-gh-project script:', e);
-    process.exit(1);
-  }
-})();
+if (event.action === 'opened' || event.action === 'reopened') {
+  processOpenAction();
+  processOpenOrEditAction();
+} else if (event.action === 'edited') {
+  processOpenOrEditAction();
+} else if (event.action === 'closed') {
+  processClosedAction();
+}

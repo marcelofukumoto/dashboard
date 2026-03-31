@@ -50,6 +50,39 @@ steps:
       # Same as .github/workflows/test.yaml -> yarn e2e:docker -> scripts/e2e-docker-start
       # Ports 80/443 are reserved by the MCP Gateway, so we remap to 8080/8443
       RANCHER_HOST_HTTP_PORT=8080 RANCHER_HOST_HTTPS_PORT=8443 RANCHER_CONTAINER_NAME=rancher RANCHER_VERSION_E2E=head yarn e2e:docker
+  - name: Bootstrap Rancher (first-login setup)
+    run: |
+      # Complete the first-login flow via API so the dashboard is fully usable.
+      # See cypress/jenkins/run.sh rancher_init() for the reference implementation.
+      RANCHER_URL="https://127.0.0.1:8443"
+      BOOTSTRAP_PASSWORD="password"
+
+      echo "Logging in with bootstrap password..."
+      TOKEN=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local?action=login" \
+        -H "Content-Type: application/json" \
+        -d "{\"username\":\"admin\",\"password\":\"${BOOTSTRAP_PASSWORD}\"}" \
+        | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+      echo "Token obtained: ${TOKEN:+yes}"
+
+      echo "Setting server-url..."
+      curl -sk -X PUT "${RANCHER_URL}/v3/settings/server-url" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\":\"server-url\",\"value\":\"${RANCHER_URL}\"}"
+
+      echo "Accepting EULA..."
+      curl -sk -X PUT "${RANCHER_URL}/v3/settings/eula-agreed" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\":\"eula-agreed\",\"value\":\"$(date +%Y-%m-%dT%H:%M:%S.000Z)\"}"
+
+      echo "Marking first-login as complete..."
+      curl -sk -X PUT "${RANCHER_URL}/v3/settings/first-login" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\":\"first-login\",\"value\":\"false\"}"
+
+      echo "Rancher bootstrap complete"
   - name: Pre-create MCP logs directory
     run: |
       # The Playwright MCP container needs write access to the mcp-logs directory.
@@ -73,13 +106,14 @@ additional information about WCAG 2.2.
 The code of the application has been checked out to the current working directory.
 
 Important notes about the runtime environment:
-- The Rancher Dashboard is running at `https://127.0.0.1:8443/dashboard/` (started by a prior workflow step).
+- The Rancher Dashboard is running at `https://127.0.0.1:8443/dashboard/` (started and bootstrapped by prior workflow steps).
+- The admin credentials are: username `admin`, password `password`.
 - You are running inside a sandboxed container. The Docker socket is NOT available, so do NOT run `docker ps`, `docker logs`, or any docker commands — they will fail.
 - If Playwright fails to connect, try waiting a few seconds and retrying. The server uses a self-signed certificate, which is already handled by `--ignore-https-errors`.
 
 Steps:
 
-1. Use the Playwright MCP tool to browse to `https://127.0.0.1:8443/dashboard/`. Review the website for accessibility problems by navigating around, clicking
+1. Use the Playwright MCP tool to browse to `https://127.0.0.1:8443/dashboard/`. If you see a login page, log in with username `admin` and password `password`. Review the website for accessibility problems by navigating around, clicking
   links, pressing keys, taking snapshots and/or screenshots to review, etc. using the appropriate Playwright MCP commands.
 
 2. Review the source code of the application to look for accessibility issues in the code.  Use the Grep, LS, Read, etc. tools.

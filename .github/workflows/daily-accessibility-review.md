@@ -44,7 +44,7 @@ steps:
     with:
       node-version-file: '.nvmrc'
   - name: Install packages
-    run: yarn install --frozen-lockfile
+    run: yarn install --frozen-lockfile --ignore-engines
   - name: Run Rancher
     run: |
       # Same as .github/workflows/test.yaml -> yarn e2e:docker -> scripts/e2e-docker-start

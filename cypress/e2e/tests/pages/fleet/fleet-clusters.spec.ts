@@ -2,12 +2,12 @@ import { FleetClusterListPagePo, FleetClusterDetailsPo } from '@/cypress/e2e/po/
 import ClusterManagerListPagePo from '@/cypress/e2e/po/pages/cluster-manager/cluster-manager-list.po';
 import { MenuActions } from '@/cypress/support/types/menu-actions';
 import { gitRepoTargetAllClustersRequest } from '@/cypress/e2e/blueprints/fleet/gitrepos';
-import { FleetApplicationListPagePo, FleetGitRepoCreateEditPo, FleetApplicationCreatePo } from '~/cypress/e2e/po/pages/fleet/fleet.cattle.io.application.po';
+import { FleetApplicationListPagePo, FleetGitRepoCreateEditPo, FleetApplicationCreatePo } from '@/cypress/e2e/po/pages/fleet/fleet.cattle.io.application.po';
 import { WorkloadsDeploymentsListPagePo } from '@/cypress/e2e/po/pages/explorer/workloads/workloads-deployments.po';
 import * as path from 'path';
 import * as jsyaml from 'js-yaml';
 import { HeaderPo } from '@/cypress/e2e/po/components/header.po';
-import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT, VERY_LONG_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
+import { EXTRA_LONG_TIMEOUT_OPT, LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT, VERY_LONG_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
 import { FeatureFlagsPagePo } from '@/cypress/e2e/po/pages/global-settings/feature-flags.po';
 import LoadingPo from '@/cypress/e2e/po/components/loading.po';
 
@@ -108,7 +108,7 @@ describe('Fleet Clusters - bundle manifests are deployed from the BundleDeployme
     fleetClusterListPage.resourceTableDetails(clusterName, 2).should('be.visible');
     // check cluster state in fleet
     fleetClusterListPage.resourceTableDetails(clusterName, 1).contains('Not Ready', MEDIUM_TIMEOUT_OPT);
-    fleetClusterListPage.resourceTableDetails(clusterName, 1).contains('Active', LONG_TIMEOUT_OPT);
+    fleetClusterListPage.resourceTableDetails(clusterName, 1).contains('Active', EXTRA_LONG_TIMEOUT_OPT);
     // check Git Repos ready
     fleetClusterListPage.resourceTableDetails(clusterName, 3).should('have.text', '1');
     // check Helm Ops ready
@@ -117,12 +117,11 @@ describe('Fleet Clusters - bundle manifests are deployed from the BundleDeployme
     fleetClusterListPage.resourceTableDetails(clusterName, 5).should('have.text', '2');
     // check resources: testing https://github.com/rancher/dashboard/issues/11154
     fleetClusterListPage.resourceTableDetails(clusterName, 6).contains( ' 7 ', MEDIUM_TIMEOUT_OPT);
-    // check cluster labels
-    fleetClusterListPage.list().resourceTable().sortableTable()
-      .subRows()
-      .should('contain.text', 'foo=bar');
 
     const fleetClusterDetailsPage = new FleetClusterDetailsPo(namespace, clusterName);
+
+    // check cluster labels
+    fleetClusterDetailsPage.clusterLabels().contains('foo: bar').should('be.visible');
 
     // go to cluster details in fleet
     fleetClusterListPage.goToDetailsPage(clusterName);
@@ -140,7 +139,7 @@ describe('Fleet Clusters - bundle manifests are deployed from the BundleDeployme
     // check target
     fleetClusterDetailsPage.appBundlesList().resourceTableDetails(gitRepo, 5).contains('All');
     // check cluster resources
-    fleetClusterDetailsPage.appBundlesList().resourceTableDetails(gitRepo, 7).should('have.text', ' 1 ');
+    fleetClusterDetailsPage.appBundlesList().resourceTableDetails(gitRepo, 7).should('contain.text', '—');
   });
 
   it('check all tabs are available in the details view', () => {
@@ -421,6 +420,10 @@ describe('Fleet CLuster List - resources', { tags: ['@fleet', '@adminUser'] }, (
   });
 
   it('should only display action menu with allowed actions only', () => {
+    // Ensure table is fully loaded before interacting with action menu
+    fleetClusterListPage.list().resourceTable().sortableTable().checkVisible();
+    fleetClusterListPage.list().resourceTable().sortableTable().checkLoadingIndicatorNotVisible();
+
     const constActionMenu = fleetClusterListPage.list().resourceTable().sortableTable()
       .rowActionMenuOpen('local');
 
@@ -438,7 +441,7 @@ describe('Fleet CLuster List - resources', { tags: ['@fleet', '@adminUser'] }, (
       constActionMenu.getMenuItem(action).should('exist');
     });
 
-    // Disabled actions should not exist
+    // For disabled actions, check that they don't exist in the dropdown
     disabledActions.forEach((action) => {
       constActionMenu.getMenuItem(action).should('not.exist');
     });

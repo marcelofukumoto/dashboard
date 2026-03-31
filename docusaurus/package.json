@@ -24,7 +24,7 @@
     "prism-react-renderer": "2.4.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "yaml": "2.8.1",
+    "yaml": "2.8.3",
     "docusaurus-plugin-typedoc": "^1.4.2",
     "typedoc": "^0.28.13",
     "typedoc-plugin-markdown": "^4.9.0",
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.8.1",
     "@docusaurus/types": "3.0.0",
-    "vue": "3.5.18",
+    "vue": "3.5.29",
     "vue-router": "4.5.1"
   },
   "browserslist": {

@@ -28,7 +28,7 @@ safe-outputs:
   allowed-github-references: []
   create-discussion:
     title-prefix: "[repo-status] "
-    labels: [report, daily-status]
+    labels: [bot/daily-status]
     close-older-discussions: true
 ---
 

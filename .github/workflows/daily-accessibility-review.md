@@ -50,6 +50,13 @@ steps:
       # Same as .github/workflows/test.yaml -> yarn e2e:docker -> scripts/e2e-docker-start
       # Ports 80/443 are reserved by the MCP Gateway, so we remap to 8080/8443
       RANCHER_HOST_HTTP_PORT=8080 RANCHER_HOST_HTTPS_PORT=8443 RANCHER_CONTAINER_NAME=rancher RANCHER_VERSION_E2E=head yarn e2e:docker
+  - name: Pre-create MCP logs directory
+    run: |
+      # The Playwright MCP container needs write access to the mcp-logs directory.
+      # Pre-create it with world-writable permissions to avoid EACCES errors
+      # when the container process (running as a different UID) tries to write logs.
+      mkdir -p /tmp/gh-aw/mcp-logs/playwright
+      chmod 777 /tmp/gh-aw/mcp-logs/playwright
 ---
 
 # Daily Accessibility Review
@@ -65,16 +72,12 @@ additional information about WCAG 2.2.
 
 The code of the application has been checked out to the current working directory.
 
-Steps:
+Important notes about the runtime environment:
+- The Rancher Dashboard is running at `https://127.0.0.1:8443/dashboard/` (started by a prior workflow step).
+- You are running inside a sandboxed container. The Docker socket is NOT available, so do NOT run `docker ps`, `docker logs`, or any docker commands — they will fail.
+- If Playwright fails to connect, try waiting a few seconds and retrying. The server uses a self-signed certificate, which is already handled by `--ignore-https-errors`.
 
-0. Read the markdown corresponding to the workflow file under `.github/workflows/daily-accessibility-review.md`. 
-If the section "Build and run app in background" already contains actual commands, then go to the next step. If it 
-still contains a placeholder, then:  
-   a. Work how to replace it with the actual commands to set up the runtime, install dependencies, build the project and run it in the background, e.g., using `&` at the end of the command.
-   b. Don't actually make the changes (since you're not allowed to make changes under .github/workflows), but rather create a discussion showing the exact changes that are needed to the workflow file. Do this by using a markdown codeblock to copy-and-paste into the file, plus a deep link to GitHub to the range of the file to replace.
-   c. In the discussion body mention that the user must (1) make these changes manually and (2) then run "gh aw compile" to compile the workflow file using GitHub Agentic Workflows (https://github.com/github/gh-aw).
-   d. Also instruct them to remove this section from the markdown. 
-   e. Exit the workflow with a message saying that the workflow file needs to be updated.
+Steps:
 
 1. Use the Playwright MCP tool to browse to `https://127.0.0.1:8443/dashboard/`. Review the website for accessibility problems by navigating around, clicking
   links, pressing keys, taking snapshots and/or screenshots to review, etc. using the appropriate Playwright MCP commands.

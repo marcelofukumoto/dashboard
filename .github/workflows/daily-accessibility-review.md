@@ -26,6 +26,7 @@ safe-outputs:
 
 tools:
   playwright:
+    args: ["--ignore-https-errors"]
   web-fetch:
   github:
     toolsets: [all]
@@ -36,31 +37,19 @@ steps:
   - name: Checkout repository
     uses: actions/checkout@v6
     with:
-      fetch-depth: 0
+      fetch-depth: 1
       persist-credentials: false
-  - name: Build and run app in background
+  - name: Setup env
+    uses: actions/setup-node@v4
+    with:
+      node-version-file: '.nvmrc'
+  - name: Install packages
+    run: yarn install --frozen-lockfile
+  - name: Run Rancher
     run: |
-      # Spin up Rancher using a head image (includes both the backend and the latest UI)
-      # Note: ports 80/443 are reserved by the MCP Gateway, so we map to 8080/8443
-      docker run -d --restart=unless-stopped -p 8080:80 -p 8443:443 \
-        -e CATTLE_UI_OFFLINE_PREFERRED=true \
-        -e CATTLE_BOOTSTRAP_PASSWORD=password \
-        -e CATTLE_PASSWORD_MIN_LENGTH=3 \
-        -e CATTLE_SERVER_URL="https://172.17.0.1:8443" \
-        --name rancher \
-        --privileged \
-        rancher/rancher:v2.14-head
-
-      # Wait for the dashboard UI to be reachable
-      echo "Waiting for dashboard UI to be reachable..."
-      for i in $(seq 1 60); do
-        STATUS=$(curl --silent --head -k https://127.0.0.1:8443/dashboard/ | awk '/^HTTP/{print $2}')
-        echo "Attempt $i - Status: $STATUS"
-        if [ "$STATUS" = "200" ]; then break; fi
-        sleep 5
-      done
-      if [ "$STATUS" != "200" ]; then echo "Dashboard did not become available"; exit 1; fi
-      echo "Dashboard UI is ready"
+      # Same as .github/workflows/test.yaml -> yarn e2e:docker -> scripts/e2e-docker-start
+      # Ports 80/443 are reserved by the MCP Gateway, so we remap to 8080/8443
+      RANCHER_HOST_HTTP_PORT=8080 RANCHER_HOST_HTTPS_PORT=8443 RANCHER_CONTAINER_NAME=rancher RANCHER_VERSION_E2E=head yarn e2e:docker
 ---
 
 # Daily Accessibility Review

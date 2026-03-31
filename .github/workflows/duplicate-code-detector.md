@@ -12,7 +12,7 @@ safe-outputs:
   create-issue:
     expires: 2d
     title-prefix: "[duplicate-code] "
-    labels: [code-quality, automated-analysis]
+    labels: [bot/duplicate-code-detector]
     assignees: copilot
     group: true
     max: 3

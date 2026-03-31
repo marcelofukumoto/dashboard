@@ -38,7 +38,7 @@
     create-pull-request:
       draft: true
       title-prefix: "[Test Improver] "
-      labels: [automation, testing]
+      labels: [bot/daily-test-improver]
       max: 4
       protected-files: fallback-to-issue
     push-to-pull-request-branch:
@@ -47,7 +47,7 @@
       max: 4
     create-issue:
       title-prefix: "[Test Improver] "
-      labels: [automation, testing]
+      labels: [bot/daily-test-improver]
       max: 4
     update-issue:
       target: "*"

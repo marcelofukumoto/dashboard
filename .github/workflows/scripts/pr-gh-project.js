@@ -169,7 +169,7 @@ async function processClosedAction() {
   // GitHub will do the closing, so we expect each issue to already be closed
   // We will fetch each issue in turn, expecting it to be closed
   // We will re-open the issue and label it as ready to test
-  fixed.forEach(async (i) => {
+  for (const i of fixed) {
     const detail = event.repository.url + '/issues/' + i;
     const iss = await request.fetch(detail);
     console.log('')
@@ -229,7 +229,7 @@ async function processClosedAction() {
     }
 
     console.log('');
-  });
+  }
 }
 
 async function processOpenAction() {

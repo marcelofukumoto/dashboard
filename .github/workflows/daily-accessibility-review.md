@@ -35,12 +35,12 @@ timeout-minutes: 15
 
 steps:
   - name: Checkout repository
-    uses: actions/checkout@v6
+    uses: actions/checkout@v6.0.2
     with:
       fetch-depth: 1
       persist-credentials: false
   - name: Setup env
-    uses: actions/setup-node@v4
+    uses: actions/setup-node@v6.3.0
     with:
       node-version-file: '.nvmrc'
   - name: Install packages

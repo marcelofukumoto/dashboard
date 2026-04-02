@@ -299,6 +299,7 @@ const onVersionSelect = (val) => {
       :value="value"
       :namespaced="false"
       :mode="mode"
+      :name-label="'fleet.helmOp.appCoConfig.name'"
       data-testid="appco-config-name-ns-description"
       @update:value="emit('update:value', $event)"
     />

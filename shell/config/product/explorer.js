@@ -100,6 +100,7 @@ export function init(store) {
     CONFIG_MAP
   ], 'storage');
   basicType([
+    'workload-dashboard',
     WORKLOAD,
     WORKLOAD_TYPES.DEPLOYMENT,
     WORKLOAD_TYPES.DAEMON_SET,
@@ -108,10 +109,6 @@ export function init(store) {
     WORKLOAD_TYPES.CRON_JOB,
     POD,
   ], 'workload');
-
-  setGroupDefaultType('workload', () => {
-    return store.getters['features/get'](STEVE_CACHE) ? WORKLOAD_TYPES.DEPLOYMENT : undefined;
-  });
 
   weightGroup('cluster', 99, true);
   weightGroup('workload', 98, true);
@@ -565,6 +562,20 @@ export function init(store) {
     route:      { name: 'c-cluster-explorer' },
     exact:      true,
     overview:   true,
+  });
+
+  // Workload Dashboard - overview page using the Resource Summary API
+  virtualType({
+    label:          store.getters['i18n/t'](`typeLabel.${ WORKLOAD }`, { count: 2 }),
+    group:          'Root',
+    namespaced:     true,
+    name:           'workload-dashboard',
+    weight:         100,
+    icon:           'folder',
+    ifHaveSubTypes: Object.values(WORKLOAD_TYPES),
+    route:          { name: 'c-cluster-explorer-workload-dashboard' },
+    exact:          true,
+    overview:       true,
   });
 
   virtualType({

@@ -147,7 +147,7 @@ export default {
     ...mapGetters(['workspace']),
 
     steps() {
-      return !this.isSuseAppCollection ? [
+      return !this.isSuseAppCollection || this.isView ? [
         {
           name:           'basics',
           title:          this.t('fleet.helmOp.add.steps.metadata.title'),
@@ -1006,7 +1006,7 @@ export default {
     </template>
 
     <template
-      v-if="isView && steps.length >= 5"
+      v-if="isView"
       #single
     >
       <NameNsDescription

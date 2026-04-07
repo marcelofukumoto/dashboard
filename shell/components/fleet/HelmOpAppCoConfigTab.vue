@@ -237,78 +237,80 @@ const appCoLockedSecrets = computed(() => {
 
 <template>
   <div class="appco-config-tab">
-    <!-- Chart header -->
-    <div
-      v-if="selectedChartName"
-      class="chart-header"
-      data-testid="appco-config-chart-header"
-    >
-      <div class="chart-header-icon">
-        <LazyImage
-          v-if="chartIcon"
-          :src="chartIcon"
-          class="chart-icon"
-        />
-        <div
-          v-else
-          class="chart-icon-placeholder"
-        >
-          <i class="icon icon-helm" />
+    <div class="appco-main-section">
+      <!-- Chart header -->
+      <div
+        v-if="selectedChartName"
+        class="chart-header"
+        data-testid="appco-config-chart-header"
+      >
+        <div class="chart-header-icon">
+          <LazyImage
+            v-if="chartIcon"
+            :src="chartIcon"
+            class="chart-icon"
+          />
+          <div
+            v-else
+            class="chart-icon-placeholder"
+          >
+            <i class="icon icon-helm" />
+          </div>
+        </div>
+        <div class="chart-header-info">
+          <h3 class="chart-header-title">
+            {{ selectedChartName }}
+          </h3>
+          <AppChartCardSubHeader :items="chartSubHeaderItems" />
         </div>
       </div>
-      <div class="chart-header-info">
-        <h3 class="chart-header-title mb-0">
-          {{ selectedChartName }}
-        </h3>
-        <AppChartCardSubHeader :items="chartSubHeaderItems" />
-      </div>
-    </div>
 
-    <!-- Chart version -->
-    <div class="row mb-20">
-      <div class="col span-6">
-        <LabeledSelect
-          :value="selectedVersion"
-          :options="versionOptions"
-          :loading="appCoChartsLoading"
+      <!-- Chart version -->
+      <div class="appco-main-content">
+        <div class="col span-6">
+          <LabeledSelect
+            :value="selectedVersion"
+            :options="versionOptions"
+            :loading="appCoChartsLoading"
+            :mode="mode"
+            :label="t('fleet.helmOp.appCoConfig.chartVersion')"
+            :searchable="true"
+            option-key="value"
+            data-testid="appco-config-version-select"
+            @update:value="onVersionSelect"
+          >
+            <template #option="opt">
+              <div class="version-option">
+                <span>{{ opt.label }}</span>
+                <span
+                  v-if="opt.date"
+                  class="version-option-date"
+                >{{ opt.date }}</span>
+              </div>
+            </template>
+            <template #selected-option="opt">
+              <div class="version-option">
+                <span>{{ opt.label }}</span>
+                <span
+                  v-if="opt.date"
+                  class="version-option-date"
+                >{{ opt.date }}</span>
+              </div>
+            </template>
+          </LabeledSelect>
+        </div>
+        <!-- Name and Description -->
+        <NameNsDescription
+          :value="value"
+          :namespaced="false"
           :mode="mode"
-          :label="t('fleet.helmOp.appCoConfig.chartVersion')"
-          :searchable="true"
-          option-key="value"
-          data-testid="appco-config-version-select"
-          @update:value="onVersionSelect"
-        >
-          <template #option="opt">
-            <div class="version-option">
-              <span>{{ opt.label }}</span>
-              <span
-                v-if="opt.date"
-                class="version-option-date"
-              >{{ opt.date }}</span>
-            </div>
-          </template>
-          <template #selected-option="opt">
-            <div class="version-option">
-              <span>{{ opt.label }}</span>
-              <span
-                v-if="opt.date"
-                class="version-option-date"
-              >{{ opt.date }}</span>
-            </div>
-          </template>
-        </LabeledSelect>
+          :no-margin-bottom="true"
+          :name-label="'fleet.helmOp.appCoConfig.name'"
+          data-testid="appco-config-name-ns-description"
+          @update:value="emit('update:value', $event)"
+        />
       </div>
     </div>
-
-    <!-- Name and Description -->
-    <NameNsDescription
-      :value="value"
-      :namespaced="false"
-      :mode="mode"
-      :name-label="'fleet.helmOp.appCoConfig.name'"
-      data-testid="appco-config-name-ns-description"
-      @update:value="emit('update:value', $event)"
-    />
 
     <!-- Deploy To -->
     <HelmOpTargetTab
@@ -341,6 +343,39 @@ const appCoLockedSecrets = computed(() => {
           />
         </div>
       </div>
+      <RcSection
+        :title="t('fleet.helmOp.resources.label')"
+        mode="with-header"
+        type="secondary"
+        expandable
+        :expanded="false"
+        data-testid="appco-config-resources"
+      >
+        <HelmOpResourcesSection
+          :value="value"
+          :mode="mode"
+          :correct-drift-enabled="correctDriftEnabled"
+          :downstream-secrets-list="downstreamSecretsList"
+          :downstream-config-maps-list="downstreamConfigMapsList"
+          :locked-secrets="appCoLockedSecrets"
+          @update:correct-drift="$emit('update:correct-drift', $event)"
+          @update:downstream-resources="$emit('update:downstream-resources', $event)"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('fleet.helmOp.target.targetAdditionalOptions')"
+        mode="with-header"
+        type="secondary"
+        expandable
+        :expanded="false"
+        data-testid="appco-config-target-options"
+      >
+        <HelmOpTargetOptionsSection
+          :value="value"
+          :mode="mode"
+          :stacked="true"
+        />
+      </RcSection>
       <RcSection
         :title="t('generic.labelsAndAnnotations', {}, true)"
         mode="with-header"
@@ -383,38 +418,6 @@ const appCoLockedSecrets = computed(() => {
           @update:diff-mode="$emit('update:diff-mode', $event)"
         />
       </RcSection>
-      <RcSection
-        :title="t('fleet.helmOp.target.targetAdditionalOptions')"
-        mode="with-header"
-        type="secondary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-target-options"
-      >
-        <HelmOpTargetOptionsSection
-          :value="value"
-          :mode="mode"
-        />
-      </RcSection>
-      <RcSection
-        :title="t('fleet.helmOp.resources.label')"
-        mode="with-header"
-        type="secondary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-resources"
-      >
-        <HelmOpResourcesSection
-          :value="value"
-          :mode="mode"
-          :correct-drift-enabled="correctDriftEnabled"
-          :downstream-secrets-list="downstreamSecretsList"
-          :downstream-config-maps-list="downstreamConfigMapsList"
-          :locked-secrets="appCoLockedSecrets"
-          @update:correct-drift="$emit('update:correct-drift', $event)"
-          @update:downstream-resources="$emit('update:downstream-resources', $event)"
-        />
-      </RcSection>
     </RcSection>
   </div>
 </template>
@@ -423,22 +426,34 @@ const appCoLockedSecrets = computed(() => {
 .appco-config-tab {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 32px;
+}
+
+.appco-main-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.appco-main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .chart-header {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 10px 0;
+  gap: 24px;
+  height: 50px;
 }
 
 .chart-header-icon {
   flex-shrink: 0;
 
   .chart-icon {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     object-fit: contain;
   }
 
@@ -465,8 +480,9 @@ const appCoLockedSecrets = computed(() => {
 }
 
 .chart-header-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
+  line-height: 24px;
 }
 
 .version-option {

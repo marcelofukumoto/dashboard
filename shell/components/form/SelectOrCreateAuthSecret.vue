@@ -188,6 +188,11 @@ export default {
       default: '',
     },
 
+    noMarginTop: {
+      type:    Boolean,
+      default: false,
+    },
+
     /**
      * Specific property to change labels if it is Github.com repository
      */
@@ -704,8 +709,7 @@ export default {
     class="select-or-create-auth-secret"
   >
     <div
-      class="mt-20"
-      :class="{'row': !vertical}"
+      :class="[{ 'mt-20': !noMarginTop, 'row': !vertical }]"
     >
       <div :class="firstCol">
         <LabeledSelect

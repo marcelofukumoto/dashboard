@@ -301,74 +301,77 @@ export default {
 
 <template>
   <div class="appco-selection-tab">
-    <div class="auth-section">
-      <SelectOrCreateAuthSecret
-        :value="value.spec.helmSecretName"
-        :namespace="value.metadata.namespace"
-        :limit-to-namespace="true"
-        :delegate-create-to-parent="true"
-        :register-before-hook="registerBeforeHook"
-        in-store="management"
-        :mode="mode"
-        :generate-name="FLEET_APPCO_AUTH_GENERATE_NAME"
-        label-key="fleet.helmOp.auth.appco"
-        :fixed-http-basic-auth="true"
-        :filter-basic-auth="FLEET_APPCO_AUTH_GENERATE_NAME"
-        :allow-none="false"
-        :pre-select="preSelectValue"
-        :cache-secrets="true"
-        @update:value="updateAuth($event, 'helmSecretName')"
-        @inputauthval="updateCachedAuthVal($event, 'helmSecretName')"
-      />
-
-      <div
-        v-if="!isExistingSecretSelected"
-        class="mt-10"
-      >
-        <Banner
-          v-for="(err, i) in createErrors"
-          :key="i"
-          color="error"
-          :label="err"
+    <div class="gap-16">
+      <div class="auth-section">
+        <SelectOrCreateAuthSecret
+          :value="value.spec.helmSecretName"
+          :namespace="value.metadata.namespace"
+          :limit-to-namespace="true"
+          :delegate-create-to-parent="true"
+          :register-before-hook="registerBeforeHook"
+          in-store="management"
+          :mode="mode"
+          :generate-name="FLEET_APPCO_AUTH_GENERATE_NAME"
+          label-key="fleet.helmOp.auth.appco"
+          :fixed-http-basic-auth="true"
+          :filter-basic-auth="FLEET_APPCO_AUTH_GENERATE_NAME"
+          :allow-none="false"
+          :pre-select="preSelectValue"
+          :cache-secrets="true"
+          :no-margin-top="true"
+          @update:value="updateAuth($event, 'helmSecretName')"
+          @inputauthval="updateCachedAuthVal($event, 'helmSecretName')"
         />
-        <RcButton
-          :disabled="!hasCredentials"
-          variant="secondary"
-          @click="saveSecret"
-        >
-          {{ t('asyncButton.createAppCoAuth.action') }}
-        </RcButton>
-      </div>
 
-      <div
-        v-if="isExistingSecretSelected"
-        class="mt-10"
-      >
-        <span
-          v-clean-tooltip="isAlreadyDefault ? t('fleet.helmOp.auth.alreadyDefault') : null"
-          class="set-default-wrapper"
+        <div
+          v-if="!isExistingSecretSelected"
+          class="mt-10"
         >
+          <Banner
+            v-for="(err, i) in createErrors"
+            :key="i"
+            color="error"
+            :label="err"
+          />
           <RcButton
-            :class="{ 'no-pointer': isAlreadyDefault }"
+            :disabled="!hasCredentials"
             variant="secondary"
-            :disabled="isAlreadyDefault"
-            @click="saveAsDefault"
+            @click="saveSecret"
           >
-            {{ t('asyncButton.setAppCoDefault.action') }}
+            {{ t('asyncButton.createAppCoAuth.action') }}
           </RcButton>
-        </span>
-      </div>
-    </div>
+        </div>
 
-    <div class="search-section">
-      <div class="search-input">
-        <input
-          v-model="searchQuery"
-          type="text"
-          :placeholder="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
-          data-testid="appco-selection-chart-search"
+        <div
+          v-if="isExistingSecretSelected"
+          class="mt-10"
         >
-        <i class="icon icon-search" />
+          <span
+            v-clean-tooltip="isAlreadyDefault ? t('fleet.helmOp.auth.alreadyDefault') : null"
+            class="set-default-wrapper"
+          >
+            <RcButton
+              :class="{ 'no-pointer': isAlreadyDefault }"
+              variant="secondary"
+              :disabled="isAlreadyDefault"
+              @click="saveAsDefault"
+            >
+              {{ t('asyncButton.setAppCoDefault.action') }}
+            </RcButton>
+          </span>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <div class="search-input">
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
+            data-testid="appco-selection-chart-search"
+          >
+          <i class="icon icon-search" />
+        </div>
       </div>
     </div>
 
@@ -378,15 +381,6 @@ export default {
     />
 
     <template v-else-if="hasCharts">
-      <div class="total-and-sort">
-        <p
-          class="total-message"
-          data-testid="appco-selection-charts-total"
-        >
-          {{ totalMessage }}
-        </p>
-      </div>
-
       <div
         class="chart-cards"
         data-testid="appco-selection-chart-cards"
@@ -437,15 +431,13 @@ export default {
 .appco-selection-tab {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 24px;
 }
 
-.auth-section {
-  margin-bottom: 5px;
-
-  :deep(.select-or-create-auth-secret > .mt-20) {
-    margin-top: 0 !important;
-  }
+.gap-16 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .search-section {
@@ -465,19 +457,6 @@ export default {
       right: 16px;
       font-size: 16px;
     }
-  }
-}
-
-.total-and-sort {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 0;
-
-  .total-message {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--body-text);
   }
 }
 

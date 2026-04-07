@@ -38,6 +38,7 @@ defineProps<{
   flex-wrap: wrap;
   gap: var(--gap) var(--gap-md);
   color: var(--link-text-secondary);
+  height: 22px;
   margin-bottom: 8px;
 
   &-item {

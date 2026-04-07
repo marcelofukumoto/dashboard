@@ -301,7 +301,7 @@ export default {
 
 <template>
   <div class="appco-selection-tab">
-    <div class="gap-16">
+    <div class="gap-24">
       <div class="auth-section">
         <SelectOrCreateAuthSecret
           :value="value.spec.helmSecretName"
@@ -362,67 +362,69 @@ export default {
         </div>
       </div>
 
-      <div class="search-section">
-        <div class="search-input">
-          <input
-            v-model="searchQuery"
-            type="text"
-            :placeholder="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
-            data-testid="appco-selection-chart-search"
+      <div class="charts-section">
+        <div class="search-section">
+          <div class="search-input">
+            <input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
+              data-testid="appco-selection-chart-search"
+            >
+            <i class="icon icon-search" />
+          </div>
+        </div>
+
+        <Loading
+          v-if="appCoChartsLoading"
+          mode="relative"
+        />
+
+        <template v-else-if="hasCharts">
+          <div
+            class="chart-cards"
+            data-testid="appco-selection-chart-cards"
           >
-          <i class="icon icon-search" />
+            <rc-item-card
+              v-for="card in chartCards"
+              :id="card.id"
+              :key="card.id"
+              :header="card.header"
+              :image="card.image"
+              :content="card.content"
+              :value="card.rawChart"
+              variant="medium"
+              :clickable="true"
+              :selected="value.spec.helm.chart === card.id"
+              data-testid="appco-selection-chart-card"
+              @card-click="selectChart"
+              @dblclick="selectChartAndNext(card.rawChart)"
+            >
+              <template #item-card-sub-header>
+                <AppChartCardSubHeader :items="card.subHeaderItems" />
+              </template>
+            </rc-item-card>
+          </div>
+        </template>
+
+        <div
+          v-else-if="showAuthPrompt"
+          class="charts-empty"
+        >
+          <p data-testid="appco-selection-auth-prompt">
+            {{ t('fleet.helmOp.add.steps.selection.authPrompt') }}
+          </p>
+        </div>
+
+        <div
+          v-else-if="!appCoChartsLoading && isExistingSecretSelected && !hasCharts"
+          class="charts-empty"
+        >
+          <p data-testid="appco-selection-no-charts">
+            {{ t('fleet.helmOp.add.steps.selection.noCharts') }}
+          </p>
         </div>
       </div>
-    </div>
-
-    <Loading
-      v-if="appCoChartsLoading"
-      mode="relative"
-    />
-
-    <template v-else-if="hasCharts">
-      <div
-        class="chart-cards"
-        data-testid="appco-selection-chart-cards"
-      >
-        <rc-item-card
-          v-for="card in chartCards"
-          :id="card.id"
-          :key="card.id"
-          :header="card.header"
-          :image="card.image"
-          :content="card.content"
-          :value="card.rawChart"
-          variant="medium"
-          :clickable="true"
-          :selected="value.spec.helm.chart === card.id"
-          data-testid="appco-selection-chart-card"
-          @card-click="selectChart"
-          @dblclick="selectChartAndNext(card.rawChart)"
-        >
-          <template #item-card-sub-header>
-            <AppChartCardSubHeader :items="card.subHeaderItems" />
-          </template>
-        </rc-item-card>
-      </div>
-    </template>
-
-    <div
-      v-else-if="showAuthPrompt"
-      class="charts-empty"
-    >
-      <p data-testid="appco-selection-auth-prompt">
-        {{ t('fleet.helmOp.add.steps.selection.authPrompt') }}
-      </p>
-    </div>
-
-    <div
-      v-else-if="!appCoChartsLoading && isExistingSecretSelected && !hasCharts"
-      class="charts-empty"
-    >
-      <p data-testid="appco-selection-no-charts">
-        {{ t('fleet.helmOp.add.steps.selection.noCharts') }}
-      </p>
     </div>
   </div>
 </template>
@@ -431,10 +433,15 @@ export default {
 .appco-selection-tab {
   display: flex;
   flex-direction: column;
+}
+
+.gap-24 {
+  display: flex;
+  flex-direction: column;
   gap: 24px;
 }
 
-.gap-16 {
+.charts-section {
   display: flex;
   flex-direction: column;
   gap: 16px;

@@ -333,91 +333,93 @@ const appCoLockedSecrets = computed(() => {
       :expanded="false"
       data-testid="appco-config-advanced"
     >
-      <div class="row">
-        <div class="col span-6">
-          <LabeledInput
-            v-model:value="value.spec.helm.releaseName"
-            :mode="mode"
-            :label-key="'fleet.helmOp.source.release.fullLabel'"
-            :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
-          />
+      <div class="content-group">
+        <div class="row">
+          <div class="col span-6">
+            <LabeledInput
+              v-model:value="value.spec.helm.releaseName"
+              :mode="mode"
+              :label-key="'fleet.helmOp.source.release.fullLabel'"
+              :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
+            />
+          </div>
         </div>
+        <RcSection
+          :title="t('fleet.helmOp.resources.label')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="false"
+          data-testid="appco-config-resources"
+        >
+          <HelmOpResourcesSection
+            :value="value"
+            :mode="mode"
+            :correct-drift-enabled="correctDriftEnabled"
+            :downstream-secrets-list="downstreamSecretsList"
+            :downstream-config-maps-list="downstreamConfigMapsList"
+            :locked-secrets="appCoLockedSecrets"
+            @update:correct-drift="$emit('update:correct-drift', $event)"
+            @update:downstream-resources="$emit('update:downstream-resources', $event)"
+          />
+        </RcSection>
+        <RcSection
+          :title="t('fleet.helmOp.target.targetAdditionalOptions')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="false"
+          data-testid="appco-config-target-options"
+        >
+          <HelmOpTargetOptionsSection
+            :value="value"
+            :mode="mode"
+            :stacked="true"
+          />
+        </RcSection>
+        <RcSection
+          :title="t('generic.labelsAndAnnotations', {}, true)"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="false"
+          data-testid="appco-config-labels"
+        >
+          <Labels
+            :value="value"
+            :mode="mode"
+            :display-side-by-side="false"
+            :add-icon="'icon-plus'"
+          />
+        </RcSection>
+        <RcSection
+          :title="t('fleet.helmOp.values.title')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="false"
+          data-testid="appco-config-values"
+        >
+          <HelmOpValuesTab
+            :value="value"
+            :mode="mode"
+            :real-mode="realMode"
+            :is-view="isView"
+            :chart-values="chartValues"
+            :chart-values-init="chartValuesInit"
+            :yaml-form="yamlForm"
+            :yaml-form-options="yamlFormOptions"
+            :yaml-diff-mode-options="yamlDiffModeOptions"
+            :is-yaml-diff="isYamlDiff"
+            :editor-mode="editorMode"
+            :diff-mode="diffMode"
+            :is-real-mode-edit="isRealModeEdit"
+            @update:yaml-form="$emit('update:yaml-form', $event)"
+            @update:chart-values="$emit('update:chart-values', $event)"
+            @update:diff-mode="$emit('update:diff-mode', $event)"
+          />
+        </RcSection>
       </div>
-      <RcSection
-        :title="t('fleet.helmOp.resources.label')"
-        mode="with-header"
-        type="secondary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-resources"
-      >
-        <HelmOpResourcesSection
-          :value="value"
-          :mode="mode"
-          :correct-drift-enabled="correctDriftEnabled"
-          :downstream-secrets-list="downstreamSecretsList"
-          :downstream-config-maps-list="downstreamConfigMapsList"
-          :locked-secrets="appCoLockedSecrets"
-          @update:correct-drift="$emit('update:correct-drift', $event)"
-          @update:downstream-resources="$emit('update:downstream-resources', $event)"
-        />
-      </RcSection>
-      <RcSection
-        :title="t('fleet.helmOp.target.targetAdditionalOptions')"
-        mode="with-header"
-        type="secondary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-target-options"
-      >
-        <HelmOpTargetOptionsSection
-          :value="value"
-          :mode="mode"
-          :stacked="true"
-        />
-      </RcSection>
-      <RcSection
-        :title="t('generic.labelsAndAnnotations', {}, true)"
-        mode="with-header"
-        type="secondary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-labels"
-      >
-        <Labels
-          :value="value"
-          :mode="mode"
-          :display-side-by-side="false"
-          :add-icon="'icon-plus'"
-        />
-      </RcSection>
-      <RcSection
-        :title="t('fleet.helmOp.values.title')"
-        mode="with-header"
-        type="secondary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-values"
-      >
-        <HelmOpValuesTab
-          :value="value"
-          :mode="mode"
-          :real-mode="realMode"
-          :is-view="isView"
-          :chart-values="chartValues"
-          :chart-values-init="chartValuesInit"
-          :yaml-form="yamlForm"
-          :yaml-form-options="yamlFormOptions"
-          :yaml-diff-mode-options="yamlDiffModeOptions"
-          :is-yaml-diff="isYamlDiff"
-          :editor-mode="editorMode"
-          :diff-mode="diffMode"
-          :is-real-mode-edit="isRealModeEdit"
-          @update:yaml-form="$emit('update:yaml-form', $event)"
-          @update:chart-values="$emit('update:chart-values', $event)"
-          @update:diff-mode="$emit('update:diff-mode', $event)"
-        />
-      </RcSection>
     </RcSection>
   </div>
 </template>
@@ -427,6 +429,12 @@ const appCoLockedSecrets = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.content-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .appco-main-section {

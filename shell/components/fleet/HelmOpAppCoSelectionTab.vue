@@ -211,7 +211,26 @@ export default {
     },
   },
 
+  mounted() {
+    this.$refs.searchInput?.focus();
+
+    if (this.hasCharts) {
+      this.scrollToSelectedOrFocusSearch();
+    }
+  },
+
   methods: {
+    scrollToSelectedOrFocusSearch() {
+      this.$nextTick(() => {
+        if (this.value.spec?.helm?.chart) {
+          const ref = this.$refs.selectedCard;
+          const el = Array.isArray(ref) ? ref[0]?.$el : ref?.$el;
+
+          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    },
+
     formatDate(dateString) {
       if (!dateString || dateString === ZERO_TIME) {
         return this.t('generic.na');
@@ -295,12 +314,29 @@ export default {
       this.selectChart(chartValue);
       this.$emit('select-chart-next');
     },
+
+    onKeydown(e) {
+      const input = this.$refs.searchInput;
+
+      if (!input || e.target === input) {
+        return;
+      }
+
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        input.focus();
+        input.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    },
   },
 };
 </script>
 
 <template>
-  <div class="appco-selection-tab">
+  <div
+    class="appco-selection-tab"
+    tabindex="-1"
+    @keydown="onKeydown"
+  >
     <div class="gap-24">
       <div class="auth-section">
         <SelectOrCreateAuthSecret
@@ -366,6 +402,7 @@ export default {
         <div class="search-section">
           <div class="search-input">
             <input
+              ref="searchInput"
               v-model="searchQuery"
               type="text"
               :placeholder="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
@@ -388,6 +425,7 @@ export default {
             <rc-item-card
               v-for="card in chartCards"
               :id="card.id"
+              :ref="value.spec.helm.chart === card.id ? 'selectedCard' : undefined"
               :key="card.id"
               :header="card.header"
               :image="card.image"
@@ -433,6 +471,7 @@ export default {
 .appco-selection-tab {
   display: flex;
   flex-direction: column;
+  outline: none;
 }
 
 .gap-24 {

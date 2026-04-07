@@ -5,8 +5,7 @@ import Banner from '@components/Banner/Banner.vue';
 import Checkbox from '@components/Form/Checkbox/Checkbox.vue';
 import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
 import UnitInput from '@shell/components/form/UnitInput';
-import FleetSecretSelector from '@shell/components/fleet/FleetSecretSelector.vue';
-import FleetConfigMapSelector from '@shell/components/fleet/FleetConfigMapSelector.vue';
+import HelmOpResourcesSection from '@shell/components/fleet/HelmOpResourcesSection.vue';
 import { SOURCE_TYPE } from '@shell/config/product/fleet';
 
 defineProps({
@@ -98,10 +97,6 @@ const updateCorrectDrift = (value) => {
   emit('update:correct-drift', value);
 };
 
-const updateDownstreamResources = (kind, list) => {
-  emit('update:downstream-resources', { kind, list });
-};
-
 const togglePolling = (value) => {
   emit('toggle-polling', value);
 };
@@ -155,45 +150,20 @@ const validatePollingInterval = () => {
       </div>
     </div>
 
-    <h2>{{ t('fleet.helmOp.resources.label') }}</h2>
+    <h2 class="mb-20">
+      {{ t('fleet.helmOp.resources.label') }}
+    </h2>
 
-    <div class="row mt-20 mb-20">
-      <div class="col span-6">
-        <FleetSecretSelector
-          :value="downstreamSecretsList"
-          :namespace="value.metadata.namespace"
-          :mode="mode"
-          @update:value="updateDownstreamResources('Secret', $event)"
-        />
-      </div>
-    </div>
-    <div class="row mt-20 mb-20">
-      <div class="col span-6">
-        <FleetConfigMapSelector
-          :value="downstreamConfigMapsList"
-          :namespace="value.metadata.namespace"
-          :mode="mode"
-          @update:value="updateDownstreamResources('ConfigMap', $event)"
-        />
-      </div>
-    </div>
-    <div class="resource-handling mb-30">
-      <Checkbox
-        :value="correctDriftEnabled"
-        :tooltip="t('fleet.helmOp.resources.correctDriftTooltip')"
-        type="checkbox"
-        label-key="fleet.helmOp.resources.correctDrift"
-        :mode="mode"
-        @update:value="updateCorrectDrift"
-      />
-      <Checkbox
-        v-model:value="value.spec.keepResources"
-        :tooltip="t('fleet.helmOp.resources.keepResourcesTooltip')"
-        type="checkbox"
-        label-key="fleet.helmOp.resources.keepResources"
-        :mode="mode"
-      />
-    </div>
+    <HelmOpResourcesSection
+      class="mb-30"
+      :value="value"
+      :mode="mode"
+      :correct-drift-enabled="correctDriftEnabled"
+      :downstream-secrets-list="downstreamSecretsList"
+      :downstream-config-maps-list="downstreamConfigMapsList"
+      @update:correct-drift="updateCorrectDrift"
+      @update:downstream-resources="$emit('update:downstream-resources', $event)"
+    />
 
     <template v-if="sourceType === SOURCE_TYPE.REPO">
       <h2>{{ t('fleet.helmOp.polling.label') }}</h2>
@@ -239,12 +209,6 @@ const validatePollingInterval = () => {
 </template>
 
 <style lang="scss" scoped>
-.resource-handling {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
 .polling {
   display: flex;
   flex-direction: column;

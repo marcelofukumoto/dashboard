@@ -1,8 +1,8 @@
 <script setup>
 import { useI18n } from '@shell/composables/useI18n';
 import { useStore } from 'vuex';
-import LabeledInput from '@components/Form/LabeledInput/LabeledInput.vue';
 import FleetClusterTargets from '@shell/components/fleet/FleetClusterTargets/index.vue';
+import HelmOpTargetOptionsSection from '@shell/components/fleet/HelmOpTargetOptionsSection.vue';
 
 defineProps({
   value: {
@@ -24,6 +24,10 @@ defineProps({
   targetsCreated: {
     type:    String,
     default: ''
+  },
+  hideAdditionalOptions: {
+    type:    Boolean,
+    default: false
   }
 });
 
@@ -54,29 +58,15 @@ const onTargetsCreated = (value) => {
       @created="onTargetsCreated"
     />
 
-    <h3 class="mmt-16">
-      {{ t('fleet.helmOp.target.additionalOptions') }}
-    </h3>
-    <div class="row mt-20">
-      <div class="col span-6">
-        <LabeledInput
-          v-model:value="value.spec.serviceAccount"
-          :mode="mode"
-          label-key="fleet.helmOp.serviceAccount.label"
-          placeholder-key="fleet.helmOp.serviceAccount.placeholder"
-        />
-      </div>
-      <div class="col span-6">
-        <LabeledInput
-          v-model:value="value.spec.namespace"
-          :mode="mode"
-          label-key="fleet.helmOp.targetNamespace.label"
-          placeholder-key="fleet.helmOp.targetNamespace.placeholder"
-          label="Target Namespace"
-          placeholder="Optional: Require all resources to be in this namespace"
-        />
-      </div>
-    </div>
+    <template v-if="!hideAdditionalOptions">
+      <h3 class="mmt-16 mb-20">
+        {{ t('fleet.helmOp.target.additionalOptions') }}
+      </h3>
+      <HelmOpTargetOptionsSection
+        :value="value"
+        :mode="mode"
+      />
+    </template>
   </div>
 </template>
 

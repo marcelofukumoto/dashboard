@@ -3,9 +3,9 @@ import { mapGetters } from 'vuex';
 import { isPrerelease } from '@shell/utils/version';
 import { set } from '@shell/utils/object';
 import { RcItemCard } from '@components/RcItemCard';
+import { RcButton } from '@components/RcButton';
 import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader';
 import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
-import AsyncButton from '@shell/components/AsyncButton';
 import Banner from '@components/Banner/Banner.vue';
 import Loading from '@shell/components/Loading';
 import { AUTH_TYPE, FLEET, FLEET_APPCO_AUTH_GENERATE_NAME, ZERO_TIME } from '@shell/config/types';
@@ -16,9 +16,9 @@ export default {
 
   components: {
     RcItemCard,
+    RcButton,
     AppChartCardSubHeader,
     SelectOrCreateAuthSecret,
-    AsyncButton,
     Banner,
     Loading,
   },
@@ -238,24 +238,21 @@ export default {
       this.$emit('update:auth', { value, key });
     },
 
-    async saveSecret(buttonCb) {
+    async saveSecret() {
       try {
         const creds = this.tempCachedValues?.helmSecretName;
 
         await this.onCreateAuth(creds);
-        buttonCb(true);
       } catch (e) {
-        buttonCb(false);
+        console.error('Failed to save secret:', e); // eslint-disable-line no-console
       }
     },
 
-    async saveAsDefault(buttonCb) {
+    async saveAsDefault() {
       try {
         const ws = this.workspaceObj;
 
         if (!ws) {
-          buttonCb(false);
-
           return;
         }
 
@@ -266,9 +263,8 @@ export default {
         ws.metadata.annotations[FLEET_ANNOTATIONS.APPCO_DEFAULT_AUTH] = this.selectedSecretName;
 
         await ws.save();
-        buttonCb(true);
       } catch (e) {
-        buttonCb(false);
+        console.error('Failed to save default:', e); // eslint-disable-line no-console
       }
     },
 
@@ -335,11 +331,13 @@ export default {
           color="error"
           :label="err"
         />
-        <AsyncButton
+        <RcButton
           :disabled="!hasCredentials"
-          mode="createAppCoAuth"
+          variant="secondary"
           @click="saveSecret"
-        />
+        >
+          {{ t('asyncButton.createAppCoAuth.action') }}
+        </RcButton>
       </div>
 
       <div
@@ -350,12 +348,14 @@ export default {
           v-clean-tooltip="isAlreadyDefault ? t('fleet.helmOp.auth.alreadyDefault') : null"
           class="set-default-wrapper"
         >
-          <AsyncButton
+          <RcButton
             :class="{ 'no-pointer': isAlreadyDefault }"
-            mode="setAppCoDefault"
+            variant="secondary"
             :disabled="isAlreadyDefault"
             @click="saveAsDefault"
-          />
+          >
+            {{ t('asyncButton.setAppCoDefault.action') }}
+          </RcButton>
         </span>
       </div>
     </div>

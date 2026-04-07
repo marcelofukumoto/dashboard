@@ -200,7 +200,7 @@ export default {
           label:          this.t('fleet.helmOp.add.steps.selection.label'),
           subtext:        this.t('fleet.helmOp.add.steps.selection.subtext'),
           descriptionKey: 'fleet.helmOp.add.steps.selection.description',
-          ready:          true,
+          ready:          this.isView || !!this.value.spec?.helm?.chart,
           weight:         1
         },
         {

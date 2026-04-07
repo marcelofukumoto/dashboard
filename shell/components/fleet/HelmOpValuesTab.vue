@@ -83,7 +83,7 @@ const updateDiffMode = (value) => {
   <div>
     <Banner
       color="info"
-      class="description"
+      class="description mt-0"
       label-key="fleet.helmOp.values.description"
     />
 

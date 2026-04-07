@@ -3494,6 +3494,7 @@ fleet:
       label: Deploy To
       labelLocal: Deploy With
       additionalOptions: Additional Options
+      targetAdditionalOptions: Target Additional Options
     targetDisplay:
       advanced: Advanced
       clusters: Clusters

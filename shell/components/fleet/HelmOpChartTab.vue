@@ -1,12 +1,11 @@
 <script setup>
-import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
+import { useStore } from 'vuex';
 import LabeledInput from '@components/Form/LabeledInput/LabeledInput.vue';
 import LabeledSelect from '@shell/components/form/LabeledSelect';
 import { SOURCE_TYPE } from '@shell/config/product/fleet';
-import { isPrerelease } from '@shell/utils/version';
 
-const props = defineProps({
+defineProps({
   value: {
     type:     Object,
     required: true
@@ -27,33 +26,13 @@ const props = defineProps({
     type:     Array,
     required: true
   },
-  isSuseAppCollection: {
-    type:    Boolean,
-    default: false
-  },
-  appCoChartOptions: {
-    type:    Array,
-    default: () => []
-  },
-  appCoVersionOptions: {
-    type:    Array,
-    default: () => []
-  },
-  appCoChartEntries: {
-    type:    Object,
-    default: () => ({})
-  },
-  appCoChartsLoading: {
-    type:    Boolean,
-    default: false
-  },
   fvGetAndReportPathRules: {
     type:     Function,
     required: true
   }
 });
 
-const emit = defineEmits(['update:source-type', 'update:app-co-version-options']);
+const emit = defineEmits(['update:source-type']);
 
 const store = useStore();
 const { t } = useI18n(store);
@@ -61,37 +40,6 @@ const { t } = useI18n(store);
 const onSourceTypeSelect = (type) => {
   emit('update:source-type', type);
 };
-
-const onChartSelect = (val) => {
-  props.value.spec.helm.chart = val;
-
-  // Update available versions based on selected chart
-  const versions = props.appCoChartEntries[val];
-
-  if (versions && versions.length) {
-    const sorted = versions
-      .filter((entry) => !isPrerelease(entry.version))
-      .map((entry) => entry.version)
-      .sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }))
-      .map((v) => ({
-        label: v,
-        value: v
-      }));
-
-    emit('update:app-co-version-options', sorted);
-
-    // Auto-select the latest version
-    props.value.spec.helm.version = sorted[0].value;
-  } else {
-    emit('update:app-co-version-options', []);
-    props.value.spec.helm.version = '';
-  }
-};
-
-const onVersionSelect = (val) => {
-  props.value.spec.helm.version = val;
-};
-
 </script>
 
 <template>
@@ -123,7 +71,6 @@ const onVersionSelect = (val) => {
           :mode="mode"
           :selectable="option => !option.disabled"
           :label="t('fleet.helmOp.source.selectLabel')"
-          :disabled="isSuseAppCollection"
           @update:value="onSourceTypeSelect"
         />
       </div>
@@ -184,71 +131,23 @@ const onVersionSelect = (val) => {
     <template v-if="sourceType === SOURCE_TYPE.OCI">
       <div class="row mb-20">
         <div class="col span-6">
-          <div class="row mb-20">
-            <LabeledInput
-              v-model:value="value.spec.helm.repo"
-              :mode="mode"
-              :label-key="`fleet.helmOp.source.${ sourceType }.chart.label`"
-              :placeholder="t(`fleet.helmOp.source.${ sourceType }.chart.placeholder`, null, true)"
-              :rules="fvGetAndReportPathRules('spec.helm.repo')"
-              :required="true"
-              :disabled="isSuseAppCollection"
-            />
-            <!-- repo is pre-filled with oci://dp.apps.rancher.io/charts by the parent when isSuseAppCollection -->
-          </div>
-          <div class="row mb-20">
-            <LabeledSelect
-              v-if="isSuseAppCollection && appCoChartOptions?.length"
-              :value="value.spec.helm.chart"
-              :options="appCoChartOptions"
-              :loading="appCoChartsLoading"
-              :mode="mode"
-              :label="t('fleet.helmOp.source.oci.chartName.label')"
-              :placeholder="t('fleet.helmOp.source.oci.chartName.placeholder', null, true)"
-              :rules="fvGetAndReportPathRules('spec.helm.chart')"
-              :required="true"
-              :searchable="true"
-              :taggable="true"
-              option-key="value"
-              @update:value="onChartSelect"
-            />
-            <LabeledInput
-              v-else
-              v-model:value="value.spec.helm.chart"
-              :mode="mode"
-              :label="t('fleet.helmOp.source.oci.chartName.label')"
-              :placeholder="t('fleet.helmOp.source.oci.chartName.placeholder', null, true)"
-              :rules="fvGetAndReportPathRules('spec.helm.chart')"
-              :required="true"
-            />
-          </div>
+          <LabeledInput
+            v-model:value="value.spec.helm.repo"
+            :mode="mode"
+            :label-key="`fleet.helmOp.source.${ sourceType }.chart.label`"
+            :placeholder="t(`fleet.helmOp.source.${ sourceType }.chart.placeholder`, null, true)"
+            :rules="fvGetAndReportPathRules('spec.helm.repo')"
+            :required="true"
+          />
         </div>
-        <div class="col span-4 helm-version">
-          <div class="row mb-20">
-            <LabeledSelect
-              v-if="isSuseAppCollection && appCoVersionOptions?.length"
-              :value="value.spec.helm.version"
-              :options="appCoVersionOptions"
-              :loading="appCoChartsLoading"
-              :mode="mode"
-              :label="t('fleet.helmOp.source.version.label')"
-              :placeholder="t('fleet.helmOp.source.version.placeholder', null, true)"
-              :rules="fvGetAndReportPathRules('spec.helm.version')"
-              :required="true"
-              :searchable="true"
-              :taggable="true"
-              option-key="value"
-              @update:value="onVersionSelect"
-            />
-            <LabeledInput
-              v-else
-              v-model:value="value.spec.helm.version"
-              :mode="mode"
-              label-key="fleet.helmOp.source.version.label"
-              :placeholder="t('fleet.helmOp.source.version.placeholder', null, true)"
-              :rules="fvGetAndReportPathRules('spec.helm.version')"
-            />
-          </div>
+        <div class="col span-4">
+          <LabeledInput
+            v-model:value="value.spec.helm.version"
+            :mode="mode"
+            label-key="fleet.helmOp.source.version.label"
+            :placeholder="t('fleet.helmOp.source.version.placeholder', null, true)"
+            :rules="fvGetAndReportPathRules('spec.helm.version')"
+          />
         </div>
       </div>
     </template>
@@ -256,7 +155,4 @@ const onVersionSelect = (val) => {
 </template>
 
 <style lang="scss" scoped>
-.helm-version {
-  align-self: end;
-}
 </style>

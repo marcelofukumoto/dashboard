@@ -4,13 +4,14 @@ import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
 import { set } from '@shell/utils/object';
 import { isPrerelease } from '@shell/utils/version';
-import { ZERO_TIME } from '@shell/config/types';
+import { ZERO_TIME, FLEET_APPCO_AUTH_GENERATE_NAME } from '@shell/config/types';
 import dayjs from 'dayjs';
 import LabeledSelect from '@shell/components/form/LabeledSelect';
 import LazyImage from '@shell/components/LazyImage';
 import NameNsDescription from '@shell/components/form/NameNsDescription';
 import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader';
 import Labels from '@shell/components/form/Labels';
+import LabeledInput from '@components/Form/LabeledInput/LabeledInput.vue';
 import { RcSection } from '@components/RcSection';
 import HelmOpResourcesSection from '@shell/components/fleet/HelmOpResourcesSection.vue';
 import HelmOpTargetOptionsSection from '@shell/components/fleet/HelmOpTargetOptionsSection.vue';
@@ -228,6 +229,10 @@ const chartSubHeaderItems = computed(() => {
 const onVersionSelect = (val) => {
   set(props.value, 'spec.helm.version', val);
 };
+
+const appCoLockedSecrets = computed(() => {
+  return props.downstreamSecretsList.filter((name) => name.startsWith(FLEET_APPCO_AUTH_GENERATE_NAME));
+});
 </script>
 
 <template>
@@ -326,6 +331,16 @@ const onVersionSelect = (val) => {
       :expanded="false"
       data-testid="appco-config-advanced"
     >
+      <div class="row">
+        <div class="col span-6">
+          <LabeledInput
+            v-model:value="value.spec.helm.releaseName"
+            :mode="mode"
+            :label-key="'fleet.helmOp.source.release.fullLabel'"
+            :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
+          />
+        </div>
+      </div>
       <RcSection
         :title="t('generic.labelsAndAnnotations', {}, true)"
         mode="with-header"
@@ -395,6 +410,7 @@ const onVersionSelect = (val) => {
           :correct-drift-enabled="correctDriftEnabled"
           :downstream-secrets-list="downstreamSecretsList"
           :downstream-config-maps-list="downstreamConfigMapsList"
+          :locked-secrets="appCoLockedSecrets"
           @update:correct-drift="$emit('update:correct-drift', $event)"
           @update:downstream-resources="$emit('update:downstream-resources', $event)"
         />

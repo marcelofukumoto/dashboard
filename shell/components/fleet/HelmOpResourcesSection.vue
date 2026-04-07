@@ -5,7 +5,7 @@ import Checkbox from '@components/Form/Checkbox/Checkbox.vue';
 import FleetSecretSelector from '@shell/components/fleet/FleetSecretSelector.vue';
 import FleetConfigMapSelector from '@shell/components/fleet/FleetConfigMapSelector.vue';
 
-defineProps({
+const props = defineProps({
   value: {
     type:     Object,
     required: true
@@ -26,6 +26,10 @@ defineProps({
     type:     Array,
     required: true
   },
+  lockedSecrets: {
+    type:    Array,
+    default: () => []
+  },
 });
 
 const emit = defineEmits([
@@ -38,6 +42,19 @@ const { t } = useI18n(store);
 
 const updateCorrectDrift = (value) => {
   emit('update:correct-drift', value);
+};
+
+const updateSecrets = (list) => {
+  // Ensure locked secrets are always included
+  const newList = [...list];
+
+  for (const locked of props.lockedSecrets) {
+    if (!newList.includes(locked)) {
+      newList.push(locked);
+    }
+  }
+
+  emit('update:downstream-resources', { kind: 'Secret', list: newList });
 };
 
 const updateDownstreamResources = (kind, list) => {
@@ -53,7 +70,7 @@ const updateDownstreamResources = (kind, list) => {
           :value="downstreamSecretsList"
           :namespace="value.metadata.namespace"
           :mode="mode"
-          @update:value="updateDownstreamResources('Secret', $event)"
+          @update:value="updateSecrets"
         />
       </div>
     </div>

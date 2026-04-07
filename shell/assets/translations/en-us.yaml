@@ -3453,6 +3453,7 @@ fleet:
         title: Release
         label: Name
         placeholder: The Helm release name
+        fullLabel: Release Name
     values:
       title: Values
       selectLabel: Values

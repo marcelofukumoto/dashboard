@@ -7,7 +7,19 @@ import { FLEET } from '@shell/config/types';
 import { FLEET as FLEET_ANNOTATIONS } from '@shell/config/labels-annotations';
 import FleetApplication from '@shell/models/fleet-application';
 
+const SUSE_APP_COLLECTION_HOST = 'oci://dp.apps.rancher.io';
+
 export default class HelmOp extends FleetApplication {
+  get applicationType() {
+    const repo = this.spec?.helm?.repo || '';
+
+    if (repo.startsWith(SUSE_APP_COLLECTION_HOST)) {
+      return this.t('catalog.repo.name.suse-application-collection');
+    }
+
+    return this.kind;
+  }
+
   applyDefaults() {
     const spec = this.spec || {};
     const meta = this.metadata || {};

@@ -28,6 +28,10 @@ defineProps({
   hideAdditionalOptions: {
     type:    Boolean,
     default: false
+  },
+  compact: {
+    type:    Boolean,
+    default: false
   }
 });
 
@@ -47,16 +51,23 @@ const onTargetsCreated = (value) => {
 
 <template>
   <div>
-    <h2>{{ t('fleet.helmOp.target.label') }}</h2>
-    <FleetClusterTargets
-      :targets="value.spec.targets"
-      :matching="value.targetClusters"
-      :namespace="value.metadata.namespace"
-      :mode="realMode"
-      :created="targetsCreated"
-      @update:value="updateTargets"
-      @created="onTargetsCreated"
-    />
+    <div class="gap-6">
+      <component
+        :is="compact ? 'h3' : 'h2'"
+      >
+        {{ t('fleet.helmOp.target.label') }}
+      </component>
+      <FleetClusterTargets
+        :targets="value.spec.targets"
+        :matching="value.targetClusters"
+        :namespace="value.metadata.namespace"
+        :mode="realMode"
+        :created="targetsCreated"
+        :compact="compact"
+        @update:value="updateTargets"
+        @created="onTargetsCreated"
+      />
+    </div>
 
     <template v-if="!hideAdditionalOptions">
       <h3 class="mmt-16 mb-20">
@@ -71,4 +82,9 @@ const onTargetsCreated = (value) => {
 </template>
 
 <style lang="scss" scoped>
+.gap-6 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 </style>

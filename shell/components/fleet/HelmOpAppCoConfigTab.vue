@@ -320,6 +320,7 @@ const appCoLockedSecrets = computed(() => {
       :is-view="isView"
       :targets-created="targetsCreated"
       :hide-additional-options="true"
+      :compact="true"
       @update:targets="$emit('update:targets', $event)"
       @targets-created="$emit('targets-created', $event)"
     />
@@ -359,6 +360,7 @@ const appCoLockedSecrets = computed(() => {
             :downstream-secrets-list="downstreamSecretsList"
             :downstream-config-maps-list="downstreamConfigMapsList"
             :locked-secrets="appCoLockedSecrets"
+            :compact="true"
             @update:correct-drift="$emit('update:correct-drift', $event)"
             @update:downstream-resources="$emit('update:downstream-resources', $event)"
           />
@@ -390,6 +392,8 @@ const appCoLockedSecrets = computed(() => {
             :mode="mode"
             :display-side-by-side="false"
             :add-icon="'icon-plus'"
+            :reduce-title-size="true"
+            :use-rc-button="true"
           />
         </RcSection>
         <RcSection
@@ -414,6 +418,9 @@ const appCoLockedSecrets = computed(() => {
             :editor-mode="editorMode"
             :diff-mode="diffMode"
             :is-real-mode-edit="isRealModeEdit"
+            :hide-title="true"
+            :is-suse-app-collection="true"
+            :white-border="true"
             @update:yaml-form="$emit('update:yaml-form', $event)"
             @update:chart-values="$emit('update:chart-values', $event)"
             @update:diff-mode="$emit('update:diff-mode', $event)"

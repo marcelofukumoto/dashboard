@@ -3458,6 +3458,7 @@ fleet:
       title: Values
       selectLabel: Values
       description: Configure Values used by Helm that help define the App.
+      appCoDescription: The predefined global imagePullSecret should not be modified, otherwise the connection with SUSE Application Collection will fail.
       types:
         values: Values
         valuesFiles: Values Files

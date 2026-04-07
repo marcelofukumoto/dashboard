@@ -72,6 +72,11 @@ export default {
       type:    String as PropType<TargetMode>,
       default: '',
     },
+
+    compact: {
+      type:    Boolean,
+      default: false,
+    },
   },
 
   async fetch() {
@@ -363,129 +368,140 @@ export default {
 </script>
 
 <template>
-  <div
-    v-if="targetMode !== 'advanced'"
-    class="row"
-  >
-    <RadioGroup
-      name="targetMode"
-      data-testid="fleet-target-cluster-radio-button"
-      :value="isLocal ? 'local' : targetMode"
-      :mode="mode"
-      :options="targetModeOptions"
-      :disabled="isView"
-      @update:value="selectTargetMode"
-    />
-  </div>
-
-  <Banner
-    v-if="targetMode === 'advanced'"
-    class="row"
-    color="warning"
-    :label="t('fleet.clusterTargets.advancedConfigs')"
-  />
-
-  <div
-    v-if="targetMode === 'clusters'"
-    class="row mt-20"
-  >
-    <div class="col span-9">
-      <h3 class="m-0">
-        {{ t('fleet.clusterTargets.clusters.title') }}
-      </h3>
-      <LabeledSelect
-        data-testid="fleet-target-cluster-name-selector"
-        class="mmt-4"
-        :value="selectedClusters"
-        :label="t('fleet.clusterTargets.clusters.byName.label')"
-        :options="clustersOptions"
-        :taggable="true"
-        :close-on-select="false"
+  <div class="gap-24">
+    <div
+      v-if="targetMode !== 'advanced'"
+      class="row"
+    >
+      <RadioGroup
+        name="targetMode"
+        data-testid="fleet-target-cluster-radio-button"
+        :value="isLocal ? 'local' : targetMode"
         :mode="mode"
-        :multiple="true"
-        :placeholder="t('fleet.clusterTargets.clusters.byName.placeholder')"
-        @update:value="selectClusters"
+        :options="targetModeOptions"
+        :disabled="isView"
+        @update:value="selectTargetMode"
       />
-      <div
-        v-if="!isView || (clusterSelectors && clusterSelectors.length > 0)"
-        class="mmt-6"
-      >
-        <h4 class="m-0">
-          {{ t('fleet.clusterTargets.clusters.byLabel.title') }}
-        </h4>
-        <div
-          v-for="(selector, i) in clusterSelectors"
-          :key="selector.key"
-          class="match-expressions-container mmt-4"
+    </div>
+
+    <Banner
+      v-if="targetMode === 'advanced'"
+      class="row"
+      color="warning"
+      :label="t('fleet.clusterTargets.advancedConfigs')"
+    />
+
+    <div
+      v-if="targetMode === 'clusters'"
+      class="row"
+    >
+      <div class="col span-9">
+        <component
+          :is="compact ? 'h4' : 'h3'"
+          class="m-0"
         >
-          <MatchExpressions
-            :ref="`match-expression-${ selector.key }`"
-            class="body"
-            :value="selector"
-            :mode="mode"
-            :initial-empty-row="true"
-            :label-key="t('fleet.clusterTargets.clusters.byLabel.labelKey')"
-            :add-icon="'icon-plus'"
-            :add-class="'btn-sm'"
-            @update:value="updateMatchExpressions(i, $event, selector.key)"
-          />
-          <RcButton
-            v-if="!isView"
-            size="small"
-            variant="link"
-            @click="removeMatchExpressions(selector.key)"
-          >
-            <i class="icon icon-x" />
-          </RcButton>
-        </div>
-        <RcButton
-          v-if="!isView"
-          size="small"
-          variant="secondary"
-          class="mmt-4"
-          @click="addMatchExpressions"
-        >
-          <i class="icon icon-plus" />
-          <span>{{ t('fleet.clusterTargets.clusters.byLabel.addSelector') }}</span>
-        </RcButton>
-      </div>
-      <div class="mmt-8">
-        <h3 class="m-0">
-          {{ t('fleet.clusterTargets.clusterGroups.title') }}
-        </h3>
+          {{ t('fleet.clusterTargets.clusters.title') }}
+        </component>
         <LabeledSelect
-          data-testid="fleet-target-cluster-group-selector"
+          data-testid="fleet-target-cluster-name-selector"
           class="mmt-4"
-          :value="selectedClusterGroups"
-          :label="t('fleet.clusterTargets.clusterGroups.byName.label')"
-          :options="clusterGroupsOptions"
+          :value="selectedClusters"
+          :label="t('fleet.clusterTargets.clusters.byName.label')"
+          :options="clustersOptions"
           :taggable="true"
           :close-on-select="false"
           :mode="mode"
           :multiple="true"
-          :placeholder="t('fleet.clusterTargets.clusterGroups.byName.placeholder')"
-          @update:value="selectClusterGroups"
+          :placeholder="t('fleet.clusterTargets.clusters.byName.placeholder')"
+          @update:value="selectClusters"
+        />
+        <div
+          v-if="!isView || (clusterSelectors && clusterSelectors.length > 0)"
+          class="mmt-6"
+        >
+          <component
+            :is="compact ? 'h5' : 'h4'"
+            class="m-0"
+          >
+            {{ t('fleet.clusterTargets.clusters.byLabel.title') }}
+          </component>
+          <div
+            v-for="(selector, i) in clusterSelectors"
+            :key="selector.key"
+            class="match-expressions-container mmt-4"
+          >
+            <MatchExpressions
+              :ref="`match-expression-${ selector.key }`"
+              class="body"
+              :value="selector"
+              :mode="mode"
+              :initial-empty-row="true"
+              :label-key="t('fleet.clusterTargets.clusters.byLabel.labelKey')"
+              :add-icon="'icon-plus'"
+              :add-class="'btn-sm'"
+              @update:value="updateMatchExpressions(i, $event, selector.key)"
+            />
+            <RcButton
+              v-if="!isView"
+              size="small"
+              variant="link"
+              @click="removeMatchExpressions(selector.key)"
+            >
+              <i class="icon icon-x" />
+            </RcButton>
+          </div>
+          <RcButton
+            v-if="!isView"
+            size="small"
+            variant="secondary"
+            class="mmt-4"
+            @click="addMatchExpressions"
+          >
+            <i class="icon icon-plus" />
+            <span>{{ t('fleet.clusterTargets.clusters.byLabel.addSelector') }}</span>
+          </RcButton>
+        </div>
+        <div class="mmt-8">
+          <component
+            :is="compact ? 'h4' : 'h3'"
+            class="m-0"
+          >
+            {{ t('fleet.clusterTargets.clusterGroups.title') }}
+          </component>
+          <LabeledSelect
+            data-testid="fleet-target-cluster-group-selector"
+            class="mmt-4"
+            :value="selectedClusterGroups"
+            :label="t('fleet.clusterTargets.clusterGroups.byName.label')"
+            :options="clusterGroupsOptions"
+            :taggable="true"
+            :close-on-select="false"
+            :mode="mode"
+            :multiple="true"
+            :placeholder="t('fleet.clusterTargets.clusterGroups.byName.placeholder')"
+            @update:value="selectClusterGroups"
+          />
+        </div>
+      </div>
+      <div class="col span-3">
+        <TargetsList
+          class="target-list"
+          :clusters="matching"
+          :empty-label="t('fleet.clusterTargets.rules.matching.placeholder')"
         />
       </div>
     </div>
-    <div class="col span-3">
-      <TargetsList
-        class="target-list"
-        :clusters="matching"
-        :empty-label="t('fleet.clusterTargets.rules.matching.placeholder')"
-      />
-    </div>
-  </div>
 
-  <div
-    v-if="targetMode === 'all' && !isLocal"
-    class="row"
-  >
-    <div class="col span-6">
-      <TargetsList
-        class="target-list mt-20"
-        :clusters="matching"
-      />
+    <div
+      v-if="targetMode === 'all' && !isLocal"
+      class="row"
+    >
+      <div class="col span-6">
+        <TargetsList
+          class="target-list"
+          :clusters="matching"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -509,5 +525,11 @@ export default {
 
   .target-list {
     max-height: 320px;
+  }
+
+  .gap-24 {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
 </style>

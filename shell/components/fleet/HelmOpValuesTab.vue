@@ -58,6 +58,18 @@ defineProps({
   isRealModeEdit: {
     type:     Boolean,
     required: true
+  },
+  hideTitle: {
+    type:    Boolean,
+    default: false
+  },
+  isSuseAppCollection: {
+    type:    Boolean,
+    default: false
+  },
+  whiteBorder: {
+    type:    Boolean,
+    default: false
   }
 });
 
@@ -84,10 +96,12 @@ const updateDiffMode = (value) => {
     <Banner
       color="info"
       class="description mt-0"
-      label-key="fleet.helmOp.values.description"
+      :label-key="isSuseAppCollection ? 'fleet.helmOp.values.appCoDescription' : 'fleet.helmOp.values.description'"
     />
 
-    <h2>{{ t('fleet.helmOp.values.title') }}</h2>
+    <h2 v-if="!hideTitle">
+      {{ t('fleet.helmOp.values.title') }}
+    </h2>
 
     <div class="mb-15">
       <div
@@ -119,6 +133,7 @@ const updateDiffMode = (value) => {
 
       <YamlEditor
         ref="yaml"
+        :class="{ 'white-border': whiteBorder }"
         :value="chartValues"
         :mode="mode"
         :initial-yaml-values="chartValuesInit"
@@ -134,6 +149,7 @@ const updateDiffMode = (value) => {
         :value="value.spec.helm.valuesFrom"
         :namespace="value.metadata.namespace"
         :mode="realMode"
+        :reduceTitleSize="hideTitle"
       />
     </div>
   </div>
@@ -143,5 +159,9 @@ const updateDiffMode = (value) => {
 .yaml-form-controls {
   display: flex;
   margin-bottom: 15px;
+}
+
+.white-border {
+  border: 4px solid white;
 }
 </style>

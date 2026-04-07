@@ -58,6 +58,11 @@ export default {
       type:    String,
       default: _EDIT
     },
+
+    reduceTitleSize: {
+      type:    Boolean,
+      default: false
+    }
   },
 
   async fetch() {
@@ -251,7 +256,8 @@ export default {
     class="values-from-container"
     data-testid="fleet-values-from-list"
   >
-    <h2
+    <component
+      :is="reduceTitleSize ? 'h4' : 'h2'"
       v-t="'fleet.helmOp.values.valuesFrom.selectLabel'"
       class="m-0"
     />

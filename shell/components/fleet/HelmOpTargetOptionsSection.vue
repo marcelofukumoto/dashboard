@@ -18,7 +18,7 @@ defineProps({
 </script>
 
 <template>
-  <div :class="{ row: !stacked, 'col gap-20': stacked }">
+  <div :class="{ row: !stacked, 'col gap-16': stacked }">
     <div class="col span-6">
       <LabeledInput
         v-model:value="value.spec.serviceAccount"
@@ -41,9 +41,9 @@ defineProps({
 </template>
 
 <style lang="css" scoped>
-.gap-20 {
+.gap-16 {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
 }
 </style>

@@ -30,6 +30,10 @@ const props = defineProps({
     type:    Array,
     default: () => []
   },
+  compact: {
+    type:    Boolean,
+    default: false
+  },
 });
 
 const emit = defineEmits([
@@ -64,7 +68,10 @@ const updateDownstreamResources = (kind, list) => {
 
 <template>
   <div>
-    <div class="row mb-20">
+    <div
+      class="row"
+      :class="compact ? 'mb-16' : 'mb-20'"
+    >
       <div class="col span-6">
         <FleetSecretSelector
           :value="downstreamSecretsList"
@@ -74,7 +81,10 @@ const updateDownstreamResources = (kind, list) => {
         />
       </div>
     </div>
-    <div class="row mt-20 mb-20">
+    <div
+      class="row"
+      :class="compact ? 'mt-16 mb-16' : 'mt-20 mb-20'"
+    >
       <div class="col span-6">
         <FleetConfigMapSelector
           :value="downstreamConfigMapsList"
@@ -109,5 +119,13 @@ const updateDownstreamResources = (kind, list) => {
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
+
+.mt-16 {
+  margin-top: 16px;
 }
 </style>

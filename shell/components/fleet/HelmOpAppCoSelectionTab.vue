@@ -1,5 +1,4 @@
 <script>
-import { mapGetters } from 'vuex';
 import { isPrerelease } from '@shell/utils/version';
 import { set } from '@shell/utils/object';
 import { RcItemCard } from '@components/RcItemCard';
@@ -8,8 +7,7 @@ import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartC
 import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
 import Banner from '@components/Banner/Banner.vue';
 import Loading from '@shell/components/Loading';
-import { AUTH_TYPE, FLEET, FLEET_APPCO_AUTH_GENERATE_NAME, ZERO_TIME } from '@shell/config/types';
-import { CATALOG, FLEET as FLEET_ANNOTATIONS } from '@shell/config/labels-annotations';
+import { AUTH_TYPE, FLEET_APPCO_AUTH_GENERATE_NAME, SECRET, ZERO_TIME } from '@shell/config/types';
 
 export default {
   name: 'HelmOpAppCoSelectionTab',
@@ -77,8 +75,6 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['workspace']),
-
     allCharts() {
       const entries = this.appCoChartEntries;
 
@@ -107,11 +103,19 @@ export default {
         return this.allCharts;
       }
 
-      const q = this.searchQuery.toLowerCase();
+      const raw = this.searchQuery;
+      const exactMatch = /^"(.+)"$/.exec(raw);
+      const q = exactMatch ? exactMatch[1].toLowerCase() : raw.toLowerCase();
 
       return this.allCharts.filter((chart) => {
-        return chart.name.toLowerCase().includes(q) ||
-          chart.description.toLowerCase().includes(q);
+        const name = chart.name.toLowerCase();
+        const desc = chart.description.toLowerCase();
+
+        if (exactMatch) {
+          return name === q || desc === q;
+        }
+
+        return name.includes(q) || desc.includes(q);
       });
     },
 
@@ -171,15 +175,12 @@ export default {
       return { selected: AUTH_TYPE._BASIC };
     },
 
-    workspaceObj() {
-      const allWorkspaces = this.$store.getters[`${ CATALOG._MANAGEMENT }/all`](FLEET.WORKSPACE) || [];
-      const ns = this.value.metadata?.namespace;
-
-      return allWorkspaces.find((ws) => ws.id === ns);
-    },
-
     currentDefault() {
-      return this.workspaceObj?.metadata?.annotations?.[FLEET_ANNOTATIONS.APPCO_DEFAULT_AUTH] || '';
+      const ns = this.value.metadata?.namespace;
+      const allSecrets = this.$store.getters['management/all'](SECRET) || [];
+      const match = allSecrets.find((s) => s.metadata?.namespace === ns && s.metadata?.name?.startsWith(FLEET_APPCO_AUTH_GENERATE_NAME));
+
+      return match?.metadata?.name || '';
     },
 
     selectedSecretName() {
@@ -196,10 +197,6 @@ export default {
       const creds = this.tempCachedValues?.helmSecretName;
 
       return !!(creds?.publicKey && creds?.privateKey);
-    },
-
-    isAlreadyDefault() {
-      return !!(this.selectedSecretName && this.selectedSecretName === this.currentDefault);
     },
 
     hasCharts() {
@@ -231,7 +228,7 @@ export default {
     fillTheSearch() {
       this.$nextTick(() => {
         if (this.value.spec?.helm?.chart) {
-          this.searchQuery = this.value.spec.helm.chart;
+          this.searchQuery = `"${ this.value.spec.helm.chart }"`;
         }
       });
     },
@@ -269,26 +266,6 @@ export default {
         await this.onCreateAuth(creds);
       } catch (e) {
         console.error('Failed to save secret:', e); // eslint-disable-line no-console
-      }
-    },
-
-    async saveAsDefault() {
-      try {
-        const ws = this.workspaceObj;
-
-        if (!ws) {
-          return;
-        }
-
-        if (!ws.metadata.annotations) {
-          ws.metadata.annotations = {};
-        }
-
-        ws.metadata.annotations[FLEET_ANNOTATIONS.APPCO_DEFAULT_AUTH] = this.selectedSecretName;
-
-        await ws.save();
-      } catch (e) {
-        console.error('Failed to save default:', e); // eslint-disable-line no-console
       }
     },
 
@@ -509,13 +486,5 @@ export default {
   text-align: center;
   padding: 72px 0;
   color: var(--input-label);
-}
-
-.set-default-wrapper {
-  display: inline-block;
-
-  .no-pointer {
-    cursor: not-allowed;
-  }
 }
 </style>

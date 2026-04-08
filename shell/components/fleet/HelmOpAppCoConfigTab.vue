@@ -6,7 +6,6 @@ import { set } from '@shell/utils/object';
 import { isPrerelease } from '@shell/utils/version';
 import { ZERO_TIME, FLEET_APPCO_AUTH_GENERATE_NAME } from '@shell/config/types';
 import dayjs from 'dayjs';
-import LabeledSelect from '@shell/components/form/LabeledSelect';
 import LazyImage from '@shell/components/LazyImage';
 import NameNsDescription from '@shell/components/form/NameNsDescription';
 import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader';
@@ -17,6 +16,9 @@ import HelmOpResourcesSection from '@shell/components/fleet/HelmOpResourcesSecti
 import HelmOpTargetOptionsSection from '@shell/components/fleet/HelmOpTargetOptionsSection.vue';
 import HelmOpValuesTab from '@shell/components/fleet/HelmOpValuesTab.vue';
 import HelmOpTargetTab from '@shell/components/fleet/HelmOpTargetTab.vue';
+import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
+import AppCoVersionSelect from '@shell/components/fleet/AppCoVersionSelect.vue';
+import { _VIEW } from '@shell/config/query-params';
 
 const props = defineProps({
   value: {
@@ -134,6 +136,18 @@ const props = defineProps({
     type:     Function,
     required: true
   },
+  hideTarget: {
+    type:    Boolean,
+    default: false
+  },
+  hideAdvanced: {
+    type:    Boolean,
+    default: false
+  },
+  hideChartConfig: {
+    type:    Boolean,
+    default: false
+  },
 });
 
 const emit = defineEmits([
@@ -233,11 +247,18 @@ const onVersionSelect = (val) => {
 const appCoLockedSecrets = computed(() => {
   return props.downstreamSecretsList.filter((name) => name.startsWith(FLEET_APPCO_AUTH_GENERATE_NAME));
 });
+
+const isStandaloneAdvanced = computed(() => props.hideChartConfig && props.hideTarget && !props.hideAdvanced);
+
+const isView = computed(() => props.mode === _VIEW);
 </script>
 
 <template>
   <div class="appco-config-tab">
-    <div class="appco-main-section">
+    <div
+      v-if="!hideChartConfig"
+      class="appco-main-section"
+    >
       <!-- Chart header -->
       <div
         v-if="selectedChartName"
@@ -269,38 +290,65 @@ const appCoLockedSecrets = computed(() => {
       </div>
 
       <!-- Chart version -->
-      <div class="appco-main-content">
-        <div class="col span-6">
-          <LabeledSelect
+      <div
+        v-if="isView"
+        class="appco-main-content"
+      >
+        <!-- Auth -->
+        <SelectOrCreateAuthSecret
+          :vertical="true"
+          :value="value.spec.helmSecretName"
+          :namespace="value.metadata.namespace"
+          :limit-to-namespace="true"
+          :delegate-create-to-parent="true"
+          :register-before-hook="registerBeforeHook"
+          in-store="management"
+          :mode="mode"
+          :generate-name="FLEET_APPCO_AUTH_GENERATE_NAME"
+          label-key="fleet.helmOp.auth.appco"
+          :fixed-http-basic-auth="true"
+          :filter-basic-auth="FLEET_APPCO_AUTH_GENERATE_NAME"
+          :allow-none="false"
+          :cache-secrets="true"
+          :no-margin-top="true"
+          @update:value="emit('update:auth', { value: $event, key: 'helmSecretName' })"
+          @inputauthval="emit('update:cached-auth', { value: $event, key: 'helmSecretName' })"
+        />
+        <!-- Name and Description -->
+        <NameNsDescription
+          :value="value"
+          :horizontal="true"
+          :namespaced="false"
+          :mode="mode"
+          :no-margin-bottom="true"
+          :name-label="'fleet.helmOp.appCoConfig.name'"
+          :full-width="true"
+          data-testid="appco-config-name-ns-description"
+          @update:value="emit('update:value', $event)"
+        />
+        <div class="col span-4">
+          <AppCoVersionSelect
             :value="selectedVersion"
             :options="versionOptions"
             :loading="appCoChartsLoading"
             :mode="mode"
-            :label="t('fleet.helmOp.appCoConfig.chartVersion')"
-            :searchable="true"
-            option-key="value"
-            data-testid="appco-config-version-select"
             @update:value="onVersionSelect"
-          >
-            <template #option="opt">
-              <div class="version-option">
-                <span>{{ opt.label }}</span>
-                <span
-                  v-if="opt.date"
-                  class="version-option-date"
-                >{{ opt.date }}</span>
-              </div>
-            </template>
-            <template #selected-option="opt">
-              <div class="version-option">
-                <span>{{ opt.label }}</span>
-                <span
-                  v-if="opt.date"
-                  class="version-option-date"
-                >{{ opt.date }}</span>
-              </div>
-            </template>
-          </LabeledSelect>
+          />
+        </div>
+      </div>
+      <!-- Chart version -->
+      <div
+        v-else
+        class="appco-main-content"
+      >
+        <div class="col span-3">
+          <AppCoVersionSelect
+            :value="selectedVersion"
+            :options="versionOptions"
+            :loading="appCoChartsLoading"
+            :mode="mode"
+            @update:value="onVersionSelect"
+          />
         </div>
         <!-- Name and Description -->
         <NameNsDescription
@@ -317,6 +365,7 @@ const appCoLockedSecrets = computed(() => {
 
     <!-- Deploy To -->
     <HelmOpTargetTab
+      v-if="!hideTarget"
       :value="value"
       :mode="mode"
       :real-mode="realMode"
@@ -330,6 +379,7 @@ const appCoLockedSecrets = computed(() => {
 
     <!-- Advanced section -->
     <RcSection
+      v-if="!hideAdvanced && !isStandaloneAdvanced"
       :title="t('fleet.helmOp.appCoConfig.advanced')"
       mode="with-header"
       type="primary"
@@ -431,6 +481,109 @@ const appCoLockedSecrets = computed(() => {
         </RcSection>
       </div>
     </RcSection>
+
+    <!-- Advanced content without RcSection wrapper (standalone tab) -->
+    <div
+      v-if="isStandaloneAdvanced"
+      class="content-group"
+    >
+      <div class="row">
+        <div class="col span-6">
+          <LabeledInput
+            v-model:value="value.spec.helm.releaseName"
+            :mode="mode"
+            :label-key="'fleet.helmOp.source.release.fullLabel'"
+            :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
+          />
+        </div>
+      </div>
+      <RcSection
+        :title="t('fleet.helmOp.resources.label')"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-resources"
+      >
+        <HelmOpResourcesSection
+          :value="value"
+          :mode="mode"
+          :correct-drift-enabled="correctDriftEnabled"
+          :downstream-secrets-list="downstreamSecretsList"
+          :downstream-config-maps-list="downstreamConfigMapsList"
+          :locked-secrets="appCoLockedSecrets"
+          :compact="true"
+          @update:correct-drift="$emit('update:correct-drift', $event)"
+          @update:downstream-resources="$emit('update:downstream-resources', $event)"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('fleet.helmOp.target.targetAdditionalOptions')"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-target-options"
+      >
+        <HelmOpTargetOptionsSection
+          :value="value"
+          :mode="mode"
+          :stacked="true"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('generic.labelsAndAnnotations', {}, true)"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-labels"
+      >
+        <Labels
+          :value="value"
+          :mode="mode"
+          :display-side-by-side="false"
+          :add-icon="'icon-plus'"
+          :reduce-title-size="true"
+          :use-rc-button="true"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('fleet.helmOp.values.title')"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-values"
+      >
+        <HelmOpValuesTab
+          :value="value"
+          :mode="mode"
+          :real-mode="realMode"
+          :is-view="isView"
+          :chart-values="chartValues"
+          :chart-values-init="chartValuesInit"
+          :yaml-form="yamlForm"
+          :yaml-form-options="yamlFormOptions"
+          :yaml-diff-mode-options="yamlDiffModeOptions"
+          :is-yaml-diff="isYamlDiff"
+          :editor-mode="editorMode"
+          :diff-mode="diffMode"
+          :is-real-mode-edit="isRealModeEdit"
+          :hide-title="true"
+          :hide-banner="true"
+          :is-suse-app-collection="true"
+          :white-border="true"
+          @update:yaml-form="$emit('update:yaml-form', $event)"
+          @update:chart-values="$emit('update:chart-values', $event)"
+          @update:diff-mode="$emit('update:diff-mode', $event)"
+        />
+      </RcSection>
+    </div>
   </div>
 </template>
 
@@ -504,15 +657,5 @@ const appCoLockedSecrets = computed(() => {
   font-weight: 600;
   line-height: 24px;
   margin-bottom: 0;
-}
-
-.version-option {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.version-option-date {
-  color: var(--muted);
 }
 </style>

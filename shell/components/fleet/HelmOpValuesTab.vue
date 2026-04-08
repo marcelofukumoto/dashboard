@@ -70,6 +70,10 @@ defineProps({
   whiteBorder: {
     type:    Boolean,
     default: false
+  },
+  hideBanner: {
+    type:    Boolean,
+    default: false
   }
 });
 
@@ -94,6 +98,7 @@ const updateDiffMode = (value) => {
 <template>
   <div>
     <Banner
+      v-if="!hideBanner"
       color="info"
       class="description mt-0"
       :label-key="isSuseAppCollection ? 'fleet.helmOp.values.appCoDescription' : 'fleet.helmOp.values.description'"

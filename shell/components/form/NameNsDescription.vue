@@ -176,6 +176,10 @@ export default {
     componentTestid: {
       type:    String,
       default: 'name-ns-description'
+    },
+    fullWidth: {
+      type:    Boolean,
+      default: false
     }
   },
 
@@ -437,7 +441,7 @@ export default {
     <div
       v-if="namespaced && !nameNsHidden && createNamespace"
       :data-testid="componentTestid + '-namespace-create'"
-      class="col span-3"
+      :class="['col', fullWidth ? 'span-4' : 'span-3']"
     >
       <LabeledInput
         ref="namespaceInput"
@@ -463,7 +467,7 @@ export default {
     <div
       v-if="namespaced && !nameNsHidden && !createNamespace"
       :data-testid="componentTestid + '-namespace'"
-      class="col span-3"
+      :class="['col', fullWidth ? 'span-4' : 'span-3']"
     >
       <LabeledSelect
         v-show="!createNamespace"
@@ -485,7 +489,7 @@ export default {
     <div
       v-if="!nameHidden && !nameNsHidden"
       :data-testid="componentTestid + '-name'"
-      class="col span-3"
+      :class="['col', fullWidth ? 'span-4' : 'span-3']"
     >
       <LabeledInput
         ref="nameInput"
@@ -506,7 +510,7 @@ export default {
     <div
       v-show="!descriptionHidden"
       :data-testid="componentTestid + '-description'"
-      :class="['col', extraColumns.length > 0 ? 'span-3' : 'span-6']"
+      :class="['col', fullWidth ? 'span-8' : (extraColumns.length > 0 ? 'span-3' : 'span-6')]"
     >
       <LabeledInput
         key="description"

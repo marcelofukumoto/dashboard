@@ -147,7 +147,34 @@ export default {
     ...mapGetters(['workspace']),
 
     steps() {
-      return !this.isSuseAppCollection || this.isView ? [
+      if (this.isSuseAppCollection && !this.isView) {
+        // IsSuseAppCollection and Edit mode
+        return [
+          {
+            name:           'selection',
+            title:          this.t('fleet.helmOp.add.steps.selection.title'),
+            label:          this.t('fleet.helmOp.add.steps.selection.label'),
+            subtext:        this.t('fleet.helmOp.add.steps.selection.subtext'),
+            descriptionKey: 'fleet.helmOp.add.steps.selection.description',
+            ready:          this.isView || !!this.value.spec?.helm?.chart,
+            weight:         1
+          },
+          {
+            name:           'appcoConfig',
+            title:          this.t('fleet.helmOp.add.steps.appcoConfig.title'),
+            label:          this.t('fleet.helmOp.add.steps.appcoConfig.label'),
+            subtext:        this.t('fleet.helmOp.add.steps.appcoConfig.subtext'),
+            descriptionKey: 'fleet.helmOp.add.steps.appcoConfig.description',
+            ready:          !!this.value.metadata.name,
+            weight:         1,
+          },
+        ];
+      } else if (this.isSuseAppCollection && this.isView) {
+        // IsSuseAppCollection and View mode — steps not used (CruResource renders #single)
+        return [];
+      }
+
+      return [
         {
           name:           'basics',
           title:          this.t('fleet.helmOp.add.steps.metadata.title'),
@@ -191,25 +218,6 @@ export default {
           subtext:        this.t('fleet.helmOp.add.steps.advanced.subtext'),
           descriptionKey: 'fleet.helmOp.add.steps.advanced.description',
           ready:          true,
-          weight:         1,
-        },
-      ] : [
-        {
-          name:           'selection',
-          title:          this.t('fleet.helmOp.add.steps.selection.title'),
-          label:          this.t('fleet.helmOp.add.steps.selection.label'),
-          subtext:        this.t('fleet.helmOp.add.steps.selection.subtext'),
-          descriptionKey: 'fleet.helmOp.add.steps.selection.description',
-          ready:          this.isView || !!this.value.spec?.helm?.chart,
-          weight:         1
-        },
-        {
-          name:           'appcoConfig',
-          title:          this.t('fleet.helmOp.add.steps.appcoConfig.title'),
-          label:          this.t('fleet.helmOp.add.steps.appcoConfig.label'),
-          subtext:        this.t('fleet.helmOp.add.steps.appcoConfig.subtext'),
-          descriptionKey: 'fleet.helmOp.add.steps.appcoConfig.description',
-          ready:          !!this.value.metadata.name,
           weight:         1,
         },
       ];
@@ -299,6 +307,26 @@ export default {
 
     downstreamConfigMapsList() {
       return (this.value.spec.downstreamResources || []).filter((r) => r.kind === 'ConfigMap').map((r) => r.name);
+    },
+
+    appCoViewTabs() {
+      return [
+        {
+          name:   'chartConfig',
+          label:  this.t('fleet.helmOp.appCoView.chartConfig'),
+          weight: 3
+        },
+        {
+          name:   'targetDetails',
+          label:  this.t('fleet.helmOp.appCoView.targetDetails'),
+          weight: 2
+        },
+        {
+          name:   'advanced',
+          label:  this.t('fleet.helmOp.appCoView.advanced'),
+          weight: 1
+        },
+      ];
     },
   },
 
@@ -1009,51 +1037,148 @@ export default {
       v-if="isView"
       #single
     >
-      <NameNsDescription
-        :value="value"
-        :namespaced="false"
-        :mode="mode"
-        @update:value="$emit('input', $event)"
-      />
+      <!-- Non-AppCo view -->
+      <div v-if="!isSuseAppCollection">
+        <NameNsDescription
+          :value="value"
+          :namespaced="false"
+          :mode="mode"
+          @update:value="$emit('input', $event)"
+        />
 
+        <Tabbed
+          v-if="isView"
+          :side-tabs="true"
+          :use-hash="true"
+        >
+          <Tab
+            v-if="steps[1]"
+            :name="steps[1].name"
+            :label="steps[1].label"
+            :weight="4"
+          >
+            <HelmOpChartTab
+              :value="value"
+              :mode="mode"
+              :is-view="isView"
+              :source-type="sourceType"
+              :source-type-options="sourceTypeOptions"
+              :is-suse-app-collection="isSuseAppCollection"
+              :app-co-chart-options="appCoChartOptions"
+              :app-co-version-options="appCoVersionOptions"
+              :app-co-chart-entries="appCoChartEntries"
+              :app-co-charts-loading="appCoChartsLoading"
+              :fv-get-and-report-path-rules="fvGetAndReportPathRules"
+              @update:source-type="onSourceTypeSelect"
+              @update:app-co-version-options="appCoVersionOptions = $event"
+            />
+          </Tab>
+          <Tab
+            v-if="steps[2]"
+            :name="steps[2].name"
+            :label="steps[2].label"
+            :weight="3"
+          >
+            <HelmOpValuesTab
+              :value="value"
+              :mode="mode"
+              :real-mode="realMode"
+              :is-view="isView"
+              :chart-values="chartValues"
+              :chart-values-init="chartValuesInit"
+              :yaml-form="yamlForm"
+              :yaml-form-options="yamlFormOptions"
+              :yaml-diff-mode-options="yamlDiffModeOptions"
+              :is-yaml-diff="isYamlDiff"
+              :editor-mode="editorMode"
+              :diff-mode="diffMode"
+              :is-real-mode-edit="isRealModeEdit"
+              @update:yaml-form="updateYamlForm"
+              @update:chart-values="updateChartValues"
+              @update:diff-mode="diffMode = $event"
+            />
+          </Tab>
+          <Tab
+            v-if="steps[3]"
+            :name="steps[3].name"
+            :label="steps[3].label"
+            :weight="2"
+          >
+            <HelmOpTargetTab
+              :value="value"
+              :mode="mode"
+              :real-mode="realMode"
+              :is-view="isView"
+              :targets-created="targetsCreated"
+              @update:targets="updateTargets"
+              @targets-created="targetsCreated=$event"
+            />
+          </Tab>
+          <Tab
+            v-if="steps[4]"
+            :name="steps[4].name"
+            :label="steps[4].label"
+            :weight="1"
+          >
+            <HelmOpAdvancedTab
+              :value="value"
+              :mode="mode"
+              :is-view="isView"
+              :source-type="sourceType"
+              :is-suse-app-collection="isSuseAppCollection"
+              :temp-cached-values="tempCachedValues"
+              :correct-drift-enabled="correctDriftEnabled"
+              :polling-interval="pollingInterval"
+              :is-polling-enabled="isPollingEnabled"
+              :show-polling-interval-min-value-warning="showPollingIntervalMinValueWarning"
+              :enable-polling-tooltip="enablePollingTooltip"
+              :is-null-or-static-version="isNullOrStaticVersion"
+              :downstream-secrets-list="downstreamSecretsList"
+              :downstream-config-maps-list="downstreamConfigMapsList"
+              :register-before-hook="registerBeforeHook"
+              @update:auth="updateAuth($event.value, $event.key)"
+              @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
+              @update:correct-drift="correctDriftEnabled = $event"
+              @update:downstream-resources="updateDownstreamResources($event.kind, $event.list)"
+              @toggle-polling="togglePolling"
+              @update:polling-interval="updatePollingInterval"
+              @update:validate-polling-interval="validatePollingInterval"
+            />
+          </Tab>
+          <Tab
+            name="labels"
+            label-key="generic.labelsAndAnnotations"
+            :weight="5"
+          >
+            <HelmOpMetadataTab
+              :value="value"
+              :mode="mode"
+              :is-view="isView"
+              @update:value="$emit('input', $event)"
+            />
+          </Tab>
+        </Tabbed>
+      </div>
+
+      <!-- AppCo view -->
       <Tabbed
-        v-if="isView"
+        v-else
         :side-tabs="true"
         :use-hash="true"
       >
         <Tab
-          v-if="steps[1]"
-          :name="steps[1].name"
-          :label="steps[1].label"
-          :weight="4"
+          :name="appCoViewTabs[0].name"
+          :label="appCoViewTabs[0].label"
+          :weight="appCoViewTabs[0].weight"
+          :show-header="false"
         >
-          <HelmOpChartTab
-            :value="value"
-            :mode="mode"
-            :is-view="isView"
-            :source-type="sourceType"
-            :source-type-options="sourceTypeOptions"
-            :is-suse-app-collection="isSuseAppCollection"
-            :app-co-chart-options="appCoChartOptions"
-            :app-co-version-options="appCoVersionOptions"
-            :app-co-chart-entries="appCoChartEntries"
-            :app-co-charts-loading="appCoChartsLoading"
-            :fv-get-and-report-path-rules="fvGetAndReportPathRules"
-            @update:source-type="onSourceTypeSelect"
-            @update:app-co-version-options="appCoVersionOptions = $event"
-          />
-        </Tab>
-        <Tab
-          v-if="steps[2]"
-          :name="steps[2].name"
-          :label="steps[2].label"
-          :weight="3"
-        >
-          <HelmOpValuesTab
+          <HelmOpAppCoConfigTab
             :value="value"
             :mode="mode"
             :real-mode="realMode"
             :is-view="isView"
+            :app-co-chart-entries="appCoChartEntries"
+            :app-co-charts-loading="appCoChartsLoading"
             :chart-values="chartValues"
             :chart-values-init="chartValuesInit"
             :yaml-form="yamlForm"
@@ -1063,37 +1188,7 @@ export default {
             :editor-mode="editorMode"
             :diff-mode="diffMode"
             :is-real-mode-edit="isRealModeEdit"
-            @update:yaml-form="updateYamlForm"
-            @update:chart-values="updateChartValues"
-            @update:diff-mode="diffMode = $event"
-          />
-        </Tab>
-        <Tab
-          v-if="steps[3]"
-          :name="steps[3].name"
-          :label="steps[3].label"
-          :weight="2"
-        >
-          <HelmOpTargetTab
-            :value="value"
-            :mode="mode"
-            :real-mode="realMode"
-            :is-view="isView"
             :targets-created="targetsCreated"
-            @update:targets="updateTargets"
-            @targets-created="targetsCreated=$event"
-          />
-        </Tab>
-        <Tab
-          v-if="steps[4]"
-          :name="steps[4].name"
-          :label="steps[4].label"
-          :weight="1"
-        >
-          <HelmOpAdvancedTab
-            :value="value"
-            :mode="mode"
-            :is-view="isView"
             :source-type="sourceType"
             :is-suse-app-collection="isSuseAppCollection"
             :temp-cached-values="tempCachedValues"
@@ -1106,6 +1201,15 @@ export default {
             :downstream-secrets-list="downstreamSecretsList"
             :downstream-config-maps-list="downstreamConfigMapsList"
             :register-before-hook="registerBeforeHook"
+            :hide-target="true"
+            :hide-advanced="true"
+            :hide-chart-config="false"
+            @update:value="$emit('input', $event)"
+            @update:yaml-form="updateYamlForm"
+            @update:chart-values="updateChartValues"
+            @update:diff-mode="diffMode = $event"
+            @update:targets="updateTargets"
+            @targets-created="targetsCreated=$event"
             @update:auth="updateAuth($event.value, $event.key)"
             @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
             @update:correct-drift="correctDriftEnabled = $event"
@@ -1115,16 +1219,109 @@ export default {
             @update:validate-polling-interval="validatePollingInterval"
           />
         </Tab>
+
         <Tab
-          name="labels"
-          label-key="generic.labelsAndAnnotations"
-          :weight="5"
+          :name="appCoViewTabs[1].name"
+          :label="appCoViewTabs[1].label"
+          :weight="appCoViewTabs[1].weight"
+          :show-header="false"
         >
-          <HelmOpMetadataTab
+          <HelmOpAppCoConfigTab
             :value="value"
             :mode="mode"
+            :real-mode="realMode"
             :is-view="isView"
+            :app-co-chart-entries="appCoChartEntries"
+            :app-co-charts-loading="appCoChartsLoading"
+            :chart-values="chartValues"
+            :chart-values-init="chartValuesInit"
+            :yaml-form="yamlForm"
+            :yaml-form-options="yamlFormOptions"
+            :yaml-diff-mode-options="yamlDiffModeOptions"
+            :is-yaml-diff="isYamlDiff"
+            :editor-mode="editorMode"
+            :diff-mode="diffMode"
+            :is-real-mode-edit="isRealModeEdit"
+            :targets-created="targetsCreated"
+            :source-type="sourceType"
+            :is-suse-app-collection="isSuseAppCollection"
+            :temp-cached-values="tempCachedValues"
+            :correct-drift-enabled="correctDriftEnabled"
+            :polling-interval="pollingInterval"
+            :is-polling-enabled="isPollingEnabled"
+            :show-polling-interval-min-value-warning="showPollingIntervalMinValueWarning"
+            :enable-polling-tooltip="enablePollingTooltip"
+            :is-null-or-static-version="isNullOrStaticVersion"
+            :downstream-secrets-list="downstreamSecretsList"
+            :downstream-config-maps-list="downstreamConfigMapsList"
+            :register-before-hook="registerBeforeHook"
+            :hide-chart-config="true"
+            :hide-advanced="true"
             @update:value="$emit('input', $event)"
+            @update:yaml-form="updateYamlForm"
+            @update:chart-values="updateChartValues"
+            @update:diff-mode="diffMode = $event"
+            @update:targets="updateTargets"
+            @targets-created="targetsCreated=$event"
+            @update:auth="updateAuth($event.value, $event.key)"
+            @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
+            @update:correct-drift="correctDriftEnabled = $event"
+            @update:downstream-resources="updateDownstreamResources($event.kind, $event.list)"
+            @toggle-polling="togglePolling"
+            @update:polling-interval="updatePollingInterval"
+            @update:validate-polling-interval="validatePollingInterval"
+          />
+        </Tab>
+
+        <Tab
+          :name="appCoViewTabs[2].name"
+          :label="appCoViewTabs[2].label"
+          :weight="appCoViewTabs[2].weight"
+        >
+          <HelmOpAppCoConfigTab
+            :value="value"
+            :mode="mode"
+            :real-mode="realMode"
+            :is-view="isView"
+            :app-co-chart-entries="appCoChartEntries"
+            :app-co-charts-loading="appCoChartsLoading"
+            :chart-values="chartValues"
+            :chart-values-init="chartValuesInit"
+            :yaml-form="yamlForm"
+            :yaml-form-options="yamlFormOptions"
+            :yaml-diff-mode-options="yamlDiffModeOptions"
+            :is-yaml-diff="isYamlDiff"
+            :editor-mode="editorMode"
+            :diff-mode="diffMode"
+            :is-real-mode-edit="isRealModeEdit"
+            :targets-created="targetsCreated"
+            :source-type="sourceType"
+            :is-suse-app-collection="isSuseAppCollection"
+            :temp-cached-values="tempCachedValues"
+            :correct-drift-enabled="correctDriftEnabled"
+            :polling-interval="pollingInterval"
+            :is-polling-enabled="isPollingEnabled"
+            :show-polling-interval-min-value-warning="showPollingIntervalMinValueWarning"
+            :enable-polling-tooltip="enablePollingTooltip"
+            :is-null-or-static-version="isNullOrStaticVersion"
+            :downstream-secrets-list="downstreamSecretsList"
+            :downstream-config-maps-list="downstreamConfigMapsList"
+            :register-before-hook="registerBeforeHook"
+            :hide-chart-config="true"
+            :hide-target="true"
+            @update:value="$emit('input', $event)"
+            @update:yaml-form="updateYamlForm"
+            @update:chart-values="updateChartValues"
+            @update:diff-mode="diffMode = $event"
+            @update:targets="updateTargets"
+            @targets-created="targetsCreated=$event"
+            @update:auth="updateAuth($event.value, $event.key)"
+            @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
+            @update:correct-drift="correctDriftEnabled = $event"
+            @update:downstream-resources="updateDownstreamResources($event.kind, $event.list)"
+            @toggle-polling="togglePolling"
+            @update:polling-interval="updatePollingInterval"
+            @update:validate-polling-interval="validatePollingInterval"
           />
         </Tab>
       </Tabbed>

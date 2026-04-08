@@ -3422,6 +3422,10 @@ fleet:
       description: Description
       descriptionPlaceholder: Any text you want that better describes this resource
       advanced: Advanced
+    appCoView:
+      chartConfig: Chart config
+      targetDetails: Target details
+      advanced: Advanced
     source:
       title: Source
       selectLabel: Type

@@ -148,6 +148,10 @@ export default {
 
     steps() {
       if (this.isSuseAppCollection && !this.isView) {
+        if (this.isEdit) {
+          return [];
+        }
+
         // IsSuseAppCollection and Edit mode
         return [
           {
@@ -1034,7 +1038,7 @@ export default {
     </template>
 
     <template
-      v-if="isView"
+      v-if="isView || isEdit && isSuseAppCollection"
       #single
     >
       <!-- Non-AppCo view -->
@@ -1162,7 +1166,7 @@ export default {
 
       <!-- AppCo view -->
       <Tabbed
-        v-else
+        v-else-if="isSuseAppCollection && isView"
         :side-tabs="true"
         :use-hash="true"
       >
@@ -1325,6 +1329,51 @@ export default {
           />
         </Tab>
       </Tabbed>
+      <div v-else-if="isSuseAppCollection && isEdit">
+        <HelmOpAppCoConfigTab
+          :value="value"
+          :mode="mode"
+          :real-mode="realMode"
+          :is-view="isView"
+          :app-co-chart-entries="appCoChartEntries"
+          :app-co-charts-loading="appCoChartsLoading"
+          :chart-values="chartValues"
+          :chart-values-init="chartValuesInit"
+          :yaml-form="yamlForm"
+          :yaml-form-options="yamlFormOptions"
+          :yaml-diff-mode-options="yamlDiffModeOptions"
+          :is-yaml-diff="isYamlDiff"
+          :editor-mode="editorMode"
+          :diff-mode="diffMode"
+          :is-real-mode-edit="isRealModeEdit"
+          :targets-created="targetsCreated"
+          :source-type="sourceType"
+          :is-suse-app-collection="isSuseAppCollection"
+          :temp-cached-values="tempCachedValues"
+          :correct-drift-enabled="correctDriftEnabled"
+          :polling-interval="pollingInterval"
+          :is-polling-enabled="isPollingEnabled"
+          :show-polling-interval-min-value-warning="showPollingIntervalMinValueWarning"
+          :enable-polling-tooltip="enablePollingTooltip"
+          :is-null-or-static-version="isNullOrStaticVersion"
+          :downstream-secrets-list="downstreamSecretsList"
+          :downstream-config-maps-list="downstreamConfigMapsList"
+          :register-before-hook="registerBeforeHook"
+          @update:value="$emit('input', $event)"
+          @update:yaml-form="updateYamlForm"
+          @update:chart-values="updateChartValues"
+          @update:diff-mode="diffMode = $event"
+          @update:targets="updateTargets"
+          @targets-created="targetsCreated=$event"
+          @update:auth="updateAuth($event.value, $event.key)"
+          @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
+          @update:correct-drift="correctDriftEnabled = $event"
+          @update:downstream-resources="updateDownstreamResources($event.kind, $event.list)"
+          @toggle-polling="togglePolling"
+          @update:polling-interval="updatePollingInterval"
+          @update:validate-polling-interval="validatePollingInterval"
+        />
+      </div>
     </template>
   </CruResource>
 </template>

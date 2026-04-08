@@ -214,7 +214,7 @@ export default {
   watch: {
     hasCharts(neu) {
       if (neu) {
-        this.scrollToSelectedOrFocusSearch();
+        this.fillTheSearch();
       }
     },
   },
@@ -223,18 +223,15 @@ export default {
     this.$refs.searchInput?.focus();
 
     if (this.hasCharts) {
-      this.scrollToSelectedOrFocusSearch();
+      this.fillTheSearch();
     }
   },
 
   methods: {
-    scrollToSelectedOrFocusSearch() {
+    fillTheSearch() {
       this.$nextTick(() => {
         if (this.value.spec?.helm?.chart) {
-          const ref = this.$refs.selectedCard;
-          const el = Array.isArray(ref) ? ref[0]?.$el : ref?.$el;
-
-          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          this.searchQuery = this.value.spec.helm.chart;
         }
       });
     },
@@ -433,7 +430,6 @@ export default {
             <rc-item-card
               v-for="card in chartCards"
               :id="card.id"
-              :ref="value.spec.helm.chart === card.id ? 'selectedCard' : undefined"
               :key="card.id"
               :header="card.header"
               :image="card.image"

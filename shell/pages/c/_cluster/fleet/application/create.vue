@@ -3,6 +3,8 @@ import { FLEET } from '@shell/config/types';
 import { SUB_TYPE } from '@shell/config/query-params';
 import FleetUtils from '@shell/utils/fleet';
 import Masthead from '@shell/components/ResourceDetail/Masthead';
+import suseLogo from '@shell/assets/images/content/suse.svg';
+import suseLogoDark from '@shell/assets/images/vendor/suse-app-collection-dark-mode.svg';
 
 export default {
   name: 'FleetApplicationCreatePage',
@@ -54,7 +56,7 @@ export default {
                 id:                  type,
                 label:               `fleet.application.subTypes.'${ FLEET.SUSE_APP_COLLECTION }'.label`,
                 description:         `fleet.application.subTypes.'${ FLEET.SUSE_APP_COLLECTION }'.description`,
-                bannerImage:         require('@shell/assets/images/content/suse.svg'),
+                bannerImage:         this.isDarkMode ? suseLogoDark : suseLogo,
                 disabled:            !canCreate,
                 tooltip:             canCreate ? null : this.t('fleet.application.noPermissions', { label }, true),
                 isSuseAppCollection: true,
@@ -71,6 +73,10 @@ export default {
 
     selectedSubtype() {
       return this.$route.query[SUB_TYPE];
+    },
+
+    isDarkMode() {
+      return this.$store.getters['prefs/theme'] === 'dark';
     },
   },
 

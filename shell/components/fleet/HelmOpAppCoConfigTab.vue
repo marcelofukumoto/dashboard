@@ -33,10 +33,6 @@ const props = defineProps({
     type:     String,
     required: true
   },
-  isView: {
-    type:    Boolean,
-    default: false
-  },
   appCoChartEntries: {
     type:    Object,
     default: () => ({})
@@ -409,130 +405,32 @@ const isEdit = computed(() => props.mode === _EDIT);
           @update:value="emit('update:value', $event)"
         />
       </div>
-      <!-- Deploy To -->
-      <HelmOpTargetTab
-        v-if="!hideTarget"
-        :value="value"
-        :mode="mode"
-        :real-mode="realMode"
-        :is-view="isView"
-        :targets-created="targetsCreated"
-        :hide-additional-options="true"
-        :compact="true"
-        @update:targets="$emit('update:targets', $event)"
-        @targets-created="$emit('targets-created', $event)"
-      />
+    </div>
+    <!-- Deploy To -->
+    <HelmOpTargetTab
+      v-if="!hideTarget"
+      :value="value"
+      :mode="mode"
+      :real-mode="realMode"
+      :is-view="isView"
+      :targets-created="targetsCreated"
+      :hide-additional-options="true"
+      :compact="true"
+      @update:targets="$emit('update:targets', $event)"
+      @targets-created="$emit('targets-created', $event)"
+    />
 
-      <!-- Advanced section -->
-      <RcSection
-        v-if="!hideAdvanced && !isStandaloneAdvanced"
-        :title="t('fleet.helmOp.appCoConfig.advanced')"
-        mode="with-header"
-        type="primary"
-        expandable
-        :expanded="false"
-        data-testid="appco-config-advanced"
-      >
-        <div class="content-group">
-          <div class="row">
-            <div class="col span-6">
-              <LabeledInput
-                v-model:value="value.spec.helm.releaseName"
-                :mode="mode"
-                :label-key="'fleet.helmOp.source.release.fullLabel'"
-                :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
-              />
-            </div>
-          </div>
-          <RcSection
-            :title="t('fleet.helmOp.resources.label')"
-            mode="with-header"
-            type="secondary"
-            expandable
-            :expanded="false"
-            data-testid="appco-config-resources"
-          >
-            <HelmOpResourcesSection
-              :value="value"
-              :mode="mode"
-              :correct-drift-enabled="correctDriftEnabled"
-              :downstream-secrets-list="downstreamSecretsList"
-              :downstream-config-maps-list="downstreamConfigMapsList"
-              :locked-secrets="appCoLockedSecrets"
-              :compact="true"
-              @update:correct-drift="$emit('update:correct-drift', $event)"
-              @update:downstream-resources="$emit('update:downstream-resources', $event)"
-            />
-          </RcSection>
-          <RcSection
-            :title="t('fleet.helmOp.target.targetAdditionalOptions')"
-            mode="with-header"
-            type="secondary"
-            expandable
-            :expanded="false"
-            data-testid="appco-config-target-options"
-          >
-            <HelmOpTargetOptionsSection
-              :value="value"
-              :mode="mode"
-              :stacked="true"
-            />
-          </RcSection>
-          <RcSection
-            :title="t('generic.labelsAndAnnotations', {}, true)"
-            mode="with-header"
-            type="secondary"
-            expandable
-            :expanded="false"
-            data-testid="appco-config-labels"
-          >
-            <Labels
-              :value="value"
-              :mode="mode"
-              :display-side-by-side="false"
-              :add-icon="'icon-plus'"
-              :reduce-title-size="true"
-              :use-rc-button="true"
-            />
-          </RcSection>
-          <RcSection
-            :title="t('fleet.helmOp.values.title')"
-            mode="with-header"
-            type="secondary"
-            expandable
-            :expanded="false"
-            data-testid="appco-config-values"
-          >
-            <HelmOpValuesTab
-              :value="value"
-              :mode="mode"
-              :real-mode="realMode"
-              :is-view="isView"
-              :chart-values="chartValues"
-              :chart-values-init="chartValuesInit"
-              :yaml-form="yamlForm"
-              :yaml-form-options="yamlFormOptions"
-              :yaml-diff-mode-options="yamlDiffModeOptions"
-              :is-yaml-diff="isYamlDiff"
-              :editor-mode="editorMode"
-              :diff-mode="diffMode"
-              :is-real-mode-edit="isRealModeEdit"
-              :hide-title="true"
-              :is-suse-app-collection="true"
-              :white-border="true"
-              @update:yaml-form="$emit('update:yaml-form', $event)"
-              @update:chart-values="$emit('update:chart-values', $event)"
-              @update:diff-mode="$emit('update:diff-mode', $event)"
-            />
-          </RcSection>
-        </div>
-      </RcSection>
-
-      <!-- Advanced content without RcSection wrapper (standalone tab) -->
-      <div
-        v-if="isStandaloneAdvanced"
-        class="content-group"
-      >
+    <!-- Advanced section -->
+    <RcSection
+      v-if="!hideAdvanced && !isStandaloneAdvanced"
+      :title="t('fleet.helmOp.appCoConfig.advanced')"
+      mode="with-header"
+      type="primary"
+      expandable
+      :expanded="false"
+      data-testid="appco-config-advanced"
+    >
+      <div class="content-group">
         <div class="row">
           <div class="col span-6">
             <LabeledInput
@@ -547,9 +445,8 @@ const isEdit = computed(() => props.mode === _EDIT);
           :title="t('fleet.helmOp.resources.label')"
           mode="with-header"
           type="secondary"
-          background="secondary"
           expandable
-          :expanded="true"
+          :expanded="false"
           data-testid="appco-config-resources"
         >
           <HelmOpResourcesSection
@@ -568,9 +465,8 @@ const isEdit = computed(() => props.mode === _EDIT);
           :title="t('fleet.helmOp.target.targetAdditionalOptions')"
           mode="with-header"
           type="secondary"
-          background="secondary"
           expandable
-          :expanded="true"
+          :expanded="false"
           data-testid="appco-config-target-options"
         >
           <HelmOpTargetOptionsSection
@@ -583,9 +479,8 @@ const isEdit = computed(() => props.mode === _EDIT);
           :title="t('generic.labelsAndAnnotations', {}, true)"
           mode="with-header"
           type="secondary"
-          background="secondary"
           expandable
-          :expanded="true"
+          :expanded="false"
           data-testid="appco-config-labels"
         >
           <Labels
@@ -601,9 +496,8 @@ const isEdit = computed(() => props.mode === _EDIT);
           :title="t('fleet.helmOp.values.title')"
           mode="with-header"
           type="secondary"
-          background="secondary"
           expandable
-          :expanded="true"
+          :expanded="false"
           data-testid="appco-config-values"
         >
           <HelmOpValuesTab
@@ -621,7 +515,6 @@ const isEdit = computed(() => props.mode === _EDIT);
             :diff-mode="diffMode"
             :is-real-mode-edit="isRealModeEdit"
             :hide-title="true"
-            :hide-banner="true"
             :is-suse-app-collection="true"
             :white-border="true"
             @update:yaml-form="$emit('update:yaml-form', $event)"
@@ -630,6 +523,109 @@ const isEdit = computed(() => props.mode === _EDIT);
           />
         </RcSection>
       </div>
+    </RcSection>
+
+    <!-- Advanced content without RcSection wrapper (standalone tab) -->
+    <div
+      v-if="isStandaloneAdvanced"
+      class="content-group"
+    >
+      <div class="row">
+        <div class="col span-6">
+          <LabeledInput
+            v-model:value="value.spec.helm.releaseName"
+            :mode="mode"
+            :label-key="'fleet.helmOp.source.release.fullLabel'"
+            :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
+          />
+        </div>
+      </div>
+      <RcSection
+        :title="t('fleet.helmOp.resources.label')"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-resources"
+      >
+        <HelmOpResourcesSection
+          :value="value"
+          :mode="mode"
+          :correct-drift-enabled="correctDriftEnabled"
+          :downstream-secrets-list="downstreamSecretsList"
+          :downstream-config-maps-list="downstreamConfigMapsList"
+          :locked-secrets="appCoLockedSecrets"
+          :compact="true"
+          @update:correct-drift="$emit('update:correct-drift', $event)"
+          @update:downstream-resources="$emit('update:downstream-resources', $event)"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('fleet.helmOp.target.targetAdditionalOptions')"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-target-options"
+      >
+        <HelmOpTargetOptionsSection
+          :value="value"
+          :mode="mode"
+          :stacked="true"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('generic.labelsAndAnnotations', {}, true)"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-labels"
+      >
+        <Labels
+          :value="value"
+          :mode="mode"
+          :display-side-by-side="false"
+          :add-icon="'icon-plus'"
+          :reduce-title-size="true"
+          :use-rc-button="true"
+        />
+      </RcSection>
+      <RcSection
+        :title="t('fleet.helmOp.values.title')"
+        mode="with-header"
+        type="secondary"
+        background="secondary"
+        expandable
+        :expanded="true"
+        data-testid="appco-config-values"
+      >
+        <HelmOpValuesTab
+          :value="value"
+          :mode="mode"
+          :real-mode="realMode"
+          :is-view="isView"
+          :chart-values="chartValues"
+          :chart-values-init="chartValuesInit"
+          :yaml-form="yamlForm"
+          :yaml-form-options="yamlFormOptions"
+          :yaml-diff-mode-options="yamlDiffModeOptions"
+          :is-yaml-diff="isYamlDiff"
+          :editor-mode="editorMode"
+          :diff-mode="diffMode"
+          :is-real-mode-edit="isRealModeEdit"
+          :hide-title="true"
+          :hide-banner="true"
+          :is-suse-app-collection="true"
+          :white-border="true"
+          @update:yaml-form="$emit('update:yaml-form', $event)"
+          @update:chart-values="$emit('update:chart-values', $event)"
+          @update:diff-mode="$emit('update:diff-mode', $event)"
+        />
+      </RcSection>
     </div>
   </div>
 </template>

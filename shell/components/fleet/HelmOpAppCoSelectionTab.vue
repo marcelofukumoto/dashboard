@@ -211,6 +211,14 @@ export default {
     },
   },
 
+  watch: {
+    hasCharts(neu) {
+      if (neu) {
+        this.scrollToSelectedOrFocusSearch();
+      }
+    },
+  },
+
   mounted() {
     this.$refs.searchInput?.focus();
 

@@ -382,25 +382,6 @@ export default {
             {{ t('asyncButton.createAppCoAuth.action') }}
           </RcButton>
         </div>
-
-        <div
-          v-if="isExistingSecretSelected"
-          class="mt-10"
-        >
-          <span
-            v-clean-tooltip="isAlreadyDefault ? t('fleet.helmOp.auth.alreadyDefault') : null"
-            class="set-default-wrapper"
-          >
-            <RcButton
-              :class="{ 'no-pointer': isAlreadyDefault }"
-              variant="secondary"
-              :disabled="isAlreadyDefault"
-              @click="saveAsDefault"
-            >
-              {{ t('asyncButton.setAppCoDefault.action') }}
-            </RcButton>
-          </span>
-        </div>
       </div>
 
       <div class="charts-section">
@@ -431,6 +412,7 @@ export default {
               v-for="card in chartCards"
               :id="card.id"
               :key="card.id"
+              class="chart-card"
               :header="card.header"
               :image="card.image"
               :content="card.content"
@@ -512,11 +494,15 @@ export default {
 
 .chart-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
   grid-gap: var(--gap-md);
   width: 100%;
   height: max-content;
   overflow: hidden;
+
+  .chart-card {
+    max-width: 500px;
+  }
 }
 
 .charts-empty {

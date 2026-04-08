@@ -666,6 +666,12 @@ const isEdit = computed(() => props.mode === _EDIT);
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  background: var(--rc-image-bg);
+  border-radius: var(--border-radius);
+  color: var(--rc-image-color);
+  width: 50px;
+  height: 50px;
+  justify-content: center;
 
   .chart-icon {
     width: 48px;

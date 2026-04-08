@@ -382,7 +382,7 @@ export default {
 
         <template v-else-if="hasCharts">
           <div
-            class="chart-cards"
+            :class="['chart-cards', { 'single-chart': filteredCharts.length === 1, 'two-charts': filteredCharts.length === 2 }]"
             data-testid="appco-selection-chart-cards"
           >
             <rc-item-card
@@ -476,6 +476,14 @@ export default {
   width: 100%;
   height: max-content;
   overflow: hidden;
+
+  &.single-chart {
+    max-width: 500px;
+  }
+
+  &.two-charts {
+    max-width: 1021px;
+  }
 
   .chart-card {
     max-width: 500px;

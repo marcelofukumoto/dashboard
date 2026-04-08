@@ -5,16 +5,21 @@ interface SubHeaderItem {
   iconTooltip?: Record<{key?: string, text?: string}>;
   label: string;
   labelTooltip?: string;
+  removeMarginBottom?: boolean;
 }
 
 defineProps<{
   items: SubHeaderItem[];
+  removeMarginBottom?: boolean;
 }>();
 
 </script>
 
 <template>
-  <div class="app-chart-card-sub-header">
+  <div
+    class="app-chart-card-sub-header"
+    :class="{ 'no-margin-bottom': removeMarginBottom }"
+  >
     <div
       v-for="(subHeaderItem, i) in items"
       :key="i"
@@ -40,6 +45,10 @@ defineProps<{
   color: var(--link-text-secondary);
   height: 22px;
   margin-bottom: 8px;
+
+  &.no-margin-bottom {
+    margin-bottom: 0;
+  }
 
   &-item {
     display: flex;

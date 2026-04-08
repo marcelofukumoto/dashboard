@@ -261,7 +261,10 @@ const appCoLockedSecrets = computed(() => {
           <h3 class="chart-header-title">
             {{ selectedChartName }}
           </h3>
-          <AppChartCardSubHeader :items="chartSubHeaderItems" />
+          <AppChartCardSubHeader
+            :items="chartSubHeaderItems"
+            :remove-margin-bottom="true"
+          />
         </div>
       </div>
 
@@ -465,6 +468,8 @@ const appCoLockedSecrets = computed(() => {
 
 .chart-header-icon {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 
   .chart-icon {
     width: 48px;
@@ -498,6 +503,7 @@ const appCoLockedSecrets = computed(() => {
   font-size: 18px;
   font-weight: 600;
   line-height: 24px;
+  margin-bottom: 0;
 }
 
 .version-option {

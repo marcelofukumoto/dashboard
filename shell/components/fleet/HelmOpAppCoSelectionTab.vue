@@ -214,6 +214,12 @@ export default {
         this.fillTheSearch();
       }
     },
+
+    appCoChartEntries() {
+      if (!this.value.spec?.helm?.chart) {
+        this.searchQuery = '';
+      }
+    },
   },
 
   mounted() {

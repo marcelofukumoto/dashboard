@@ -343,8 +343,18 @@ export default {
 
     appCoRepoName: {
       immediate: true,
-      handler(repoName) {
+      handler(repoName, oldRepoName) {
         if (this.isSuseAppCollection && repoName) {
+          // When switching auth secrets, reset chart selection so stale values
+          // don't persist if the new chart list doesn't contain the old chart.
+          if (oldRepoName) {
+            set(this.value, 'spec.helm.chart', '');
+            set(this.value, 'spec.helm.version', '');
+            set(this.value, 'spec.helm.values', {});
+            this.appCoVersionOptions = [];
+            this.chartValues = '';
+          }
+
           this.fetchAppCoCharts(repoName);
         }
       },

@@ -245,6 +245,7 @@ const appCoLockedSecrets = computed(() => {
 });
 
 const isStandaloneAdvanced = computed(() => props.hideChartConfig && props.hideTarget && !props.hideAdvanced);
+const isStandaloneTarget = computed(() => props.hideChartConfig && !props.hideTarget && props.hideAdvanced);
 
 const isView = computed(() => props.mode === _VIEW);
 const isCreate = computed(() => props.mode === _CREATE);
@@ -310,6 +311,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :allow-none="false"
           :cache-secrets="true"
           :no-margin-top="true"
+          data-testid="appco-config-auth"
           @update:value="emit('update:auth', { value: $event, key: 'helmSecretName' })"
           @inputauthval="emit('update:cached-auth', { value: $event, key: 'helmSecretName' })"
         />
@@ -331,6 +333,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :options="versionOptions"
             :loading="appCoChartsLoading"
             :mode="mode"
+            data-testid="appco-config-version"
             @update:value="onVersionSelect"
           />
         </div>
@@ -346,6 +349,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :options="versionOptions"
             :loading="appCoChartsLoading"
             :mode="mode"
+            data-testid="appco-config-version"
             @update:value="onVersionSelect"
           />
         </div>
@@ -382,6 +386,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :allow-none="false"
           :cache-secrets="true"
           :no-margin-top="true"
+          data-testid="appco-config-auth"
           @update:value="emit('update:auth', { value: $event, key: 'helmSecretName' })"
           @inputauthval="emit('update:cached-auth', { value: $event, key: 'helmSecretName' })"
         />
@@ -391,6 +396,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :options="versionOptions"
             :loading="appCoChartsLoading"
             :mode="mode"
+            data-testid="appco-config-version"
             @update:value="onVersionSelect"
           />
         </div>
@@ -408,7 +414,7 @@ const isEdit = computed(() => props.mode === _EDIT);
     </div>
     <!-- Deploy To -->
     <HelmOpTargetTab
-      v-if="!hideTarget"
+      v-if="!hideTarget && isStandaloneTarget"
       :value="value"
       :mode="mode"
       :real-mode="realMode"
@@ -416,9 +422,34 @@ const isEdit = computed(() => props.mode === _EDIT);
       :targets-created="targetsCreated"
       :hide-additional-options="true"
       :compact="true"
+      data-testid="appco-config-target"
       @update:targets="$emit('update:targets', $event)"
       @targets-created="$emit('targets-created', $event)"
     />
+
+    <!-- Deploy To (standalone tab) -->
+    <RcSection
+      v-if="!hideTarget && !isStandaloneTarget"
+      :title="t('fleet.helmOp.appCoView.targetDetails')"
+      mode="with-header"
+      type="primary"
+      expandable
+      :expanded="true"
+      data-testid="appco-config-rcsection-target"
+    >
+      <HelmOpTargetTab
+        :value="value"
+        :mode="mode"
+        :real-mode="realMode"
+        :is-view="isView"
+        :targets-created="targetsCreated"
+        :hide-additional-options="true"
+        :compact="true"
+        data-testid="appco-config-target"
+        @update:targets="$emit('update:targets', $event)"
+        @targets-created="$emit('targets-created', $event)"
+      />
+    </RcSection>
 
     <!-- Advanced section -->
     <RcSection
@@ -438,6 +469,7 @@ const isEdit = computed(() => props.mode === _EDIT);
               :mode="mode"
               :label-key="'fleet.helmOp.source.release.fullLabel'"
               :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
+              data-testid="appco-config-release-name"
             />
           </div>
         </div>
@@ -457,6 +489,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :downstream-config-maps-list="downstreamConfigMapsList"
             :locked-secrets="appCoLockedSecrets"
             :compact="true"
+            data-testid="appco-config-resources-section"
             @update:correct-drift="$emit('update:correct-drift', $event)"
             @update:downstream-resources="$emit('update:downstream-resources', $event)"
           />
@@ -473,6 +506,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :value="value"
             :mode="mode"
             :stacked="true"
+            data-testid="appco-config-target-options-section"
           />
         </RcSection>
         <RcSection
@@ -490,6 +524,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :add-icon="'icon-plus'"
             :reduce-title-size="true"
             :use-rc-button="true"
+            data-testid="appco-config-labels-section"
           />
         </RcSection>
         <RcSection
@@ -517,6 +552,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :hide-title="true"
             :is-suse-app-collection="true"
             :white-border="true"
+            data-testid="appco-config-values-tab"
             @update:yaml-form="$emit('update:yaml-form', $event)"
             @update:chart-values="$emit('update:chart-values', $event)"
             @update:diff-mode="$emit('update:diff-mode', $event)"
@@ -537,6 +573,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :mode="mode"
             :label-key="'fleet.helmOp.source.release.fullLabel'"
             :placeholder="t('fleet.helmOp.source.release.placeholder', null, true)"
+            data-testid="appco-config-release-name"
           />
         </div>
       </div>
@@ -557,6 +594,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :downstream-config-maps-list="downstreamConfigMapsList"
           :locked-secrets="appCoLockedSecrets"
           :compact="true"
+          data-testid="appco-config-resources-section"
           @update:correct-drift="$emit('update:correct-drift', $event)"
           @update:downstream-resources="$emit('update:downstream-resources', $event)"
         />
@@ -574,6 +612,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :value="value"
           :mode="mode"
           :stacked="true"
+          data-testid="appco-config-target-options-section"
         />
       </RcSection>
       <RcSection
@@ -592,6 +631,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :add-icon="'icon-plus'"
           :reduce-title-size="true"
           :use-rc-button="true"
+          data-testid="appco-config-labels-section"
         />
       </RcSection>
       <RcSection
@@ -621,6 +661,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :hide-banner="true"
           :is-suse-app-collection="true"
           :white-border="true"
+          data-testid="appco-config-values-tab"
           @update:yaml-form="$emit('update:yaml-form', $event)"
           @update:chart-values="$emit('update:chart-values', $event)"
           @update:diff-mode="$emit('update:diff-mode', $event)"
@@ -634,7 +675,7 @@ const isEdit = computed(() => props.mode === _EDIT);
 .appco-config-tab {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 16px;
 }
 
 .content-group {

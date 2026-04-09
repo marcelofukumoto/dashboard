@@ -50,7 +50,7 @@ const onTargetsCreated = (value) => {
 </script>
 
 <template>
-  <div>
+  <div data-testid="helmop-target-tab">
     <div class="gap-6">
       <component
         :is="compact ? 'h3' : 'h2'"
@@ -64,6 +64,7 @@ const onTargetsCreated = (value) => {
         :mode="realMode"
         :created="targetsCreated"
         :compact="compact"
+        data-testid="helmop-target-cluster-targets"
         @update:value="updateTargets"
         @created="onTargetsCreated"
       />
@@ -76,6 +77,7 @@ const onTargetsCreated = (value) => {
       <HelmOpTargetOptionsSection
         :value="value"
         :mode="mode"
+        data-testid="helmop-target-options"
       />
     </template>
   </div>

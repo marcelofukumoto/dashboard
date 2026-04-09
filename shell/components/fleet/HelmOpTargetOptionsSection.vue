@@ -18,13 +18,17 @@ defineProps({
 </script>
 
 <template>
-  <div :class="{ row: !stacked, 'col gap-16': stacked }">
+  <div
+    :class="{ row: !stacked, 'col gap-16': stacked }"
+    data-testid="helmop-target-options-section"
+  >
     <div class="col span-6">
       <LabeledInput
         v-model:value="value.spec.serviceAccount"
         :mode="mode"
         label-key="fleet.helmOp.serviceAccount.label"
         placeholder-key="fleet.helmOp.serviceAccount.placeholder"
+        data-testid="helmop-target-options-service-account"
       />
     </div>
     <div class="col span-6">
@@ -35,6 +39,7 @@ defineProps({
         placeholder-key="fleet.helmOp.targetNamespace.placeholder"
         label="Target Namespace"
         placeholder="Optional: Require all resources to be in this namespace"
+        data-testid="helmop-target-options-namespace"
       />
     </div>
   </div>

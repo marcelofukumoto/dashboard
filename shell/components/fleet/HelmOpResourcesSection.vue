@@ -67,7 +67,7 @@ const updateDownstreamResources = (kind, list) => {
 </script>
 
 <template>
-  <div>
+  <div data-testid="helmop-resources-section">
     <div
       class="row"
       :class="compact ? 'mb-16' : 'mb-20'"
@@ -77,6 +77,7 @@ const updateDownstreamResources = (kind, list) => {
           :value="downstreamSecretsList"
           :namespace="value.metadata.namespace"
           :mode="mode"
+          data-testid="helmop-resources-secret-selector"
           @update:value="updateSecrets"
         />
       </div>
@@ -90,6 +91,7 @@ const updateDownstreamResources = (kind, list) => {
           :value="downstreamConfigMapsList"
           :namespace="value.metadata.namespace"
           :mode="mode"
+          data-testid="helmop-resources-configmap-selector"
           @update:value="updateDownstreamResources('ConfigMap', $event)"
         />
       </div>
@@ -101,6 +103,7 @@ const updateDownstreamResources = (kind, list) => {
         type="checkbox"
         label-key="fleet.helmOp.resources.correctDrift"
         :mode="mode"
+        data-testid="helmop-resources-correct-drift"
         @update:value="updateCorrectDrift"
       />
       <Checkbox
@@ -109,6 +112,7 @@ const updateDownstreamResources = (kind, list) => {
         type="checkbox"
         label-key="fleet.helmOp.resources.keepResources"
         :mode="mode"
+        data-testid="helmop-resources-keep-resources"
       />
     </div>
   </div>

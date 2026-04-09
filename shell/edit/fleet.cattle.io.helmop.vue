@@ -862,6 +862,7 @@ export default {
     :steps="!isView ? steps : undefined"
     :finish-mode="'finish'"
     class="wizard"
+    data-testid="helmop-cru-resource"
     @cancel="done"
     @error="e=>errors = e"
     @finish="save"
@@ -874,6 +875,7 @@ export default {
         :value="value"
         :mode="mode"
         :is-view="isView"
+        data-testid="helmop-metadata-tab"
         @update:value="$emit('input', $event)"
       />
     </template>
@@ -892,6 +894,7 @@ export default {
         :register-before-hook="registerBeforeHook"
         :app-co-chart-entries="appCoChartEntries"
         :app-co-charts-loading="appCoChartsLoading"
+        data-testid="helmop-appco-selection-tab"
         @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
         @update:auth="updateAuth($event.value, $event.key)"
         @select-chart-next="goToNextStep"
@@ -930,6 +933,7 @@ export default {
         :downstream-secrets-list="downstreamSecretsList"
         :downstream-config-maps-list="downstreamConfigMapsList"
         :register-before-hook="registerBeforeHook"
+        data-testid="helmop-appco-config-tab"
         @update:value="$emit('input', $event)"
         @update:yaml-form="updateYamlForm"
         @update:chart-values="updateChartValues"
@@ -962,6 +966,7 @@ export default {
         :app-co-chart-entries="appCoChartEntries"
         :app-co-charts-loading="appCoChartsLoading"
         :fv-get-and-report-path-rules="fvGetAndReportPathRules"
+        data-testid="helmop-chart-tab"
         @update:source-type="onSourceTypeSelect"
         @update:app-co-version-options="appCoVersionOptions = $event"
       />
@@ -985,6 +990,7 @@ export default {
         :editor-mode="editorMode"
         :diff-mode="diffMode"
         :is-real-mode-edit="isRealModeEdit"
+        data-testid="helmop-values-tab"
         @update:yaml-form="updateYamlForm"
         @update:chart-values="updateChartValues"
         @update:diff-mode="diffMode = $event"
@@ -1001,6 +1007,7 @@ export default {
         :real-mode="realMode"
         :is-view="isView"
         :targets-created="targetsCreated"
+        data-testid="helmop-target-tab"
         @update:targets="updateTargets"
         @targets-created="targetsCreated=$event"
       />
@@ -1026,6 +1033,7 @@ export default {
         :downstream-secrets-list="downstreamSecretsList"
         :downstream-config-maps-list="downstreamConfigMapsList"
         :register-before-hook="registerBeforeHook"
+        data-testid="helmop-advanced-tab"
         @update:auth="updateAuth($event.value, $event.key)"
         @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
         @update:correct-drift="correctDriftEnabled = $event"
@@ -1046,6 +1054,7 @@ export default {
           :value="value"
           :namespaced="false"
           :mode="mode"
+          data-testid="helmop-view-name-ns-description"
           @update:value="$emit('input', $event)"
         />
 
@@ -1072,6 +1081,7 @@ export default {
               :app-co-chart-entries="appCoChartEntries"
               :app-co-charts-loading="appCoChartsLoading"
               :fv-get-and-report-path-rules="fvGetAndReportPathRules"
+              data-testid="helmop-view-chart-tab"
               @update:source-type="onSourceTypeSelect"
               @update:app-co-version-options="appCoVersionOptions = $event"
             />
@@ -1096,6 +1106,7 @@ export default {
               :editor-mode="editorMode"
               :diff-mode="diffMode"
               :is-real-mode-edit="isRealModeEdit"
+              data-testid="helmop-view-values-tab"
               @update:yaml-form="updateYamlForm"
               @update:chart-values="updateChartValues"
               @update:diff-mode="diffMode = $event"
@@ -1113,6 +1124,7 @@ export default {
               :real-mode="realMode"
               :is-view="isView"
               :targets-created="targetsCreated"
+              data-testid="helmop-view-target-tab"
               @update:targets="updateTargets"
               @targets-created="targetsCreated=$event"
             />
@@ -1139,6 +1151,7 @@ export default {
               :downstream-secrets-list="downstreamSecretsList"
               :downstream-config-maps-list="downstreamConfigMapsList"
               :register-before-hook="registerBeforeHook"
+              data-testid="helmop-view-advanced-tab"
               @update:auth="updateAuth($event.value, $event.key)"
               @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
               @update:correct-drift="correctDriftEnabled = $event"
@@ -1157,6 +1170,7 @@ export default {
               :value="value"
               :mode="mode"
               :is-view="isView"
+              data-testid="helmop-view-metadata-tab"
               @update:value="$emit('input', $event)"
             />
           </Tab>
@@ -1168,6 +1182,7 @@ export default {
         v-else-if="isSuseAppCollection && isView"
         :side-tabs="true"
         :use-hash="true"
+        data-testid="helmop-appco-view-tabbed"
       >
         <Tab
           :name="appCoViewTabs[0].name"
@@ -1206,6 +1221,7 @@ export default {
             :hide-target="true"
             :hide-advanced="true"
             :hide-chart-config="false"
+            data-testid="helmop-appco-view-chart-config"
             @update:value="$emit('input', $event)"
             @update:yaml-form="updateYamlForm"
             @update:chart-values="updateChartValues"
@@ -1258,6 +1274,7 @@ export default {
             :register-before-hook="registerBeforeHook"
             :hide-chart-config="true"
             :hide-advanced="true"
+            data-testid="helmop-appco-view-target-details"
             @update:value="$emit('input', $event)"
             @update:yaml-form="updateYamlForm"
             @update:chart-values="updateChartValues"
@@ -1309,6 +1326,7 @@ export default {
             :register-before-hook="registerBeforeHook"
             :hide-chart-config="true"
             :hide-target="true"
+            data-testid="helmop-appco-view-advanced"
             @update:value="$emit('input', $event)"
             @update:yaml-form="updateYamlForm"
             @update:chart-values="updateChartValues"
@@ -1325,7 +1343,10 @@ export default {
           />
         </Tab>
       </Tabbed>
-      <div v-else-if="isSuseAppCollection && isEdit">
+      <div
+        v-else-if="isSuseAppCollection && isEdit"
+        data-testid="helmop-appco-edit"
+      >
         <HelmOpAppCoConfigTab
           :value="value"
           :mode="mode"
@@ -1354,6 +1375,7 @@ export default {
           :downstream-secrets-list="downstreamSecretsList"
           :downstream-config-maps-list="downstreamConfigMapsList"
           :register-before-hook="registerBeforeHook"
+          data-testid="helmop-appco-edit-config-tab"
           @update:value="$emit('input', $event)"
           @update:yaml-form="updateYamlForm"
           @update:chart-values="updateChartValues"

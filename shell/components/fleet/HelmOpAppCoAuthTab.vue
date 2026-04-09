@@ -95,10 +95,11 @@ const saveSecret = async(buttonCb) => {
 </script>
 
 <template>
-  <div>
+  <div data-testid="appco-auth-tab">
     <Banner
       color="info"
       label-key="fleet.helmOp.add.steps.auth.info"
+      data-testid="appco-auth-info-banner"
     />
 
     <h2>{{ t('fleet.helmOp.auth.appco') }}</h2>
@@ -119,6 +120,7 @@ const saveSecret = async(buttonCb) => {
         :allow-none="false"
         :pre-select="preSelectValue"
         :cache-secrets="true"
+        data-testid="appco-auth-secret-selector"
         @update:value="updateAuth($event, 'helmSecretName')"
         @inputauthval="updateCachedAuthVal($event, 'helmSecretName')"
       />
@@ -137,6 +139,7 @@ const saveSecret = async(buttonCb) => {
       <AsyncButton
         :disabled="!hasCredentials"
         mode="createAppCoAuth"
+        data-testid="appco-auth-save-btn"
         @click="saveSecret"
       />
     </div>

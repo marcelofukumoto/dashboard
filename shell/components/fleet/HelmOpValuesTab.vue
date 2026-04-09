@@ -96,12 +96,13 @@ const updateDiffMode = (value) => {
 </script>
 
 <template>
-  <div>
+  <div data-testid="helmop-values-tab">
     <Banner
       v-if="!hideBanner"
       color="info"
       class="description mt-0"
       :label-key="isSuseAppCollection ? 'fleet.helmOp.values.appCoDescription' : 'fleet.helmOp.values.description'"
+      data-testid="helmop-values-info-banner"
     />
 
     <h2 v-if="!hideTitle">
@@ -145,6 +146,7 @@ const updateDiffMode = (value) => {
         :scrolling="true"
         :editor-mode="editorMode"
         :hide-preview-buttons="true"
+        data-testid="helmop-values-yaml-editor"
         @update:value="updateChartValues"
       />
     </div>
@@ -155,6 +157,7 @@ const updateDiffMode = (value) => {
         :namespace="value.metadata.namespace"
         :mode="realMode"
         :reduceTitleSize="hideTitle"
+        data-testid="helmop-values-from"
       />
     </div>
   </div>

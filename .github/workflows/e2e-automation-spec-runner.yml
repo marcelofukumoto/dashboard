@@ -1,0 +1,283 @@
+name: E2E Automation Spec Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_password:
+        description: "Password for login (TEST_PASSWORD)"
+        required: true
+        type: string
+      pr_number:
+        description: "PR number to test (leave empty for first run)"
+        required: false
+        type: string
+        default: ""
+      attempt:
+        description: "Fix-loop attempt number (max 5)"
+        required: false
+        type: string
+        default: "1"
+
+env:
+  TEST_USERNAME: admin
+  TEST_PASSWORD: ${{ github.event.inputs.test_password }}
+  CATTLE_BOOTSTRAP_PASSWORD: ${{ github.event.inputs.test_password }}
+  TEST_BASE_URL: https://127.0.0.1.sslip.io
+  API: https://127.0.0.1.sslip.io
+  TEST_PROJECT_ID: rancher-dashboard
+  BUILD_DASHBOARD: true
+  E2E_RANCHER_LOG: rancher.log
+  E2E_BUILD_DIST_NAME: dist
+  E2E_BUILD_DIST_DIR: dist
+  E2E_BUILD_DIST_EMBER_NAME: dist_ember
+  E2E_BUILD_DIST_EMBER_DIR: dist_ember
+
+jobs:
+  # ── Build the dashboard ─────────────────────────────────────────
+  e2e-ui-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup env
+        uses: ./.github/actions/setup
+      - name: Build e2e
+        run: yarn e2e:build
+      - name: Upload e2e build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.E2E_BUILD_DIST_NAME }}
+          path: ${{ env.E2E_BUILD_DIST_DIR }}/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 9
+      - name: Upload e2e build ember
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.E2E_BUILD_DIST_EMBER_NAME }}
+          path: ${{ env.E2E_BUILD_DIST_EMBER_DIR }}/
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 9
+
+  # ── Run the full E2E suite 5 times ──────────────────────────────
+  e2e-run:
+    needs: e2e-ui-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: write
+    steps:
+      - name: Resolve checkout ref
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUM="${{ github.event.inputs.pr_number }}"
+          if [ -n "$PR_NUM" ] && [ "$PR_NUM" != "0" ]; then
+            HEAD_REF=$(gh pr view "$PR_NUM" --repo "${{ github.repository }}" \
+              --json headRefName -q .headRefName)
+            echo "ref=$HEAD_REF" >> "$GITHUB_OUTPUT"
+            echo "pr_number=$PR_NUM" >> "$GITHUB_OUTPUT"
+            echo "Testing PR #$PR_NUM (branch $HEAD_REF)"
+          else
+            echo "ref=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "pr_number=" >> "$GITHUB_OUTPUT"
+            echo "No PR — testing current ref ${{ github.ref_name }}"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve.outputs.ref }}
+          fetch-depth: 1
+
+      - name: Setup env
+        uses: ./.github/actions/setup
+
+      - name: Download e2e build
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.E2E_BUILD_DIST_NAME }}
+          path: ${{ env.E2E_BUILD_DIST_DIR }}
+
+      - name: Download e2e build ember
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.E2E_BUILD_DIST_EMBER_NAME }}
+          path: ${{ env.E2E_BUILD_DIST_EMBER_DIR }}
+
+      - name: Run Rancher
+        run: yarn e2e:docker
+
+      - name: Setup Rancher and user
+        run: yarn e2e:prod
+        env:
+          GREP_TAGS: "@adminUserSetup --@jenkins"
+          TEST_USERNAME: admin
+          TEST_ONLY: setup
+          TEST_SKIP: ""
+
+      # ── Run all tests 5 times ───────────────────────────────────
+      - name: Run E2E tests (5 iterations)
+        id: run-tests
+        run: |
+          mkdir -p cypress/results
+          PASSED=0
+          FAILED=0
+
+          for i in 1 2 3 4 5; do
+            echo "::group::Run $i of 5"
+            RUN_DIR="cypress/results/run-$i"
+            mkdir -p "$RUN_DIR"
+
+            if yarn e2e:prod 2>&1 | tee "$RUN_DIR/output.txt"; then
+              echo "✅ Run $i: PASSED"
+              PASSED=$((PASSED + 1))
+            else
+              echo "❌ Run $i: FAILED"
+              FAILED=$((FAILED + 1))
+            fi
+
+            # Move Cypress artifacts per run
+            cp -r cypress/screenshots "$RUN_DIR/screenshots" 2>/dev/null || true
+            cp -r cypress/videos "$RUN_DIR/videos" 2>/dev/null || true
+            cp -r cypress/reports "$RUN_DIR/reports" 2>/dev/null || true
+
+            echo "::endgroup::"
+          done
+
+          echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
+        env:
+          TEST_SKIP: setup
+          GREP_TAGS: "@adminUser --@jenkins"
+          TEST_USERNAME: admin
+
+      # ── Parse results ─────────────────────────────────────────────
+      - name: Parse results
+        id: parse
+        if: always() && steps.run-tests.outcome != 'cancelled'
+        run: |
+          PASSED="${{ steps.run-tests.outputs.passed }}"
+          FAILED="${{ steps.run-tests.outputs.failed }}"
+
+          if [ -z "$PASSED" ] || [ -z "$FAILED" ]; then
+            echo "status=error" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$FAILED" = "0" ]; then
+            echo "status=passed" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Collect failure details from each failed run
+          FAILURES="[]"
+          for i in 1 2 3 4 5; do
+            OUT="cypress/results/run-$i/output.txt"
+            if [ -f "$OUT" ] && ! grep -q "All specs passed" "$OUT"; then
+              TAIL=$(tail -100 "$OUT" | jq -Rsa .)
+              # Extract failed spec names
+              FAILED_SPECS=$(grep -E '^\s+✖\s+' "$OUT" | sed 's/.*✖\s*//' | sed 's/\s*[0-9].*$//' || true)
+              SPEC_LIST=$(echo "$FAILED_SPECS" | jq -R -s 'split("\n") | map(select(. != ""))')
+              FAILURES=$(echo "$FAILURES" | jq \
+                --arg run "$i" \
+                --argjson specs "$SPEC_LIST" \
+                --argjson output "$TAIL" \
+                '. + [{"run": ($run | tonumber), "failed_specs": $specs, "output": $output}]')
+            fi
+          done
+
+          ATTEMPT="${{ github.event.inputs.attempt }}"
+          PR_NUM="${{ steps.resolve.outputs.pr_number }}"
+
+          # Deduplicate all failed spec paths across runs
+          ALL_FAILED=$(echo "$FAILURES" | jq '[.[].failed_specs[]] | unique')
+
+          jq -n \
+            --argjson attempt "$ATTEMPT" \
+            --arg pr "$PR_NUM" \
+            --argjson passed "$PASSED" \
+            --argjson failed "$FAILED" \
+            --argjson all_failed_specs "$ALL_FAILED" \
+            --argjson runs "$FAILURES" \
+            '{attempt:$attempt, pr_number:$pr, total_runs:5,
+              passed:$passed, failed:$failed,
+              failed_specs:$all_failed_specs,
+              runs:$runs}' \
+            > cypress/results/summary.json
+
+      # ── Fetch Rancher logs on failure ─────────────────────────────
+      - name: Fetch Rancher Logs
+        if: failure()
+        run: yarn docker:local:logs
+
+      # ── Upload artifacts ──────────────────────────────────────────
+      - name: Create Artifacts Folder
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp -r cypress/results artifacts/results 2>/dev/null || true
+          cp -r browser-logs/out.html artifacts/browser-logs.html 2>/dev/null || true
+          cp ${{ env.E2E_RANCHER_LOG }} artifacts/rancher.log 2>/dev/null || true
+
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-spec-runner-results-attempt-${{ github.event.inputs.attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 9
+
+      # ── Decide next action ────────────────────────────────────────
+      - name: Report and decide
+        if: always() && steps.parse.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          STATUS="${{ steps.parse.outputs.status }}"
+          ATTEMPT="${{ github.event.inputs.attempt }}"
+          PR_NUM="${{ steps.resolve.outputs.pr_number }}"
+
+          if [ -z "$STATUS" ] || [ "$STATUS" = "error" ]; then
+            echo "Parse did not produce status. Skipping."
+            exit 0
+          fi
+
+          echo "Status: $STATUS (attempt $ATTEMPT)"
+
+          if [ "$STATUS" = "passed" ]; then
+            echo "All 5 runs passed — suite is stable."
+            if [ -n "$PR_NUM" ]; then
+              gh pr comment "$PR_NUM" --repo "${{ github.repository }}" \
+                --body "✅ **E2E Spec Runner** — All 5/5 runs passed (attempt $ATTEMPT). Suite is stable."
+            fi
+          else
+            PASSED="${{ steps.run-tests.outputs.passed }}"
+            FAILED="${{ steps.run-tests.outputs.failed }}"
+            echo "Flaky or broken ($FAILED/5 failed). Dispatching fixer…"
+
+            FAILURE_SUMMARY=$(jq -c '.' cypress/results/summary.json)
+
+            gh workflow run e2e-automation-fixer.lock.yml \
+              --repo "${{ github.repository }}" \
+              --ref e2e-agentic \
+              -f test_password="${{ github.event.inputs.test_password }}" \
+              -f pr_number="$PR_NUM" \
+              -f attempt="$ATTEMPT" \
+              -f failure_summary="$FAILURE_SUMMARY" \
+              -f runner_run_id="${{ github.run_id }}"
+
+            echo "Dispatched fixer (attempt $ATTEMPT)"
+
+            if [ -n "$PR_NUM" ]; then
+              FAILED_COUNT=$(jq '.failed_specs | length' cypress/results/summary.json)
+              gh pr comment "$PR_NUM" --repo "${{ github.repository }}" \
+                --body "⚠️ **E2E Spec Runner** — $FAILED/5 runs failed ($FAILED_COUNT unique spec(s) failing, attempt $ATTEMPT). Dispatching the fixer."
+            fi
+          fi

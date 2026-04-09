@@ -1,0 +1,171 @@
+name: Apply E2E Automation Spec Patch
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_password:
+        description: "Password for login (TEST_PASSWORD)"
+        required: true
+        type: string
+      pr_number:
+        description: "PR number to push the fix to"
+        required: true
+        type: string
+      attempt:
+        description: "Next attempt number for the runner"
+        required: true
+        type: string
+        default: "2"
+
+jobs:
+  apply-patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Wait for repo-memory patch and apply
+        env:
+          GH_TOKEN: ${{ secrets.MAINTAINER_PAT }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          ATTEMPT="${{ github.event.inputs.attempt }}"
+
+          # ── 1. Clone the memory/default branch and find the patch ──
+          PATCH_FOUND=false
+          for i in 1 2 3 4 5 6; do
+            echo "::group::Attempt $i — clone memory/default"
+            rm -rf /tmp/repo-memory
+            git clone --depth 1 --branch memory/default \
+              "https://x-access-token:${GH_TOKEN}@github.com/$REPO.git" \
+              /tmp/repo-memory 2>/dev/null || {
+              echo "Branch memory/default not found yet."
+              echo "::endgroup::"
+              [ "$i" -lt 6 ] && sleep 15 && continue
+              echo "Giving up." && exit 0
+            }
+
+            if ls /tmp/repo-memory/e2e-pr-*.patch 1>/dev/null 2>&1; then
+              PATCH_FOUND=true
+              echo "Found patch on attempt $i"
+              echo "::endgroup::"
+              break
+            fi
+
+            echo "No patch files yet."
+            echo "::endgroup::"
+            [ "$i" -lt 6 ] && sleep 15
+          done
+
+          if [ "$PATCH_FOUND" != "true" ]; then
+            echo "No e2e patch files in repo-memory after 6 attempts, nothing to apply."
+            exit 0
+          fi
+
+          # ── 2. Find the patch for this PR ──────────────────────────
+          PATCH_FILE="/tmp/repo-memory/e2e-pr-${PR_NUMBER}.patch"
+          if [ ! -s "$PATCH_FILE" ]; then
+            PATCH_FILE="/tmp/repo-memory/e2e-pr-new.patch"
+          fi
+          if [ ! -s "$PATCH_FILE" ]; then
+            echo "No matching patch found for PR #$PR_NUMBER."
+            exit 0
+          fi
+
+          echo "Applying $(wc -c < "$PATCH_FILE") bytes from $(basename "$PATCH_FILE")"
+
+          # ── 3. Get PR branch info ──────────────────────────────────
+          PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json headRefName,headRepository,headRepositoryOwner,maintainerCanModify,state)
+
+          PR_STATE=$(echo "$PR_DATA" | jq -r '.state')
+          if [ "$PR_STATE" != "OPEN" ]; then
+            echo "PR #$PR_NUMBER is $PR_STATE. Cleaning patch and skipping."
+            rm -f "$PATCH_FILE"
+            exit 0
+          fi
+
+          HEAD_REF=$(echo "$PR_DATA" | jq -r '.headRefName')
+          HEAD_OWNER=$(echo "$PR_DATA" | jq -r '.headRepositoryOwner.login')
+          HEAD_REPO=$(echo "$PR_DATA" | jq -r '.headRepository.name')
+          CAN_MODIFY=$(echo "$PR_DATA" | jq -r '.maintainerCanModify')
+          REPO_OWNER=$(echo "$REPO" | cut -d'/' -f1)
+
+          echo "PR #$PR_NUMBER → $HEAD_OWNER/$HEAD_REPO branch $HEAD_REF"
+
+          if [ "$HEAD_OWNER" != "$REPO_OWNER" ] && [ "$CAN_MODIFY" != "true" ]; then
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "⚠️ **E2E auto-apply failed**: This PR does not allow maintainer edits."
+            exit 0
+          fi
+
+          # ── 4. Clone the PR branch and apply the patch ─────────────
+          FORK_DIR="/tmp/fork-$PR_NUMBER"
+          FORK_URL="https://x-access-token:${GH_TOKEN}@github.com/$HEAD_OWNER/$HEAD_REPO.git"
+          git clone --depth 10 --branch "$HEAD_REF" "$FORK_URL" "$FORK_DIR"
+
+          cd "$FORK_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          PATCH_COMMITTED=false
+          if git am --ignore-whitespace "$PATCH_FILE" 2>/dev/null; then
+            echo "Patch applied (git am)"
+            PATCH_COMMITTED=true
+          elif git apply --ignore-whitespace "$PATCH_FILE" 2>/dev/null; then
+            echo "Patch applied (git apply)"
+          elif git apply --ignore-whitespace --3way "$PATCH_FILE" 2>/dev/null; then
+            echo "Patch applied (git apply --3way)"
+          elif patch -p1 --fuzz=3 < "$PATCH_FILE" 2>/dev/null; then
+            echo "Patch applied (patch --fuzz=3)"
+          else
+            echo "All patch methods failed."
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "⚠️ **E2E auto-apply failed**: The patch could not be applied cleanly to \`$HEAD_REF\`."
+            exit 0
+          fi
+
+          if [ "$PATCH_COMMITTED" != "true" ]; then
+            git add -A
+            git commit -m "fix(e2e): apply spec-fixer patch (attempt $ATTEMPT)
+
+          Co-authored-by: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          fi
+
+          # ── 5. Push ────────────────────────────────────────────────
+          if git push origin "$HEAD_REF"; then
+            echo "✅ Patch pushed to $HEAD_REF"
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "✅ **E2E spec-fix applied** — re-triggering the runner (attempt $ATTEMPT)."
+            rm -f "$PATCH_FILE"
+          else
+            gh pr comment "$PR_NUMBER" --repo "$REPO" \
+              --body "⚠️ **E2E auto-apply failed**: Could not push to \`$HEAD_REF\`."
+            exit 0
+          fi
+
+          # ── 6. Re-dispatch the runner ──────────────────────────────
+          GH_TOKEN="${{ github.token }}" gh workflow run e2e-automation-spec-runner.yml \
+            --repo "$REPO" \
+            --ref e2e-agentic \
+            -f test_password="${{ github.event.inputs.test_password }}" \
+            -f pr_number="$PR_NUMBER" \
+            -f attempt="$ATTEMPT" \
+            || echo "⚠️ Warning: Failed to dispatch spec runner"
+
+          echo "Dispatched runner for PR #$PR_NUMBER, attempt=$ATTEMPT"
+
+          # ── 7. Clean up repo-memory ────────────────────────────────
+          cd /tmp/repo-memory
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git add -A && git diff --cached --quiet; then
+            echo "No patches to clean up."
+          else
+            git commit -m "chore: clean up applied e2e spec-fixer patch (PR #$PR_NUMBER)"
+            git push origin memory/default
+            echo "Cleaned up applied patch from repo-memory."
+          fi

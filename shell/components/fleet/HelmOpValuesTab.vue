@@ -167,6 +167,6 @@ const updateDiffMode = (value) => {
 }
 
 .white-border {
-  border: 4px solid white;
+  border: 2px solid var(--body-bg);
 }
 </style>

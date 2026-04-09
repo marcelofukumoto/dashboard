@@ -14,7 +14,7 @@ export default class HelmOp extends FleetApplication {
     const repo = this.spec?.helm?.repo || '';
 
     if (repo.startsWith(SUSE_APP_COLLECTION_HOST)) {
-      return this.t('catalog.repo.name.suse-application-collection');
+      return 'SUSE AppCo';
     }
 
     return this.kind;

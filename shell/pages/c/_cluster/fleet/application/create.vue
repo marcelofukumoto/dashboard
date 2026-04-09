@@ -81,6 +81,13 @@ export default {
   },
 
   methods: {
+    subtypeAriaLabel(subtype) {
+      const label = this.$store.getters['i18n/exists'](subtype.label) ? this.t(subtype.label) : subtype.label;
+      const desc = subtype.description && this.$store.getters['i18n/exists'](subtype.description) ? this.t(subtype.description) : subtype.description;
+
+      return desc ? `${ label } - ${ desc }` : label;
+    },
+
     selectType(subtype, event) {
       if (subtype.disabled) {
         return;
@@ -129,8 +136,8 @@ export default {
           disabled: subtype.disabled
         }"
         :data-testid="`subtype-banner-item-${subtype.id}`"
-        :aria-disabled="false"
-        :aria-label="subtype.description ? `${subtype.label} - ${subtype.description}` : subtype.label"
+        :aria-disabled="subtype.disabled || undefined"
+        :aria-label="subtypeAriaLabel(subtype)"
         @click="selectType(subtype, $event)"
         @keyup.enter.space="selectType(subtype, $event)"
       >

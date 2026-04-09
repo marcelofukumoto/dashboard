@@ -369,6 +369,7 @@ export default {
               v-model="searchQuery"
               type="text"
               :placeholder="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
+              :aria-label="t('fleet.helmOp.add.steps.selection.searchPlaceholder')"
               data-testid="appco-selection-chart-search"
             >
             <i class="icon icon-search" />

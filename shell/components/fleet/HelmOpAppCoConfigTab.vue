@@ -270,6 +270,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             v-if="chartIcon"
             :src="chartIcon"
             class="chart-icon"
+            :alt="selectedChartName"
           />
           <div
             v-else

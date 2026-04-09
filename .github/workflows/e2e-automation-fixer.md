@@ -8,22 +8,18 @@ description: |
 on:
   workflow_dispatch:
     inputs:
-      test_password:
-        description: "Password for login"
-        required: true
-        type: string
       pr_number:
         description: "Existing PR number (empty if first run)"
         required: false
         type: string
         default: ""
-      attempt:
-        description: "Current fix-loop attempt number"
+      run_number:
+        description: "Which consecutive run failed (1-5)"
         required: true
         type: string
         default: "1"
       failure_summary:
-        description: "JSON object with failed_specs list and Cypress output from the runner"
+        description: "JSON with failed_specs list from the runner"
         required: true
         type: string
       runner_run_id:
@@ -74,7 +70,7 @@ steps:
   - name: Download test artifacts
     uses: actions/download-artifact@v4
     with:
-      name: e2e-spec-runner-results-attempt-${{ github.event.inputs.attempt }}
+      name: e2e-spec-runner-results-run-${{ github.event.inputs.run_number }}
       path: /tmp/gh-aw/e2e-results/
       run-id: ${{ github.event.inputs.runner_run_id }}
       github-token: ${{ github.token }}
@@ -84,10 +80,9 @@ timeout-minutes: 60
 
 # E2E Automation Fixer
 
-You are a **spec-fixing agent** for the Rancher Dashboard. The full Cypress
-E2E suite was run and one or more specs failed. Your job is to diagnose ALL
-failures, fix every failing spec (and any related source code), and save a
-single patch.
+You are a **spec-fixing agent** for the Rancher Dashboard. The E2E suite
+was run and failed. Your job is to diagnose ALL failures, fix every failing
+spec (and any related source code), and save a single patch.
 
 **CRITICAL: You have a limited time budget. Focus on the failure output,
 read only the files directly relevant to the failures, make the fixes, and
@@ -98,7 +93,7 @@ save the patch. Do NOT explore the entire codebase.**
 | Field | Value |
 |-------|-------|
 | **PR number** | `${{ github.event.inputs.pr_number }}` (empty = no PR yet) |
-| **Attempt** | `${{ github.event.inputs.attempt }}` |
+| **Run number** | `${{ github.event.inputs.run_number }}` of 5 |
 | **Runner run** | `${{ github.event.inputs.runner_run_id }}` |
 | **Failure summary** | `${{ github.event.inputs.failure_summary }}` |
 
@@ -113,25 +108,23 @@ to avoid repeating the same mistakes.
 
 ## Step 1 — Loop Guard
 
-Calculate the next attempt: current attempt + 1.
+This is a fix attempt triggered by run `${{ github.event.inputs.run_number }}`.
+The apply-patch workflow will always restart the runner at run_number=1.
 
-If the next attempt would be **> 5**, do NOT re-trigger. Instead:
-1. Use `create-issue` explaining the specs could not be auto-fixed after 5 attempts.
+If the fixer has already been triggered **3 or more times** for this PR
+(check comments on the PR for "Dispatching the fixer"), do NOT re-trigger.
+Instead:
+1. Use `create-issue` explaining the specs could not be auto-fixed.
 2. Include the full failure summary and PR number.
 3. Stop.
 
 ## Step 2 — Analyze Failures
 
-1. Read the runner summary: `/tmp/gh-aw/e2e-results/results/summary.json`
-   This contains `failed_specs` (deduplicated array of spec file paths),
-   `runs` (per-run details with output), `passed`/`failed` counts.
-2. Read per-run output files for failing runs:
-   `cat /tmp/gh-aw/e2e-results/results/run-*/output.txt`
-3. List screenshots if any:
-   `find /tmp/gh-aw/e2e-results/ -name "*.png" -type f`
-4. Check the mochawesome reports if available:
-   `ls /tmp/gh-aw/e2e-results/results/run-*/reports/*.json 2>/dev/null`
-5. Check Rancher logs: `cat /tmp/gh-aw/e2e-results/rancher.log | tail -200`
+1. List all artifacts: `find /tmp/gh-aw/e2e-results/ -type f`
+2. Check Cypress reports: `ls /tmp/gh-aw/e2e-results/*.json 2>/dev/null`
+3. List screenshots: `find /tmp/gh-aw/e2e-results/ -name "*.png" -type f`
+4. Check Rancher logs: `tail -200 /tmp/gh-aw/e2e-results/rancher.logs 2>/dev/null`
+5. Parse the `failure_summary` input for `failed_specs` list.
 
 For each failing spec, identify the root cause. Common categories:
 
@@ -198,10 +191,8 @@ For each failing spec, edit the file to fix the identified issues.
 ## Step 6 — Commit and Save Patch
 
 ```bash
-NEXT_ATTEMPT=$(( ${{ github.event.inputs.attempt }} + 1 ))
-
 git add -A
-git commit -m "fix(e2e): fix failing specs — attempt $NEXT_ATTEMPT"
+git commit -m "fix(e2e): fix failing specs"
 
 # Generate the patch
 git diff HEAD~1 > /tmp/gh-aw/repo-memory/default/e2e-pr-${{ github.event.inputs.pr_number || 'new' }}.patch
@@ -233,17 +224,15 @@ Note the PR number from the output — you will need it for the apply-patch disp
 Use `add-comment` on the PR:
 - **item_number**: the PR number (existing or newly created)
 - **body**: Include:
-  - Heading with attempt number
+  - Heading with run number that failed
   - List of failing specs and root causes
   - Changes made to each file
-  - Next steps (apply-patch will push and re-trigger runner)
+  - Next steps (apply-patch will push and re-trigger runner at run 1)
 
 ## Step 9 — Dispatch Apply-Patch
 
 Use the `apply_e2e_automation_spec_patch` dispatch tool with:
-- `test_password`: `${{ github.event.inputs.test_password }}`
 - `pr_number`: the PR number (existing or newly created)
-- `attempt`: the **next** attempt number (current + 1)
 
 ## Step 10 — Update Learnings
 

@@ -25,7 +25,7 @@
 # specs at once, and saves a patch to repo-memory. Creates a PR/branch when
 # one does not exist yet. Dispatches the apply-patch workflow to push changes.
 #
-# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"15dee119c9511072316f5e474e16dfc90aabceafc742b61143d4e809c561ef21","compiler_version":"v0.65.5","strict":true,"agent_id":"copilot"}
+# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"ecaf8d4c9332e8baabde261cbc92981491fa6ef42a2aa53ec7b52bacd7a2c58f","compiler_version":"v0.65.5","strict":true,"agent_id":"copilot"}
 
 name: "E2E Automation Fixer"
 "on":
@@ -36,13 +36,8 @@ name: "E2E Automation Fixer"
         description: Agent caller context (used internally by Agentic Workflows).
         required: false
         type: string
-      attempt:
-        default: "1"
-        description: Current fix-loop attempt number
-        required: true
-        type: string
       failure_summary:
-        description: JSON object with failed_specs list and Cypress output from the runner
+        description: JSON with failed_specs list from the runner
         required: true
         type: string
       pr_number:
@@ -50,12 +45,13 @@ name: "E2E Automation Fixer"
         description: Existing PR number (empty if first run)
         required: false
         type: string
-      runner_run_id:
-        description: Run ID of the spec runner to download artifacts from
+      run_number:
+        default: "1"
+        description: Which consecutive run failed (1-5)
         required: true
         type: string
-      test_password:
-        description: Password for login
+      runner_run_id:
+        description: Run ID of the spec runner to download artifacts from
         required: true
         type: string
 
@@ -150,11 +146,10 @@ jobs:
           GH_AW_GITHUB_ACTOR: ${{ github.actor }}
           GH_AW_GITHUB_EVENT_COMMENT_ID: ${{ github.event.comment.id }}
           GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER: ${{ github.event.discussion.number }}
-          GH_AW_GITHUB_EVENT_INPUTS_ATTEMPT: ${{ github.event.inputs.attempt }}
           GH_AW_GITHUB_EVENT_INPUTS_FAILURE_SUMMARY: ${{ github.event.inputs.failure_summary }}
           GH_AW_GITHUB_EVENT_INPUTS_PR_NUMBER: ${{ github.event.inputs.pr_number }}
           GH_AW_GITHUB_EVENT_INPUTS_RUNNER_RUN_ID: ${{ github.event.inputs.runner_run_id }}
-          GH_AW_GITHUB_EVENT_INPUTS_TEST_PASSWORD: ${{ github.event.inputs.test_password }}
+          GH_AW_GITHUB_EVENT_INPUTS_RUN_NUMBER: ${{ github.event.inputs.run_number }}
           GH_AW_GITHUB_EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
           GH_AW_GITHUB_REPOSITORY: ${{ github.repository }}
@@ -165,20 +160,20 @@ jobs:
         run: |
           bash ${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh
           {
-          cat << 'GH_AW_PROMPT_1884c3d43a69f2ee_EOF'
+          cat << 'GH_AW_PROMPT_cb20f4156a920540_EOF'
           <system>
-          GH_AW_PROMPT_1884c3d43a69f2ee_EOF
+          GH_AW_PROMPT_cb20f4156a920540_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/repo_memory_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_1884c3d43a69f2ee_EOF'
+          cat << 'GH_AW_PROMPT_cb20f4156a920540_EOF'
           <safe-output-tools>
           Tools: add_comment(max:2), create_issue, create_pull_request, dispatch_workflow, missing_tool, missing_data, noop
-          GH_AW_PROMPT_1884c3d43a69f2ee_EOF
+          GH_AW_PROMPT_cb20f4156a920540_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_create_pull_request.md"
-          cat << 'GH_AW_PROMPT_1884c3d43a69f2ee_EOF'
+          cat << 'GH_AW_PROMPT_cb20f4156a920540_EOF'
           </safe-output-tools>
           <github-context>
           The following GitHub context information is available for this workflow:
@@ -211,23 +206,22 @@ jobs:
             - **Note**: If a branch you need is not in the list above and is not listed as an additional fetched ref, it has NOT been checked out. For private repositories you cannot fetch it without proper authentication. If the branch is required and not available, exit with an error and ask the user to add it to the `fetch:` option of the `checkout:` configuration (e.g., `fetch: ["refs/pulls/open/*"]` for all open PR refs, or `fetch: ["main", "feature/my-branch"]` for specific branches).
           </github-context>
           
-          GH_AW_PROMPT_1884c3d43a69f2ee_EOF
+          GH_AW_PROMPT_cb20f4156a920540_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_1884c3d43a69f2ee_EOF'
+          cat << 'GH_AW_PROMPT_cb20f4156a920540_EOF'
           </system>
           {{#runtime-import .github/workflows/e2e-automation-fixer.md}}
-          GH_AW_PROMPT_1884c3d43a69f2ee_EOF
+          GH_AW_PROMPT_cb20f4156a920540_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
-          GH_AW_GITHUB_EVENT_INPUTS_ATTEMPT: ${{ github.event.inputs.attempt }}
           GH_AW_GITHUB_EVENT_INPUTS_FAILURE_SUMMARY: ${{ github.event.inputs.failure_summary }}
           GH_AW_EXPR_88124107: ${{ github.event.inputs.pr_number || 'new' }}
           GH_AW_GITHUB_EVENT_INPUTS_PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          GH_AW_GITHUB_EVENT_INPUTS_RUN_NUMBER: ${{ github.event.inputs.run_number }}
           GH_AW_GITHUB_EVENT_INPUTS_RUNNER_RUN_ID: ${{ github.event.inputs.runner_run_id }}
-          GH_AW_GITHUB_EVENT_INPUTS_TEST_PASSWORD: ${{ github.event.inputs.test_password }}
           GH_AW_GITHUB_REPOSITORY: ${{ github.repository }}
         with:
           script: |
@@ -243,11 +237,10 @@ jobs:
           GH_AW_GITHUB_ACTOR: ${{ github.actor }}
           GH_AW_GITHUB_EVENT_COMMENT_ID: ${{ github.event.comment.id }}
           GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER: ${{ github.event.discussion.number }}
-          GH_AW_GITHUB_EVENT_INPUTS_ATTEMPT: ${{ github.event.inputs.attempt }}
           GH_AW_GITHUB_EVENT_INPUTS_FAILURE_SUMMARY: ${{ github.event.inputs.failure_summary }}
           GH_AW_GITHUB_EVENT_INPUTS_PR_NUMBER: ${{ github.event.inputs.pr_number }}
           GH_AW_GITHUB_EVENT_INPUTS_RUNNER_RUN_ID: ${{ github.event.inputs.runner_run_id }}
-          GH_AW_GITHUB_EVENT_INPUTS_TEST_PASSWORD: ${{ github.event.inputs.test_password }}
+          GH_AW_GITHUB_EVENT_INPUTS_RUN_NUMBER: ${{ github.event.inputs.run_number }}
           GH_AW_GITHUB_EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
           GH_AW_GITHUB_REPOSITORY: ${{ github.repository }}
@@ -274,11 +267,10 @@ jobs:
                 GH_AW_GITHUB_ACTOR: process.env.GH_AW_GITHUB_ACTOR,
                 GH_AW_GITHUB_EVENT_COMMENT_ID: process.env.GH_AW_GITHUB_EVENT_COMMENT_ID,
                 GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER: process.env.GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER,
-                GH_AW_GITHUB_EVENT_INPUTS_ATTEMPT: process.env.GH_AW_GITHUB_EVENT_INPUTS_ATTEMPT,
                 GH_AW_GITHUB_EVENT_INPUTS_FAILURE_SUMMARY: process.env.GH_AW_GITHUB_EVENT_INPUTS_FAILURE_SUMMARY,
                 GH_AW_GITHUB_EVENT_INPUTS_PR_NUMBER: process.env.GH_AW_GITHUB_EVENT_INPUTS_PR_NUMBER,
                 GH_AW_GITHUB_EVENT_INPUTS_RUNNER_RUN_ID: process.env.GH_AW_GITHUB_EVENT_INPUTS_RUNNER_RUN_ID,
-                GH_AW_GITHUB_EVENT_INPUTS_TEST_PASSWORD: process.env.GH_AW_GITHUB_EVENT_INPUTS_TEST_PASSWORD,
+                GH_AW_GITHUB_EVENT_INPUTS_RUN_NUMBER: process.env.GH_AW_GITHUB_EVENT_INPUTS_RUN_NUMBER,
                 GH_AW_GITHUB_EVENT_ISSUE_NUMBER: process.env.GH_AW_GITHUB_EVENT_ISSUE_NUMBER,
                 GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: process.env.GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER,
                 GH_AW_GITHUB_REPOSITORY: process.env.GH_AW_GITHUB_REPOSITORY,
@@ -362,7 +354,7 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           github-token: ${{ github.token }}
-          name: e2e-spec-runner-results-attempt-${{ github.event.inputs.attempt }}
+          name: e2e-spec-runner-results-run-${{ github.event.inputs.run_number }}
           path: /tmp/gh-aw/e2e-results/
           run-id: ${{ github.event.inputs.runner_run_id }}
 
@@ -423,12 +415,12 @@ jobs:
           mkdir -p ${RUNNER_TEMP}/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/config.json << 'GH_AW_SAFE_OUTPUTS_CONFIG_1ca331b52b57145c_EOF'
+          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/config.json << 'GH_AW_SAFE_OUTPUTS_CONFIG_9470c903c410f383_EOF'
           {"add_comment":{"hide_older_comments":true,"max":2,"target":"*"},"create_issue":{"expires":48,"labels":["bot/e2e-automation"],"max":1,"title_prefix":"[E2E Automation Fixer] "},"create_pull_request":{"draft":true,"labels":["bot/e2e-automation"],"max":1,"max_patch_size":1024,"protected_files":["package.json","bun.lockb","bunfig.toml","deno.json","deno.jsonc","deno.lock","global.json","NuGet.Config","Directory.Packages.props","mix.exs","mix.lock","go.mod","go.sum","stack.yaml","stack.yaml.lock","pom.xml","build.gradle","build.gradle.kts","settings.gradle","settings.gradle.kts","gradle.properties","package-lock.json","yarn.lock","pnpm-lock.yaml","npm-shrinkwrap.json","requirements.txt","Pipfile","Pipfile.lock","pyproject.toml","setup.py","setup.cfg","Gemfile","Gemfile.lock","uv.lock","CODEOWNERS"],"protected_path_prefixes":[".github/",".agents/"],"title_prefix":"[E2E Fix] "},"dispatch_workflow":{"max":1,"workflow_files":{"apply-e2e-automation-spec-patch":".yml"},"workflows":["apply-e2e-automation-spec-patch"]},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"push_repo_memory":{"memories":[{"dir":"/tmp/gh-aw/repo-memory/default","id":"default","max_file_count":100,"max_file_size":102400,"max_patch_size":102400}]}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_1ca331b52b57145c_EOF
+          GH_AW_SAFE_OUTPUTS_CONFIG_9470c903c410f383_EOF
       - name: Write Safe Outputs Tools
         run: |
-          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/tools_meta.json << 'GH_AW_SAFE_OUTPUTS_TOOLS_META_5a04d7898362d15e_EOF'
+          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/tools_meta.json << 'GH_AW_SAFE_OUTPUTS_TOOLS_META_1e00debbccec11e1_EOF'
           {
             "description_suffixes": {
               "add_comment": " CONSTRAINTS: Maximum 2 comment(s) can be added. Target: *.",
@@ -443,24 +435,13 @@ jobs:
                 "inputSchema": {
                   "additionalProperties": false,
                   "properties": {
-                    "attempt": {
-                      "default": "2",
-                      "description": "Next attempt number for the runner",
-                      "type": "string"
-                    },
                     "pr_number": {
                       "description": "PR number to push the fix to",
-                      "type": "string"
-                    },
-                    "test_password": {
-                      "description": "Password for login (TEST_PASSWORD)",
                       "type": "string"
                     }
                   },
                   "required": [
-                    "attempt",
-                    "pr_number",
-                    "test_password"
+                    "pr_number"
                   ],
                   "type": "object"
                 },
@@ -468,8 +449,8 @@ jobs:
               }
             ]
           }
-          GH_AW_SAFE_OUTPUTS_TOOLS_META_5a04d7898362d15e_EOF
-          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/validation.json << 'GH_AW_SAFE_OUTPUTS_VALIDATION_c92da405064fc6c3_EOF'
+          GH_AW_SAFE_OUTPUTS_TOOLS_META_1e00debbccec11e1_EOF
+          cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/validation.json << 'GH_AW_SAFE_OUTPUTS_VALIDATION_341a36ab006f5198_EOF'
           {
             "add_comment": {
               "defaultMax": 1,
@@ -616,7 +597,7 @@ jobs:
               }
             }
           }
-          GH_AW_SAFE_OUTPUTS_VALIDATION_c92da405064fc6c3_EOF
+          GH_AW_SAFE_OUTPUTS_VALIDATION_341a36ab006f5198_EOF
           node ${RUNNER_TEMP}/gh-aw/actions/generate_safe_outputs_tools.cjs
       - name: Generate Safe Outputs MCP Server Config
         id: safe-outputs-config
@@ -684,7 +665,7 @@ jobs:
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host -v /var/run/docker.sock:/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_OUTPUTS_PORT -e GH_AW_SAFE_OUTPUTS_API_KEY -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.2.11'
           
           mkdir -p /home/runner/.copilot
-          cat << GH_AW_MCP_CONFIG_6f8dd12ec7c77450_EOF | bash ${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.sh
+          cat << GH_AW_MCP_CONFIG_f9b52616f64e4e72_EOF | bash ${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.sh
           {
             "mcpServers": {
               "github": {
@@ -725,7 +706,7 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_6f8dd12ec7c77450_EOF
+          GH_AW_MCP_CONFIG_f9b52616f64e4e72_EOF
       - name: Download activation artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

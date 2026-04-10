@@ -19,24 +19,37 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
 
-            // Find all open issues with the 'agentic-workflows' label
-            const issues = await github.rest.issues.listForRepo({
+            // Relabel issues with 'agentic-workflows' label
+            const awIssues = await github.rest.issues.listForRepo({
               owner, repo,
               labels: 'agentic-workflows',
               state: 'open',
               per_page: 100
             });
 
-            for (const issue of issues.data) {
+            for (const issue of awIssues.data) {
               const issue_number = issue.number;
 
-              // Add the canonical labels
               await github.rest.issues.addLabels({ owner, repo, issue_number, labels: ['bot/skip-grooming', 'bot/agentic-workflows'] });
 
-              // Remove the source label (ignore 404 if already removed)
               try {
                 await github.rest.issues.removeLabel({ owner, repo, issue_number, name: 'agentic-workflows' });
               } catch (error) {
                 if (error.status !== 404) throw error;
+              }
+            }
+
+            // Add bot/skip-grooming to issues with 'bot/daily-test-improver' that don't have it yet
+            const tiIssues = await github.rest.issues.listForRepo({
+              owner, repo,
+              labels: 'bot/daily-test-improver',
+              state: 'open',
+              per_page: 100
+            });
+
+            for (const issue of tiIssues.data) {
+              const hasSkipGrooming = issue.labels.some(l => l.name === 'bot/skip-grooming');
+              if (!hasSkipGrooming) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: ['bot/skip-grooming'] });
               }
             }

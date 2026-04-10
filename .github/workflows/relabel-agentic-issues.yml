@@ -1,19 +1,15 @@
 name: Relabel Agentic Workflow Issues
 
 on:
-  issues:
-    types: [labeled]
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
 
 # Top-level: no permissions; granted per-job only
 permissions: {}
 
-concurrency:
-  group: relabel-agentic-${{ github.event.issue.number }}
-  cancel-in-progress: true
-
 jobs:
   relabel:
-    if: github.event.label.name == 'agentic-workflows'
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -22,14 +18,25 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
 
-            // Add the canonical labels
-            await github.rest.issues.addLabels({ owner, repo, issue_number, labels: ['bot/skip-grooming', 'bot/agentic-workflows'] });
+            // Find all open issues with the 'agentic-workflows' label
+            const issues = await github.rest.issues.listForRepo({
+              owner, repo,
+              labels: 'agentic-workflows',
+              state: 'open',
+              per_page: 100
+            });
 
-            // Remove the source label (ignore 404 if already removed)
-            try {
-              await github.rest.issues.removeLabel({ owner, repo, issue_number, name: 'agentic-workflows' });
-            } catch (error) {
-              if (error.status !== 404) throw error;
+            for (const issue of issues.data) {
+              const issue_number = issue.number;
+
+              // Add the canonical labels
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: ['bot/skip-grooming', 'bot/agentic-workflows'] });
+
+              // Remove the source label (ignore 404 if already removed)
+              try {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: 'agentic-workflows' });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
             }

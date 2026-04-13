@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-12
+# Test Improver Memory - 2026-04-13
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -20,14 +20,13 @@
 - Module-level constants: use jest.resetModules() in beforeEach + dynamic import
 
 ## Backlog (prioritized by value)
-1. `shell/utils/units.js` - formatSi/parseSi/createMemoryValues: complex SI unit logic, ~193 lines, 0 tests
-2. `shell/utils/validators/` - 10 of 12 validators untested (cidr.js, setting.js done); each small+pure
-3. `shell/utils/ingress.ts` - 64 lines, no tests
-4. `shell/components/CruResource.vue` - component test (complex, 1032 lines)
-5. `shell/components/ResourceTable.vue` - component test (complex, 836 lines)
+1. `shell/utils/validators/` - 10 of 12 validators untested (cidr.js, setting.js done); each small+pure
+2. `shell/components/CruResource.vue` - component test (complex, 1032 lines)
+3. `shell/components/ResourceTable.vue` - component test (complex, 836 lines)
 
 Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
-`async.ts` (PR #113), `aws.ts` (PR #123), `platform.js` (PR #132)
+`async.ts` (PR #113), `aws.ts` (PR #123), `platform.js` (PR #132),
+`units.js` (PR pending - branch test-assist/units-utils, 57 tests, 100% all coverage)
 
 ## Round-Robin
 - 2026-03-11: Tasks 1,2,7
@@ -36,17 +35,20 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 - 2026-04-10 run1: Tasks 3,4,7
 - 2026-04-10 run2: Tasks 3,7
 - 2026-04-11: Tasks 3,7
-- 2026-04-12: Tasks 5,6,7. Next run: Tasks 3,4,7
+- 2026-04-12: Tasks 5,6,7
+- 2026-04-13: Tasks 3,4,7. Next run: Tasks 5,6,7
 
 ## Monthly Summary Issues
 - March 2026: #45 (closed 2026-04-10)
-- April 2026: #114 (open)
+- April 2026: #114 (closed "not_planned" by maintainer 2026-04-13)
+- April 2026 new: created this run (pending number assignment)
 
 ## Open Test Improver PRs
 - PR #72: url.ts + duration.js tests (draft, open, awaiting review)
 - PR #113: git.ts + async.ts tests (draft, open, awaiting review)
 - PR #123: aws.ts tests (15 tests, 100% coverage, draft, open)
 - PR #132: platform.js tests (18 tests, 100% stmts/funcs, draft, open)
+- PR pending: units.js tests (57 tests, 100% all coverage, draft, branch test-assist/units-utils)
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
@@ -54,7 +56,8 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 - Validators: 12 files in shell/utils/validators/, only cidr + setting tested
 
 ## Maintainer Priorities
-None noted yet
+- Monthly summary issue #114 closed as "not_planned" on 2026-04-13 by marcelofukumoto
+  (no comments; may prefer fewer activity tracking issues)
 
 ## Checked Off Items
 None

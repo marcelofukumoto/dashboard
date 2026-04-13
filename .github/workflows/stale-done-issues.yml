@@ -1,0 +1,122 @@
+name: Stale Done Issues in Closed Milestones
+
+# Finds issues on the UI Project Board that are:
+#   - Status: "Done"
+#   - NOT archived
+#   - In a CLOSED milestone
+#
+# These are issues that should have been archived when the milestone was closed
+# but slipped through (e.g. added to a closed milestone after the batch archive).
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Every Monday at 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: read
+
+env:
+  PROJECT_NUMBER: '57'
+  ORG: rancher
+  DONE_STATUS: Done
+
+jobs:
+  find-stale-done-issues:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Find stale Done issues in closed milestones
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      with:
+        github-token: ${{ secrets.PROJECT_READ_TOKEN }}
+        script: |
+          const projectNumber = parseInt(process.env.PROJECT_NUMBER);
+          const org = process.env.ORG;
+          const doneStatus = process.env.DONE_STATUS;
+          const staleIssues = [];
+
+          // Paginate through all project board items, collecting non-archived
+          // "Done" issues that have a closed milestone.
+          let hasNextPage = true;
+          let cursor = null;
+          let pageCount = 0;
+          const MAX_PAGES = 50;
+
+          while (hasNextPage && pageCount < MAX_PAGES) {
+            pageCount++;
+
+            const result = await github.graphql(`
+              query($org: String!, $projectNumber: Int!, $cursor: String) {
+                organization(login: $org) {
+                  projectV2(number: $projectNumber) {
+                    items(first: 100, after: $cursor) {
+                      pageInfo { hasNextPage endCursor }
+                      nodes {
+                        isArchived
+                        fieldValueByName(name: "Status") {
+                          ... on ProjectV2ItemFieldSingleSelectValue { name }
+                        }
+                        content {
+                          ... on Issue {
+                            number
+                            title
+                            state
+                            url
+                            milestone { title state }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, { org, projectNumber, cursor });
+
+            const items = result.organization.projectV2.items;
+
+            for (const item of items.nodes) {
+              if (item.isArchived) continue;
+
+              const content = item.content;
+              if (!content || !content.number) continue;
+
+              const status = item.fieldValueByName?.name;
+              if (status !== doneStatus) continue;
+
+              const milestone = content.milestone;
+              if (!milestone || milestone.state !== 'CLOSED') continue;
+
+              staleIssues.push({
+                number:    content.number,
+                title:     content.title,
+                url:       content.url,
+                state:     content.state,
+                milestone: milestone.title,
+              });
+            }
+
+            hasNextPage = items.pageInfo.hasNextPage;
+            cursor = items.pageInfo.endCursor;
+          }
+
+          core.info(`Scanned ${pageCount} page(s) of project items`);
+
+          if (staleIssues.length === 0) {
+            core.info('No stale Done issues found in closed milestones.');
+            return;
+          }
+
+          core.warning(`Found ${staleIssues.length} Done issue(s) in closed milestones that are not archived:`);
+
+          let summary = '## Stale Done Issues in Closed Milestones\n\n';
+          summary += 'These issues are in **Done** on the project board, assigned to a **closed milestone**, but **not archived**.\n\n';
+          summary += '| Issue | Milestone | State |\n';
+          summary += '|-------|-----------|-------|\n';
+
+          for (const issue of staleIssues) {
+            const line = `| [#${issue.number}](${issue.url}) ${issue.title} | ${issue.milestone} | ${issue.state} |`;
+            summary += line + '\n';
+            core.warning(`#${issue.number} - ${issue.title} (milestone: ${issue.milestone}, state: ${issue.state})`);
+          }
+
+          await core.summary.addRaw(summary).write();

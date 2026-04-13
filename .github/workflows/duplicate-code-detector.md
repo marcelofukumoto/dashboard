@@ -12,7 +12,7 @@ safe-outputs:
   create-issue:
     expires: 2d
     title-prefix: "[duplicate-code] "
-    labels: [bot/duplicate-code-detector]
+    labels: [bot/duplicate-code-detector, bot/skip-grooming]
     assignees: copilot
     group: true
     max: 3

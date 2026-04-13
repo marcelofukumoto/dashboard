@@ -47,7 +47,7 @@
       max: 4
     create-issue:
       title-prefix: "[Test Improver] "
-      labels: [bot/daily-test-improver]
+      labels: [bot/daily-test-improver, bot/skip-grooming]
       max: 4
     update-issue:
       target: "*"

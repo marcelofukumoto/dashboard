@@ -13,7 +13,6 @@ safe-outputs:
     expires: 2d
     title-prefix: "[duplicate-code] "
     labels: [bot/duplicate-code-detector, bot/skip-grooming]
-    assignees: copilot
     group: true
     max: 3
 timeout-minutes: 15

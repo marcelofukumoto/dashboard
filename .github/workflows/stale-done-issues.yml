@@ -134,6 +134,7 @@ jobs:
       if: steps.scan.outputs.has_stale == 'true'
       uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
       with:
+        webhook-type: webhook-trigger
         payload: |
           {
             "text": ${{ toJSON(steps.scan.outputs.slack_text) }}

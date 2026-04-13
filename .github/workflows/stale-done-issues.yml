@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Find stale Done issues in closed milestones
+      id: scan
       uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
       with:
         github-token: ${{ secrets.PROJECT_READ_TOKEN }}
@@ -113,10 +114,29 @@ jobs:
           summary += '| Issue | Milestone | State |\n';
           summary += '|-------|-----------|-------|\n';
 
+          let slackLines = [];
+
           for (const issue of staleIssues) {
             const line = `| [#${issue.number}](${issue.url}) ${issue.title} | ${issue.milestone} | ${issue.state} |`;
             summary += line + '\n';
+            slackLines.push(`• <${issue.url}|#${issue.number}> ${issue.title} (${issue.milestone})`);
             core.warning(`#${issue.number} - ${issue.title} (milestone: ${issue.milestone}, state: ${issue.state})`);
           }
 
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+          const slackText = `🔍 Found ${staleIssues.length} stale Done issue(s) in closed milestones:\n${slackLines.join('\n')}\n\n<${runUrl}|View workflow run>`;
+
+          core.setOutput('slack_text', slackText);
+          core.setOutput('has_stale', 'true');
+
           await core.summary.addRaw(summary).write();
+    - name: Send Slack notification
+      if: steps.scan.outputs.has_stale == 'true'
+      uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+      with:
+        payload: |
+          {
+            "text": ${{ toJSON(steps.scan.outputs.slack_text) }}
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_STALE_ISSUES }}

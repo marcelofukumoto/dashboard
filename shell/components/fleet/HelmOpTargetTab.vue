@@ -32,6 +32,10 @@ defineProps({
   compact: {
     type:    Boolean,
     default: false
+  },
+  isSuseAppCollection: {
+    type:    Boolean,
+    default: false
   }
 });
 
@@ -64,6 +68,7 @@ const onTargetsCreated = (value) => {
         :mode="realMode"
         :created="targetsCreated"
         :compact="compact"
+        :is-suse-app-collection="isSuseAppCollection"
         data-testid="helmop-target-cluster-targets"
         @update:value="updateTargets"
         @created="onTargetsCreated"

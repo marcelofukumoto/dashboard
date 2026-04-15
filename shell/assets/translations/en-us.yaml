@@ -3147,6 +3147,7 @@ fleet:
         placeholder: Select Multiple Cluster Groups
     rules:
       matching:
+        sectionTitle: Targeted clusters
         title: |-
           {n, plural,
             =0 {No clusters selected}

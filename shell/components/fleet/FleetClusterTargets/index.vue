@@ -11,6 +11,8 @@ import LabeledSelect from '@shell/components/form/LabeledSelect.vue';
 import MatchExpressions from '@shell/components/form/MatchExpressions.vue';
 import { Banner } from '@components/Banner';
 import { RcButton } from '@components/RcButton';
+import { RcSection } from '@components/RcSection';
+import { RcCounterBadge } from '@components/Pill';
 import RadioGroup from '@components/Form/Radio/RadioGroup.vue';
 import TargetsList from '@shell/components/fleet/FleetClusterTargets/TargetsList.vue';
 
@@ -44,6 +46,8 @@ export default {
     MatchExpressions,
     RadioGroup,
     RcButton,
+    RcCounterBadge,
+    RcSection,
     TargetsList,
   },
 
@@ -74,6 +78,11 @@ export default {
     },
 
     compact: {
+      type:    Boolean,
+      default: false,
+    },
+
+    isSuseAppCollection: {
       type:    Boolean,
       default: false,
     },
@@ -391,8 +400,126 @@ export default {
       :label="t('fleet.clusterTargets.advancedConfigs')"
     />
 
+    <!-- AppCo: RcSection layout -->
     <div
-      v-if="targetMode === 'clusters'"
+      v-if="targetMode === 'clusters' && isSuseAppCollection"
+      class="row"
+    >
+      <div class="col span-12 content-group">
+        <RcSection
+          :title="t('fleet.clusterTargets.clusters.title')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="true"
+          data-testid="fleet-target-clusters-section"
+        >
+          <LabeledSelect
+            data-testid="fleet-target-cluster-name-selector"
+            :value="selectedClusters"
+            :label="t('fleet.clusterTargets.clusters.byName.label')"
+            :options="clustersOptions"
+            :taggable="true"
+            :close-on-select="false"
+            :mode="mode"
+            :multiple="true"
+            :placeholder="t('fleet.clusterTargets.clusters.byName.placeholder')"
+            @update:value="selectClusters"
+          />
+          <div
+            v-if="!isView || (clusterSelectors && clusterSelectors.length > 0)"
+          >
+            <component
+              :is="compact ? 'h5' : 'h4'"
+              class="m-0"
+            >
+              {{ t('fleet.clusterTargets.clusters.byLabel.title') }}
+            </component>
+            <div
+              v-for="(selector, i) in clusterSelectors"
+              :key="selector.key"
+              class="match-expressions-container mmt-4"
+            >
+              <MatchExpressions
+                :ref="`match-expression-${ selector.key }`"
+                class="body"
+                :value="selector"
+                :mode="mode"
+                :initial-empty-row="true"
+                :label-key="t('fleet.clusterTargets.clusters.byLabel.labelKey')"
+                :add-icon="'icon-plus'"
+                :add-class="'btn-sm'"
+                @update:value="updateMatchExpressions(i, $event, selector.key)"
+              />
+              <RcButton
+                v-if="!isView"
+                size="small"
+                variant="link"
+                @click="removeMatchExpressions(selector.key)"
+              >
+                <i class="icon icon-x" />
+              </RcButton>
+            </div>
+            <RcButton
+              v-if="!isView"
+              size="small"
+              variant="secondary"
+              class="mmt-4"
+              @click="addMatchExpressions"
+            >
+              <i class="icon icon-plus" />
+              <span>{{ t('fleet.clusterTargets.clusters.byLabel.addSelector') }}</span>
+            </RcButton>
+          </div>
+        </RcSection>
+        <RcSection
+          :title="t('fleet.clusterTargets.clusterGroups.title')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="true"
+          data-testid="fleet-target-cluster-groups-section"
+        >
+          <LabeledSelect
+            data-testid="fleet-target-cluster-group-selector"
+            :value="selectedClusterGroups"
+            :label="t('fleet.clusterTargets.clusterGroups.byName.label')"
+            :options="clusterGroupsOptions"
+            :taggable="true"
+            :close-on-select="false"
+            :mode="mode"
+            :multiple="true"
+            :placeholder="t('fleet.clusterTargets.clusterGroups.byName.placeholder')"
+            @update:value="selectClusterGroups"
+          />
+        </RcSection>
+        <RcSection
+          :title="t('fleet.clusterTargets.rules.matching.sectionTitle')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="true"
+          data-testid="fleet-target-targeted-clusters-section"
+        >
+          <template #counter>
+            <RcCounterBadge
+              :count="matching.length"
+              type="inactive"
+            />
+          </template>
+          <TargetsList
+            :clusters="matching"
+            :empty-label="t('fleet.clusterTargets.rules.matching.placeholder')"
+            :chips="true"
+            :hide-title="true"
+          />
+        </RcSection>
+      </div>
+    </div>
+
+    <!-- Default: original layout -->
+    <div
+      v-if="targetMode === 'clusters' && !isSuseAppCollection"
       class="row"
     >
       <div class="col span-9">
@@ -492,8 +619,38 @@ export default {
       </div>
     </div>
 
+    <!-- AppCo: all mode with RcSection -->
     <div
-      v-if="targetMode === 'all' && !isLocal"
+      v-if="targetMode === 'all' && !isLocal && isSuseAppCollection"
+      class="row"
+    >
+      <div class="col span-12">
+        <RcSection
+          :title="t('fleet.clusterTargets.rules.matching.sectionTitle')"
+          mode="with-header"
+          type="secondary"
+          expandable
+          :expanded="true"
+          data-testid="fleet-target-targeted-clusters-section-all"
+        >
+          <template #counter>
+            <RcCounterBadge
+              :count="matching.length"
+              type="inactive"
+            />
+          </template>
+          <TargetsList
+            :clusters="matching"
+            :chips="true"
+            :hide-title="true"
+          />
+        </RcSection>
+      </div>
+    </div>
+
+    <!-- Default: all mode -->
+    <div
+      v-if="targetMode === 'all' && !isLocal && !isSuseAppCollection"
       class="row"
     >
       <div class="col span-6">
@@ -507,6 +664,12 @@ export default {
 </template>
 
 <style lang="scss" scoped>
+  .content-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
   .match-expressions-container {
     display: flex;
     align-items: start;

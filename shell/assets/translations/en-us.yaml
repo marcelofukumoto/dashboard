@@ -3409,7 +3409,22 @@ fleet:
               other {{count, number} charts matched}
               }
           noCharts: No charts found in this repository.
+          fetchError: Failed to fetch charts from the SUSE Application Collection. Please verify that the selected authentication secret has valid credentials.
           authPrompt: Select an authentication secret above to browse the catalogue.
+          emptyState:
+            noAuth:
+              title: No authentication available
+              description: Add your SUSE Application Collection HTTP auth secret in the field above to fetch the charts catalogue.
+            connectionError:
+              title: Connection error
+              descriptionPre: 'There was an error fetching SUSE Application Collection catalogue. Please, '
+              tryAgain: try again
+              descriptionPost: ' or contact your system administrator.'
+            noMatch:
+              title: No charts to show
+              descriptionPre: 'Tips: use a different search criteria or '
+              clearSearch: clear the search bar
+              descriptionPost: ' and explore the catalogue.'
         appcoConfig:
           label: App Bundle config
           title: 'Create: Step 2'
@@ -3509,6 +3524,7 @@ fleet:
       local: Local
     resources:
       label: 'Resources'
+      lockedSecretBanner: The previously selected Image Pull Secret is required to connect with SUSE Application Collection.
       keepResources: Always keep resources
       keepResourcesTooltip: When enabled, resources will be kept when deleting a HelmOp or Bundle - only Helm release secrets will be deleted.
       correctDrift: Enable self-healing

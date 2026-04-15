@@ -205,7 +205,13 @@ const selectedChartEntry = computed(() => {
   return props.appCoChartEntries[chart].find((e) => e.version === version) || props.appCoChartEntries[chart][0] || null;
 });
 
-const chartIcon = computed(() => selectedChartEntry.value?.icon || '');
+const chartIcon = computed(() => {
+  const chart = selectedChartName.value;
+  const entries = props.appCoChartEntries[chart];
+
+  // Icon is chart-level, not version-specific — use the first (latest) entry which always carries it
+  return entries?.[0]?.icon || '';
+});
 
 const chartSubHeaderItems = computed(() => {
   const items = [];
@@ -223,13 +229,11 @@ const chartSubHeaderItems = computed(() => {
     });
   }
 
-  if (entry.created) {
-    const isZeroTime = entry.created === ZERO_TIME;
-
+  if (entry.created && entry.created !== ZERO_TIME) {
     items.push({
       icon:        'icon-refresh-alt',
       iconTooltip: { key: 'tableHeaders.lastUpdated' },
-      label:       isZeroTime ? t('generic.na') : dayjs(entry.created).format('MMM D, YYYY'),
+      label:       dayjs(entry.created).format('MMM D, YYYY'),
     });
   }
 
@@ -489,6 +493,7 @@ const isEdit = computed(() => props.mode === _EDIT);
             :downstream-secrets-list="downstreamSecretsList"
             :downstream-config-maps-list="downstreamConfigMapsList"
             :locked-secrets="appCoLockedSecrets"
+            :is-app-collection="true"
             :compact="true"
             data-testid="appco-config-resources-section"
             @update:correct-drift="$emit('update:correct-drift', $event)"
@@ -594,6 +599,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           :downstream-secrets-list="downstreamSecretsList"
           :downstream-config-maps-list="downstreamConfigMapsList"
           :locked-secrets="appCoLockedSecrets"
+          :is-app-collection="true"
           :compact="true"
           data-testid="appco-config-resources-section"
           @update:correct-drift="$emit('update:correct-drift', $event)"

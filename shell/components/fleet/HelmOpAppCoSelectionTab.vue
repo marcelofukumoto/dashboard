@@ -5,6 +5,7 @@ import { RcItemCard } from '@components/RcItemCard';
 import { RcButton } from '@components/RcButton';
 import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader';
 import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
+import AppCoEmptyState from '@shell/components/fleet/AppCoEmptyState.vue';
 import Banner from '@components/Banner/Banner.vue';
 import Loading from '@shell/components/Loading';
 import { AUTH_TYPE, FLEET_APPCO_AUTH_GENERATE_NAME, SECRET, ZERO_TIME } from '@shell/config/types';
@@ -17,6 +18,7 @@ export default {
     RcButton,
     AppChartCardSubHeader,
     SelectOrCreateAuthSecret,
+    AppCoEmptyState,
     Banner,
     Loading,
   },
@@ -58,6 +60,10 @@ export default {
       type:    Boolean,
       default: false
     },
+    appCoChartsFetchError: {
+      type:    Boolean,
+      default: false
+    },
   },
 
   emits: [
@@ -65,6 +71,7 @@ export default {
     'update:auth',
     'select-chart',
     'select-chart-next',
+    'retry-fetch',
   ],
 
   data() {
@@ -241,7 +248,7 @@ export default {
 
     formatDate(dateString) {
       if (!dateString || dateString === ZERO_TIME) {
-        return this.t('generic.na');
+        return '';
       }
 
       try {
@@ -301,6 +308,15 @@ export default {
     selectChartAndNext(chartValue) {
       this.selectChart(chartValue);
       this.$emit('select-chart-next');
+    },
+
+    clearSearch() {
+      this.searchQuery = '';
+      this.$refs.searchInput?.focus();
+    },
+
+    retryFetch() {
+      this.$emit('retry-fetch');
     },
 
     onKeydown(e) {
@@ -368,7 +384,10 @@ export default {
       </div>
 
       <div class="charts-section">
-        <div class="search-section">
+        <div
+          v-if="hasCharts"
+          class="search-section"
+        >
           <div class="search-input">
             <input
               ref="searchInput"
@@ -387,8 +406,30 @@ export default {
           mode="relative"
         />
 
+        <AppCoEmptyState
+          v-else-if="showAuthPrompt"
+          :title="t('fleet.helmOp.add.steps.selection.emptyState.noAuth.title')"
+          data-testid="appco-selection-auth-prompt"
+        >
+          {{ t('fleet.helmOp.add.steps.selection.emptyState.noAuth.description') }}
+        </AppCoEmptyState>
+
+        <AppCoEmptyState
+          v-else-if="appCoChartsFetchError"
+          :title="t('fleet.helmOp.add.steps.selection.emptyState.connectionError.title')"
+          data-testid="appco-selection-fetch-error"
+        >
+          {{ t('fleet.helmOp.add.steps.selection.emptyState.connectionError.descriptionPre') }}
+          <a
+            href="#"
+            @click.prevent="retryFetch"
+          >{{ t('fleet.helmOp.add.steps.selection.emptyState.connectionError.tryAgain') }}</a>
+          {{ t('fleet.helmOp.add.steps.selection.emptyState.connectionError.descriptionPost') }}
+        </AppCoEmptyState>
+
         <template v-else-if="hasCharts">
           <div
+            v-if="filteredCharts.length"
             :class="['chart-cards', { 'single-chart': filteredCharts.length === 1, 'two-charts': filteredCharts.length === 2 }]"
             data-testid="appco-selection-chart-cards"
           >
@@ -413,25 +454,19 @@ export default {
               </template>
             </rc-item-card>
           </div>
+          <AppCoEmptyState
+            v-else
+            :title="t('fleet.helmOp.add.steps.selection.emptyState.noMatch.title')"
+            data-testid="appco-selection-no-charts"
+          >
+            {{ t('fleet.helmOp.add.steps.selection.emptyState.noMatch.descriptionPre') }}
+            <a
+              href="#"
+              @click.prevent="clearSearch"
+            >{{ t('fleet.helmOp.add.steps.selection.emptyState.noMatch.clearSearch') }}</a>
+            {{ t('fleet.helmOp.add.steps.selection.emptyState.noMatch.descriptionPost') }}
+          </AppCoEmptyState>
         </template>
-
-        <div
-          v-else-if="showAuthPrompt"
-          class="charts-empty"
-        >
-          <p data-testid="appco-selection-auth-prompt">
-            {{ t('fleet.helmOp.add.steps.selection.authPrompt') }}
-          </p>
-        </div>
-
-        <div
-          v-else-if="!appCoChartsLoading && isExistingSecretSelected && !hasCharts"
-          class="charts-empty"
-        >
-          <p data-testid="appco-selection-no-charts">
-            {{ t('fleet.helmOp.add.steps.selection.noCharts') }}
-          </p>
-        </div>
       </div>
     </div>
   </div>
@@ -495,11 +530,5 @@ export default {
   .chart-card {
     max-width: 500px;
   }
-}
-
-.charts-empty {
-  text-align: center;
-  padding: 72px 0;
-  color: var(--input-label);
 }
 </style>

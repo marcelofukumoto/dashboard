@@ -106,11 +106,18 @@ export default {
       targetsCreated:   '',
       fvFormRuleSets:   [],
 
-      appCoChartsCache:    {},
-      appCoChartOptions:   [],
-      appCoVersionOptions: [],
-      appCoChartEntries:   {},
-      appCoChartsLoading:  false,
+      // SUSE App Collection chart data — keyed by repoName to avoid re-fetching
+      appCoChartsCache:      {},
+      // Dropdown options for chart names (label/value pairs)
+      appCoChartOptions:     [],
+      // Dropdown options for the selected chart's versions (label/value pairs)
+      appCoVersionOptions:   [],
+      // Raw chart index entries from the ClusterRepo, keyed by chart name
+      appCoChartEntries:     {},
+      // True while fetching the chart index from the ClusterRepo
+      appCoChartsLoading:    false,
+      // True when the chart index fetch failed (triggers the connection error empty state)
+      appCoChartsFetchError: false,
     };
   },
 
@@ -344,24 +351,47 @@ export default {
     appCoRepoName: {
       immediate: true,
       handler(repoName, oldRepoName) {
-        if (this.isSuseAppCollection && repoName) {
-          // When switching auth secrets, reset chart selection so stale values
-          // don't persist if the new chart list doesn't contain the old chart.
+        if (!this.isSuseAppCollection) {
+          return;
+        }
+
+        // When auth is cleared (e.g. switching to _BASIC), reset everything
+        if (!repoName) {
           if (oldRepoName) {
-            set(this.value, 'spec.helm.chart', '');
-            set(this.value, 'spec.helm.version', '');
-            set(this.value, 'spec.helm.values', {});
-            this.appCoVersionOptions = [];
-            this.chartValues = '';
+            this.resetAppCoChartSelection();
+            this.resetAppCoChartData();
           }
 
-          this.fetchAppCoCharts(repoName);
+          return;
         }
+
+        // When switching auth secrets, reset chart selection and chart data so stale values
+        // don't persist if the new chart list doesn't contain the old chart.
+        if (oldRepoName) {
+          this.resetAppCoChartSelection();
+          this.resetAppCoChartData();
+        }
+
+        this.fetchAppCoCharts(repoName);
       },
     },
   },
 
   methods: {
+    resetAppCoChartSelection() {
+      set(this.value, 'spec.helm.chart', '');
+      set(this.value, 'spec.helm.version', '');
+      set(this.value, 'spec.helm.values', {});
+      this.chartValues = '';
+    },
+
+    resetAppCoChartData({ error = false } = {}) {
+      this.appCoChartOptions = [];
+      this.appCoVersionOptions = [];
+      this.appCoChartEntries = {};
+      this.appCoChartsFetchError = error;
+    },
+
     goToNextStep() {
       this.$refs.cruResource?.$refs?.Wizard?.next();
     },
@@ -741,9 +771,7 @@ export default {
 
     async fetchAppCoCharts(repoName) {
       if (!repoName) {
-        this.appCoChartOptions = [];
-        this.appCoChartEntries = {};
-        this.appCoVersionOptions = [];
+        this.resetAppCoChartData();
 
         return;
       }
@@ -754,6 +782,7 @@ export default {
 
         this.appCoChartEntries = cached.entries;
         this.appCoChartOptions = cached.chartOptions;
+        this.appCoChartsFetchError = false;
 
         // Re-populate version options if a chart is already selected (e.g. edit mode)
         const currentChart = this.value.spec?.helm?.chart;
@@ -777,6 +806,7 @@ export default {
       }
 
       this.appCoChartsLoading = true;
+      this.appCoChartsFetchError = false;
 
       try {
         let repo = this.$store.getters[`${ CATALOG._MANAGEMENT }/byId`](CATALOG_TYPES.CLUSTER_REPO, repoName);
@@ -788,9 +818,7 @@ export default {
               id:   repoName,
             });
           } catch (e) {
-            this.appCoChartOptions = [];
-            this.appCoChartEntries = {};
-            this.appCoVersionOptions = [];
+            this.resetAppCoChartData({ error: true });
 
             return;
           }
@@ -829,11 +857,18 @@ export default {
         }
       } catch (e) {
         console.error('Failed to fetch AppCo chart list:', e); // eslint-disable-line no-console
-        this.appCoChartOptions = [];
-        this.appCoChartEntries = {};
-        this.appCoVersionOptions = [];
+        this.resetAppCoChartData({ error: true });
       } finally {
         this.appCoChartsLoading = false;
+      }
+    },
+
+    retryAppCoChartsFetch() {
+      const repoName = this.appCoRepoName;
+
+      if (repoName) {
+        delete this.appCoChartsCache[repoName];
+        this.fetchAppCoCharts(repoName);
       }
     },
 
@@ -904,10 +939,12 @@ export default {
         :register-before-hook="registerBeforeHook"
         :app-co-chart-entries="appCoChartEntries"
         :app-co-charts-loading="appCoChartsLoading"
+        :app-co-charts-fetch-error="appCoChartsFetchError"
         data-testid="helmop-appco-selection-tab"
         @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
         @update:auth="updateAuth($event.value, $event.key)"
         @select-chart-next="goToNextStep"
+        @retry-fetch="retryAppCoChartsFetch"
       />
     </template>
 

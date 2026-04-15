@@ -114,6 +114,10 @@ export default {
     noOptionsLabelKey: {
       type:    String,
       default: 'labelSelect.noOptions.empty'
+    },
+    lockedOptions: {
+      type:    Array,
+      default: () => []
     }
   },
 
@@ -307,7 +311,33 @@ export default {
       }
 
       return this.getOptionLabel(opt);
-    }
+    },
+
+    markLockedOptions() {
+      if (!this.lockedOptions.length) {
+        return;
+      }
+
+      const tags = this.$el?.querySelectorAll('.vs__selected');
+
+      if (!tags) {
+        return;
+      }
+
+      tags.forEach((tag) => {
+        const text = tag.textContent?.trim() || '';
+
+        tag.classList.toggle('vs__selected--locked', this.lockedOptions.includes(text));
+      });
+    },
+  },
+
+  mounted() {
+    this.$nextTick(() => this.markLockedOptions());
+  },
+
+  updated() {
+    this.$nextTick(() => this.markLockedOptions());
   },
 };
 </script>
@@ -601,6 +631,14 @@ export default {
         min-height: unset !important;
         padding: 0 0 0 7px !important;
 
+        &.vs__selected--locked {
+          padding: 0 7px 0 7px !important;
+
+          .vs__deselect {
+            display: none;
+          }
+        }
+
         > button {
           height: 20px;
           line-height: 14px;
@@ -614,6 +652,14 @@ export default {
             color: #fff;
           }
         }
+      }
+    }
+
+    :deep() .vs--disabled .vs__selected-options .vs__selected {
+      padding: 0 7px 0 7px !important;
+
+      .vs__deselect {
+        display: none;
       }
     }
   }
@@ -763,4 +809,5 @@ $icon-size: 18px;
     margin: 0px calc(-#{$input-padding-sm}/2);
     padding: 3px 20px;
 }
+
 </style>

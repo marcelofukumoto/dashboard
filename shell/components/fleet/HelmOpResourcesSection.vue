@@ -1,6 +1,7 @@
 <script setup>
 import { useI18n } from '@shell/composables/useI18n';
 import { useStore } from 'vuex';
+import Banner from '@components/Banner/Banner.vue';
 import Checkbox from '@components/Form/Checkbox/Checkbox.vue';
 import FleetSecretSelector from '@shell/components/fleet/FleetSecretSelector.vue';
 import FleetConfigMapSelector from '@shell/components/fleet/FleetConfigMapSelector.vue';
@@ -29,6 +30,10 @@ const props = defineProps({
   lockedSecrets: {
     type:    Array,
     default: () => []
+  },
+  isAppCollection: {
+    type:    Boolean,
+    default: false
   },
   compact: {
     type:    Boolean,
@@ -68,6 +73,14 @@ const updateDownstreamResources = (kind, list) => {
 
 <template>
   <div data-testid="helmop-resources-section">
+    <Banner
+      v-if="isAppCollection && lockedSecrets.length > 0"
+      color="info"
+      :class="['mt-0', compact ? 'mb-16' : 'mb-20']"
+      data-testid="helmop-resources-locked-secret-banner"
+    >
+      {{ t('fleet.helmOp.resources.lockedSecretBanner') }}
+    </Banner>
     <div
       class="row"
       :class="compact ? 'mb-16' : 'mb-20'"
@@ -77,6 +90,7 @@ const updateDownstreamResources = (kind, list) => {
           :value="downstreamSecretsList"
           :namespace="value.metadata.namespace"
           :mode="mode"
+          :locked-options="lockedSecrets"
           data-testid="helmop-resources-secret-selector"
           @update:value="updateSecrets"
         />

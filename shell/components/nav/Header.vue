@@ -1,7 +1,7 @@
 <script>
 import { mapGetters } from 'vuex';
 import debounce from 'lodash/debounce';
-import { FLEET, MANAGEMENT, NORMAN, STEVE } from '@shell/config/types';
+import { MANAGEMENT, NORMAN, STEVE } from '@shell/config/types';
 import { HARVESTER_NAME as HARVESTER } from '@shell/config/features';
 import { ucFirst } from '@shell/utils/string';
 import { isAlternate, isMac } from '@shell/utils/platform';
@@ -190,17 +190,9 @@ export default {
       // Don't show if the header is in 'simple' mode
       const notSimple = !this.simple;
       // One of these must be enabled, otherwise there's no component to show
-      const showWorkspace = this.currentProduct?.showWorkspaceSwitcher && !this.isWorkspacesPage;
-      const validFilterSettings = this.currentProduct?.showNamespaceFilter || showWorkspace;
+      const validFilterSettings = this.currentProduct?.showNamespaceFilter || this.showWorkspaceSwitcher;
 
       return validClusterOrProduct && notSimple && validFilterSettings;
-    },
-
-    /**
-     * Whether the current route is the Workspaces list page.
-     */
-    isWorkspacesPage() {
-      return this.$route?.params?.resource === FLEET.WORKSPACE;
     },
 
     /**
@@ -583,7 +575,7 @@ export default {
       >
         <NamespaceFilter v-if="clusterReady && currentProduct && (currentProduct.showNamespaceFilter || isExplorer)" />
         <WorkspaceSwitcher
-          v-else-if="clusterReady && currentProduct && currentProduct.showWorkspaceSwitcher && showWorkspaceSwitcher"
+          v-else-if="clusterReady && showWorkspaceSwitcher"
           :disabled="disableWorkspaceSwitcher"
         />
       </div>

@@ -1,6 +1,5 @@
 import { shallowMount } from '@vue/test-utils';
 import Header from '@shell/components/nav/Header.vue';
-import { FLEET } from '@shell/config/types';
 
 describe('component: Header', () => {
   const defaultStoreMock = {
@@ -130,8 +129,8 @@ describe('component: Header', () => {
     it('should return false on the Workspaces list page', () => {
       const wrapper = createWrapper({
         name:   'c-cluster-fleet-application-resource',
-        path:   `/c/local/fleet/application/${ FLEET.WORKSPACE }`,
-        params: { resource: FLEET.WORKSPACE },
+        path:   '/c/local/fleet/application/management.cattle.io.fleetworkspace',
+        params: { resource: 'management.cattle.io.fleetworkspace' },
       });
 
       expect((wrapper.vm as any).disableWorkspaceSwitcher).toBe(false);
@@ -202,14 +201,17 @@ describe('component: Header', () => {
       expect((wrapper.vm as any).showFilter).toBe(true);
     });
 
-    it('should return false when showWorkspaceSwitcher is enabled on the Workspaces page (switcher hidden)', () => {
+    it('should return false when showWorkspaceSwitcher is false in the store (e.g. Workspaces page)', () => {
       const wrapper = createWrapper(
         {
           name:   'c-cluster-fleet-application-resource',
-          path:   `/c/local/fleet/application/${ FLEET.WORKSPACE }`,
-          params: { resource: FLEET.WORKSPACE },
+          path:   '/c/local/fleet/application/management.cattle.io.fleetworkspace',
+          params: { resource: 'management.cattle.io.fleetworkspace' },
         },
-        { currentProduct: { showWorkspaceSwitcher: true } },
+        {
+          currentProduct:        { showWorkspaceSwitcher: true },
+          showWorkspaceSwitcher: false,
+        },
       );
 
       expect((wrapper.vm as any).showFilter).toBe(false);

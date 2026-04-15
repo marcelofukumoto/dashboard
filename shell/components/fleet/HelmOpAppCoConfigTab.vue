@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
 import { set } from '@shell/utils/object';
@@ -254,6 +254,16 @@ const isStandaloneTarget = computed(() => props.hideChartConfig && !props.hideTa
 const isView = computed(() => props.mode === _VIEW);
 const isCreate = computed(() => props.mode === _CREATE);
 const isEdit = computed(() => props.mode === _EDIT);
+
+const valuesTabRef = ref(null);
+
+const refreshYamlEditor = () => {
+  nextTick(() => {
+    valuesTabRef.value?.refreshYaml?.();
+  });
+};
+
+defineExpose({ refreshYamlEditor });
 
 </script>
 
@@ -542,6 +552,7 @@ const isEdit = computed(() => props.mode === _EDIT);
           data-testid="appco-config-values"
         >
           <HelmOpValuesTab
+            ref="valuesTabRef"
             :value="value"
             :mode="mode"
             :real-mode="realMode"
@@ -651,6 +662,7 @@ const isEdit = computed(() => props.mode === _EDIT);
         data-testid="appco-config-values"
       >
         <HelmOpValuesTab
+          ref="valuesTabRef"
           :value="value"
           :mode="mode"
           :real-mode="realMode"

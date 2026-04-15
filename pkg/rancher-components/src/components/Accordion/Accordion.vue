@@ -17,16 +17,6 @@ export default defineComponent({
     openInitially: {
       type:    Boolean,
       default: false
-    },
-
-    /**
-     * When true, the accordion body uses v-if instead of v-show.
-     * This defers mounting of the content until the accordion is opened,
-     * which is useful for components that need correct dimensions on mount (e.g. code editors).
-     */
-    lazyMount: {
-      type:    Boolean,
-      default: false
     }
   },
 
@@ -66,8 +56,7 @@ export default defineComponent({
       </slot>
     </div>
     <div
-      v-if="lazyMount ? isOpen : true"
-      v-show="lazyMount ? true : isOpen"
+      v-show="isOpen"
       class="accordion-body"
       data-testid="accordion-body"
     >

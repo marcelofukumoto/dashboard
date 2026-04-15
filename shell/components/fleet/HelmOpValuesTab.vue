@@ -1,10 +1,21 @@
 <script setup>
+import { ref, nextTick } from 'vue';
 import { useI18n } from '@shell/composables/useI18n';
 import { useStore } from 'vuex';
 import Banner from '@components/Banner/Banner.vue';
 import ButtonGroup from '@shell/components/ButtonGroup';
 import YamlEditor from '@shell/components/YamlEditor';
 import FleetValuesFrom from '@shell/components/fleet/FleetValuesFrom.vue';
+
+const yaml = ref(null);
+
+const refreshYaml = () => {
+  nextTick(() => {
+    yaml.value?.refresh();
+  });
+};
+
+defineExpose({ refreshYaml });
 
 defineProps({
   value: {

@@ -378,6 +378,10 @@ export default {
   },
 
   methods: {
+    refreshAppCoAdvancedYaml() {
+      this.$refs.appCoAdvancedRef?.refreshYamlEditor?.();
+    },
+
     resetAppCoChartSelection() {
       set(this.value, 'spec.helm.chart', '');
       set(this.value, 'spec.helm.version', '');
@@ -1344,8 +1348,10 @@ export default {
           :name="appCoViewTabs[2].name"
           :label="appCoViewTabs[2].label"
           :weight="appCoViewTabs[2].weight"
+          @active="refreshAppCoAdvancedYaml"
         >
           <HelmOpAppCoConfigTab
+            ref="appCoAdvancedRef"
             :value="value"
             :mode="mode"
             :real-mode="realMode"

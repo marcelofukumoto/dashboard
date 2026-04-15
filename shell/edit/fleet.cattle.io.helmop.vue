@@ -752,10 +752,12 @@ export default {
         this.fvFormRuleSets = [{
           path:  'spec.helm.repo',
           rules: ['ociRegistry'],
-        }, {
+        },
+        ...(this.isSuseAppCollection ? [{
           path:  'spec.helm.chart',
           rules: ['required'],
-        }, {
+        }] : []),
+        {
           path:  'spec.helm.version',
           rules: this.isSuseAppCollection ? ['required', 'semanticVersion'] : ['semanticVersion'],
         }];

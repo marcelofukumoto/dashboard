@@ -124,6 +124,15 @@ export default {
         this.update();
       }
     },
+
+    allClusters(clusters: any[]) {
+      if (clusters.length) {
+        // Resolve metadata.name values to nameDisplay for UI display
+        this.selectedClusters = this.selectedClusters.map(
+          (name) => this.resolveClusterDisplayName(name)
+        );
+      }
+    },
   },
 
   computed: {
@@ -350,6 +359,14 @@ export default {
       }
 
       return undefined;
+    },
+
+    resolveClusterDisplayName(name: string): string {
+      const cluster = this.allClusters.find(
+        (c: any) => c.metadata.namespace === this.namespace && c.metadata.name === name
+      );
+
+      return cluster ? cluster.nameDisplay : name;
     },
 
     reset() {

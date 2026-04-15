@@ -76,7 +76,8 @@ export default {
 
   data() {
     return {
-      searchQuery: '',
+      searchQuery:  '',
+      secretsReady: false,
       FLEET_APPCO_AUTH_GENERATE_NAME,
     };
   },
@@ -211,7 +212,7 @@ export default {
     },
 
     showAuthPrompt() {
-      return !this.isExistingSecretSelected && !this.hasCharts && !this.appCoChartsLoading;
+      return this.secretsReady && !this.isExistingSecretSelected && !this.hasCharts && !this.appCoChartsLoading;
     },
   },
 
@@ -235,6 +236,18 @@ export default {
     if (this.hasCharts) {
       this.fillTheSearch();
     }
+
+    // Watch the child component's fetch state to know when secrets are loaded
+    const unwatch = this.$watch(
+      () => this.$refs.authSecretRef?.$fetchState?.pending,
+      (pending) => {
+        if (pending === false) {
+          this.secretsReady = true;
+          unwatch();
+        }
+      },
+      { immediate: true }
+    );
   },
 
   methods: {
@@ -344,6 +357,7 @@ export default {
     <div class="gap-24">
       <div class="auth-section">
         <SelectOrCreateAuthSecret
+          ref="authSecretRef"
           :value="value.spec.helmSecretName"
           :namespace="value.metadata.namespace"
           :limit-to-namespace="true"
@@ -364,7 +378,7 @@ export default {
         />
 
         <div
-          v-if="!isExistingSecretSelected"
+          v-if="secretsReady && !isExistingSecretSelected"
           class="mt-10"
         >
           <Banner
@@ -402,7 +416,7 @@ export default {
         </div>
 
         <Loading
-          v-if="appCoChartsLoading"
+          v-if="!secretsReady || appCoChartsLoading"
           mode="relative"
         />
 

@@ -33,9 +33,16 @@ export default {
 
   data() {
     return {
-      showAll:    false,
-      isOverflow: false,
-      observed:   false,
+      showAll:         false,
+      isOverflow:      false,
+      observed:        false,
+      observerVisible: null as IntersectionObserver | null,
+      observerHidden:  null as IntersectionObserver | null,
+      resizeObserver:  null as ResizeObserver | null,
+      throttledResize: null as ReturnType<typeof throttle> | null,
+      lastWidth:       0,
+      lastChipCount:   0,
+      expanding:       false,
     };
   },
 
@@ -53,7 +60,7 @@ export default {
 
     watch(() => this.showAll, (val) => {
       if (!val) {
-        const root = this.$refs.chipsContainer;
+        const root = this.$refs.chipsContainer as HTMLElement;
 
         if (root) {
           root.querySelectorAll(':scope > .rc-tag').forEach((el) => {
@@ -67,11 +74,11 @@ export default {
   },
 
   updated() {
-    const root = this.$refs.chipsContainer;
+    const root = this.$refs.chipsContainer as HTMLElement | undefined;
     const count = root ? root.querySelectorAll(':scope > .rc-tag').length : 0;
 
-    if (count !== this._lastChipCount) {
-      this._lastChipCount = count;
+    if (count !== this.lastChipCount) {
+      this.lastChipCount = count;
       this.observeChips();
     }
   },
@@ -89,15 +96,15 @@ export default {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
-    if (this._throttledResize) {
-      this._throttledResize.cancel();
-      this._throttledResize = null;
+    if (this.throttledResize) {
+      this.throttledResize.cancel();
+      this.throttledResize = null;
     }
   },
 
   methods: {
     setupObserver() {
-      const root = this.$refs.chipsContainer;
+      const root = this.$refs.chipsContainer as HTMLElement | undefined;
 
       if (!root) {
         return;
@@ -133,26 +140,28 @@ export default {
 
       this.observeChips();
 
-      this._lastWidth = root.offsetWidth;
-      this._throttledResize = throttle((newWidth) => {
+      this.lastWidth = root.offsetWidth;
+      this.throttledResize = throttle((newWidth: number) => {
         this.handleResizeIncrease(root);
-        this._lastWidth = newWidth;
+        this.lastWidth = newWidth;
       }, 300);
 
       this.resizeObserver = new ResizeObserver((entries) => {
         const newWidth = entries[0].contentRect.width;
 
-        if (!this.showAll && this.observed && newWidth > this._lastWidth) {
-          this._throttledResize(newWidth);
+        if (!this.showAll && this.observed && newWidth > this.lastWidth) {
+          if (this.throttledResize) {
+            this.throttledResize(newWidth);
+          }
         } else {
-          this._lastWidth = newWidth;
+          this.lastWidth = newWidth;
         }
       });
       this.resizeObserver.observe(root);
     },
 
     observeChips() {
-      const root = this.$refs.chipsContainer;
+      const root = this.$refs.chipsContainer as HTMLElement | undefined;
 
       if (!this.observerVisible || !this.observerHidden || !root) {
         return;
@@ -160,21 +169,25 @@ export default {
 
       this.observerVisible.disconnect();
       this.observerHidden.disconnect();
-      root.querySelectorAll(':scope > .rc-tag').forEach((el) => {
-        this.observerVisible.observe(el);
-        this.observerHidden.observe(el);
+      root.querySelectorAll(':scope > .rc-tag').forEach((el: Element) => {
+        if (this.observerVisible) {
+          this.observerVisible.observe(el);
+        }
+        if (this.observerHidden) {
+          this.observerHidden.observe(el);
+        }
       });
     },
 
     updateOverflow() {
-      const root = this.$refs.chipsContainer;
+      const root = this.$refs.chipsContainer as HTMLElement | undefined;
 
       if (!root) {
         return;
       }
 
       const hasHidden = !!root.querySelector(':scope > .rc-tag.hidden-chip');
-      const partial = root.querySelector(':scope > .rc-tag.partial');
+      const partial = root.querySelector(':scope > .rc-tag.partial') as HTMLElement | null;
 
       if (!hasHidden && partial) {
         // Temporarily unshrink to check if it actually needs to truncate
@@ -192,8 +205,8 @@ export default {
       this.isOverflow = !!root.querySelector(':scope > .rc-tag:not(.visible)');
     },
 
-    markPartialChip(root) {
-      root.querySelectorAll(':scope > .rc-tag.partial').forEach((el) => {
+    markPartialChip(root: HTMLElement) {
+      root.querySelectorAll(':scope > .rc-tag.partial').forEach((el: Element) => {
         el.classList.remove('partial');
       });
 
@@ -201,23 +214,27 @@ export default {
 
       if (unresolved.length === 1) {
         unresolved[0].classList.add('partial');
-        this._expanding = false;
-      } else if (unresolved.length === 0 && this._expanding) {
+        this.expanding = false;
+      } else if (unresolved.length === 0 && this.expanding) {
         // All chips settled — if still expanding and hidden chips remain, reveal next
         const nextHidden = root.querySelector(':scope > .rc-tag.hidden-chip');
 
         if (nextHidden) {
           nextHidden.classList.remove('hidden-chip');
-          this.observerVisible.observe(nextHidden);
-          this.observerHidden.observe(nextHidden);
+          if (this.observerVisible) {
+            this.observerVisible.observe(nextHidden);
+          }
+          if (this.observerHidden) {
+            this.observerHidden.observe(nextHidden);
+          }
         } else {
-          this._expanding = false;
+          this.expanding = false;
         }
       }
     },
 
-    handleResizeIncrease(root) {
-      this._expanding = true;
+    handleResizeIncrease(root: HTMLElement) {
+      this.expanding = true;
 
       const partial = root.querySelector(':scope > .rc-tag.partial');
 

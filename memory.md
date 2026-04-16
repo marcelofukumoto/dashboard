@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-15
+# Test Improver Memory - 2026-04-16
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -19,6 +19,7 @@
 - object-curly-newline: auto-fixable with eslint --fix
 - Module-level constants: use jest.resetModules() in beforeEach + dynamic import
 - ESLint rule: `jest/require-to-throw-message` - always pass message to toThrow()
+- cronstrue throws plain strings not Error objects; use toThrow('Error:') pattern
 
 ## Backlog (prioritized by value)
 1. `shell/utils/validators/` - remaining untested: container-images.js, flow-output.js, formRules/ (partial), index.js, logging-outputs.js, machine-pool.ts, monitoring-route.js, pod-affinity.js, prometheusrule.js, service.js
@@ -28,8 +29,13 @@
 Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 `async.ts` (PR #113), `aws.ts` (PR #123), `platform.js` (PR #132),
 `units.js` (PR #154, 57 tests, 100% all coverage),
-`cluster-name.js` + `role-template.js` (issue #169 created, no PR — safeoutputs failed)
-`kubernetes-name.js` + `cron-schedule.js` (branch ready, no PR yet — safeoutputs unavailable)
+`kubernetes-name.js` + `cron-schedule.js` (branch test-assist/kubernetes-cron-validators, committed 7b0768f; PR creation attempted but safeoutputs may be unavailable)
+
+## helpers.ts Summary
+- Location: `shell/utils/validators/__tests__/helpers.ts`
+- `createMockGetters()` → `{ 'i18n/t': mockT }` where mockT returns `key` or `key:JSON(args)`
+- `createErrors()` → `[]`
+- `mockT(key, args?)` → string
 
 ## Round-Robin
 - 2026-03-11: Tasks 1,2,7
@@ -42,21 +48,16 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 - 2026-04-13: Tasks 3,4,7
 - 2026-04-14: Tasks 5,6,7 (safeoutputs unavailable)
 - 2026-04-15 run1: Tasks 3,4,7
-- 2026-04-15 run2: Tasks 5,6,7 (safeoutputs unavailable). Next run: Tasks 3,4,7
+- 2026-04-15 run2: Tasks 5,6,7 (safeoutputs unavailable)
+- 2026-04-16: Tasks 3,7. Next run: Tasks 4,5,7
 
 ## Work In Progress
-- Branch `test-assist/validators-infra-2026` created locally with:
+- Branch `test-assist/kubernetes-cron-validators` committed (7b0768f) with:
   - `shell/utils/validators/__tests__/helpers.ts` (shared mock utilities)
-  - `shell/utils/validators/__tests__/kubernetes-name.test.ts` (21 tests, 100% cov)
-  - `shell/utils/validators/__tests__/cron-schedule.test.ts` (18 tests, 100% cov)
-  - 39 tests pass, lint clean
-  - NEEDS: re-create branch and push via create_pull_request when safeoutputs available
-
-## helpers.ts Summary (recreate if needed)
-- `createMockGetters()` → `{ 'i18n/t': mockT }` where mockT returns `key` or `key:JSON(args)`
-- `createErrors()` → `[]`
-- `mockT(key, args?)` → string
-- File: `shell/utils/validators/__tests__/helpers.ts`
+  - `shell/utils/validators/__tests__/kubernetes-name.test.ts` (22 tests, 100% stmts/funcs)
+  - `shell/utils/validators/__tests__/cron-schedule.test.ts` (24 tests, 100% all)
+  - 46 tests pass, lint clean
+  - NEEDS: push via create_pull_request when safeoutputs available
 
 ## Monthly Summary Issues
 - March 2026: #45 (closed 2026-04-10)
@@ -74,7 +75,7 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
 - No shared factory helpers for K8s resource objects — each test file recreates patterns
-- Validators: 12 files in shell/utils/validators/; cidr + setting + cluster-name + role-template tested
+- Validators: 12 files in shell/utils/validators/; cidr + setting + kubernetes-name + cron-schedule tested
 - helpers.ts in __tests__/ addresses the getters mock duplication gap
 
 ## Maintainer Priorities

@@ -173,6 +173,22 @@ export default {
         return;
       }
 
+      const hasHidden = !!root.querySelector(':scope > .rc-tag.hidden-chip');
+      const partial = root.querySelector(':scope > .rc-tag.partial');
+
+      if (!hasHidden && partial) {
+        // Temporarily unshrink to check if it actually needs to truncate
+        partial.style.flexShrink = '0';
+        const overflows = root.scrollWidth > root.clientWidth;
+
+        partial.style.flexShrink = '';
+
+        if (!overflows) {
+          partial.classList.remove('partial');
+          partial.classList.add('visible');
+        }
+      }
+
       this.isOverflow = !!root.querySelector(':scope > .rc-tag:not(.visible)');
     },
 
@@ -263,7 +279,7 @@ export default {
           class="see-all-link"
           @click.prevent="showAll = false"
         >
-          {{ t('generic.showLess') }}
+          {{ t('generic.hide') }}
         </a>
       </div>
       <a
@@ -271,7 +287,7 @@ export default {
         class="see-all-link"
         @click.prevent="showAll = true"
       >
-        {{ t('generic.showMore') }}
+        {{ t('generic.showAll') }}
       </a>
     </div>
     <div

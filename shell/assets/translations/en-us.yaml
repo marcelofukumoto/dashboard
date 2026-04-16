@@ -161,6 +161,8 @@ generic:
     genericRow: row {index}
   showLess: Show less
   showMore: Show more
+  showAll: Show all
+  hide: Hide
   externalIps: External IPs
   internalIps: Internal IPs
   opensInNewTab: Opens in a new tab

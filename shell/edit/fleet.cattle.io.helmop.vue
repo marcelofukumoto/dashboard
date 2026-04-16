@@ -708,6 +708,8 @@ export default {
     },
 
     updateChartValues(value) {
+      this.chartValues = value;
+
       try {
         const chartValues = jsyaml.load(value);
 

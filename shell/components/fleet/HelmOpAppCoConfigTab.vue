@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, nextTick } from 'vue';
+import { computed, ref, nextTick, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
 import { set } from '@shell/utils/object';
@@ -256,6 +256,13 @@ const isCreate = computed(() => props.mode === _CREATE);
 const isEdit = computed(() => props.mode === _EDIT);
 
 const valuesTabRef = ref(null);
+const valuesExpanded = ref(false);
+
+watch(valuesExpanded, (expanded) => {
+  if (expanded) {
+    refreshYamlEditor();
+  }
+});
 
 const refreshYamlEditor = () => {
   nextTick(() => {
@@ -546,11 +553,11 @@ defineExpose({ refreshYamlEditor });
           />
         </RcSection>
         <RcSection
+          v-model:expanded="valuesExpanded"
           :title="t('fleet.helmOp.values.title')"
           mode="with-header"
           type="secondary"
           expandable
-          :expanded="false"
           data-testid="appco-config-values"
         >
           <HelmOpValuesTab
@@ -570,7 +577,7 @@ defineExpose({ refreshYamlEditor });
             :is-real-mode-edit="isRealModeEdit"
             :hide-title="true"
             :is-suse-app-collection="true"
-            :white-border="true"
+            :bg-border="true"
             data-testid="appco-config-values-tab"
             @update:yaml-form="$emit('update:yaml-form', $event)"
             @update:chart-values="$emit('update:chart-values', $event)"
@@ -681,7 +688,7 @@ defineExpose({ refreshYamlEditor });
           :hide-title="true"
           :hide-banner="true"
           :is-suse-app-collection="true"
-          :white-border="true"
+          :bg-border="true"
           data-testid="appco-config-values-tab"
           @update:yaml-form="$emit('update:yaml-form', $event)"
           @update:chart-values="$emit('update:chart-values', $event)"

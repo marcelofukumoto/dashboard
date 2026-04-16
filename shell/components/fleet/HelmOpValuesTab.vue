@@ -78,7 +78,7 @@ defineProps({
     type:    Boolean,
     default: false
   },
-  whiteBorder: {
+  bgBorder: {
     type:    Boolean,
     default: false
   },
@@ -150,7 +150,7 @@ const updateDiffMode = (value) => {
 
       <YamlEditor
         ref="yaml"
-        :class="{ 'white-border': whiteBorder }"
+        :class="{ 'bg-border': bgBorder }"
         :value="chartValues"
         :mode="mode"
         :initial-yaml-values="chartValuesInit"
@@ -180,7 +180,7 @@ const updateDiffMode = (value) => {
   margin-bottom: 15px;
 }
 
-.white-border {
+.bg-border {
   border: 2px solid var(--body-bg);
 }
 </style>

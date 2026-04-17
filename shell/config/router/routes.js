@@ -348,6 +348,14 @@ export default [
         component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/workload-dashboard.vue')),
         name:      'c-cluster-explorer-workload-dashboard'
       }, {
+        path:      '/c/:cluster/explorer/summary-api-explorer',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/summary-api-explorer.vue')),
+        name:      'c-cluster-explorer-summary-api-explorer'
+      }, {
+        path:      '/c/:cluster/explorer/fleet-performance',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/fleet-performance.vue')),
+        name:      'c-cluster-explorer-fleet-performance'
+      }, {
         path:      '/c/:cluster/explorer/tools',
         component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/tools/index.vue')),
         name:      'c-cluster-explorer-tools'

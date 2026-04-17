@@ -101,6 +101,8 @@ export function init(store) {
   ], 'storage');
   basicType([
     'workload-dashboard',
+    'summary-api-explorer',
+    'fleet-performance',
     WORKLOAD,
     WORKLOAD_TYPES.DEPLOYMENT,
     WORKLOAD_TYPES.DAEMON_SET,
@@ -576,6 +578,31 @@ export function init(store) {
     route:          { name: 'c-cluster-explorer-workload-dashboard' },
     exact:          true,
     overview:       true,
+  });
+
+  // Summary API Explorer - investigation dashboard for the Resource Summary API (rancher/rancher#51337)
+  virtualType({
+    label:      'Summary API Explorer',
+    group:      'Root',
+    namespaced: true,
+    name:       'summary-api-explorer',
+    weight:     99,
+    icon:       'folder',
+    route:      { name: 'c-cluster-explorer-summary-api-explorer' },
+    exact:      true,
+    overview:   true,
+  });
+
+  virtualType({
+    label:      'Fleet Performance',
+    group:      'Root',
+    namespaced: true,
+    name:       'fleet-performance',
+    weight:     98,
+    icon:       'folder',
+    route:      { name: 'c-cluster-explorer-fleet-performance' },
+    exact:      true,
+    overview:   true,
   });
 
   virtualType({

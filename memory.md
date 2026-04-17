@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-16
+# Test Improver Memory - 2026-04-17
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -29,7 +29,7 @@
 Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 `async.ts` (PR #113), `aws.ts` (PR #123), `platform.js` (PR #132),
 `units.js` (PR #154, 57 tests, 100% all coverage),
-`kubernetes-name.js` + `cron-schedule.js` (branch test-assist/kubernetes-cron-validators, committed 7b0768f; PR creation attempted but safeoutputs may be unavailable)
+`kubernetes-name.js` + `cron-schedule.js` (RECREATED 2026-04-17: branch test-assist/validators-kubernetes-cron-2026-17764553, local commit 2fc8eb829d; safeoutputs PR unavailable; test files saved in repo-memory as .txt files)
 
 ## helpers.ts Summary
 - Location: `shell/utils/validators/__tests__/helpers.ts`
@@ -50,14 +50,17 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 - 2026-04-15 run1: Tasks 3,4,7
 - 2026-04-15 run2: Tasks 5,6,7 (safeoutputs unavailable)
 - 2026-04-16: Tasks 3,7. Next run: Tasks 4,5,7
+- 2026-04-17: Tasks 3(WIP recovery),4,7 (safeoutputs unavailable - PR not created). Next run: Tasks 3(push WIP),5,7
 
 ## Work In Progress
-- Branch `test-assist/kubernetes-cron-validators` committed (7b0768f) with:
+- Branch `test-assist/validators-kubernetes-cron-2026-17764553` committed locally (2fc8eb829d):
   - `shell/utils/validators/__tests__/helpers.ts` (shared mock utilities)
-  - `shell/utils/validators/__tests__/kubernetes-name.test.ts` (22 tests, 100% stmts/funcs)
-  - `shell/utils/validators/__tests__/cron-schedule.test.ts` (24 tests, 100% all)
-  - 46 tests pass, lint clean
-  - NEEDS: push via create_pull_request when safeoutputs available
+  - `shell/utils/validators/__tests__/kubernetes-name.test.ts` (22 tests)
+  - `shell/utils/validators/__tests__/cron-schedule.test.ts` (18 tests)
+  - 40 tests pass, lint clean
+  - Test files SAVED to repo-memory: validators-helpers.txt, validators-kubernetes-name-test.txt, validators-cron-schedule-test.txt
+  - NEEDS: recreate branch + push via create_pull_request when safeoutputs available
+  - Note: uppercase IS valid in kubernetes-name (validChars='A-Za-z0-9-'); cronstrue allows 7-field expressions
 
 ## Monthly Summary Issues
 - March 2026: #45 (closed 2026-04-10)
@@ -71,6 +74,7 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 - PR #123: aws.ts tests (15 tests, 100% coverage, draft, open)
 - PR #132: platform.js tests (18 tests, 100% stmts/funcs, draft, open)
 - PR #154: units.js tests (57 tests, 100% all coverage, draft, open)
+- Note: 2026-04-17 verified all 5 PRs' tests still pass on current master
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks

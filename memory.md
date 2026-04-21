@@ -24,9 +24,10 @@
 - When mocking imported modules for service.js: mock returns new array; doesn't mutate passed-in errors
 
 ## Backlog (prioritized by value)
-1. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
-2. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
-3. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
+1. `shell/utils/parse-externalid.js` - complex parsing logic, two functions, good test target
+2. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
+3. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
+4. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
 
 Previously done validators: url.ts, duration.js, git.ts, async.ts, aws.ts, platform.js,
 units.js, kubernetes-name.js, cron-schedule.js, flow-output.js, service.js,
@@ -37,7 +38,7 @@ logging-outputs.js, monitoring-route.js, prometheusrule.js, pod-affinity.js
 - `createMockGetters()` → `{ 'i18n/t': mockT }` where mockT returns `key` or `key:JSON(args)`
 - `createErrors()` → `[]`
 - `mockT(key, args?)` → string
-- NOTE: helpers.ts is in PRs #185, #198, and new pod-affinity PR - whichever merges first includes it
+- NOTE: helpers.ts is in PRs #185, #198, #207 - whichever merges first includes it
 
 ## Round-Robin
 - 2026-03-11: Tasks 1,2,7
@@ -56,7 +57,8 @@ logging-outputs.js, monitoring-route.js, prometheusrule.js, pod-affinity.js
 - 2026-04-18: Tasks 3,7
 - 2026-04-19: Tasks 4,5,7
 - 2026-04-21 run1: Tasks 3,7
-- 2026-04-21 run2: Tasks 3,4,7. Next run: Tasks 5,6,7
+- 2026-04-21 run2: Tasks 3,4,7
+- 2026-04-21 run3: Tasks 5,6,7. Next run: Tasks 3,4,7
 
 ## Work In Progress
 None
@@ -76,7 +78,7 @@ None
 - PR #154: units.js tests (57 tests, 100% all coverage, draft, open)
 - PR #185: kubernetes-name.js (22 tests) + cron-schedule.js (18 tests) — 40 tests, 100% coverage (draft, open)
 - PR #198: flow-output.js (9 tests, 100%) + service.js (37 tests, 98.52% stmts) — 46 tests (draft, open)
-- New PR (this run): pod-affinity.js (26 tests, 100%) + prometheusrule.js (20 tests, 100%) + logging-outputs.js (5 tests, 100%) + monitoring-route.js (11 tests, 100%) — 62 tests (draft, created 2026-04-21)
+- PR #207: pod-affinity.js (26 tests, 100%) + prometheusrule.js (20 tests, 100%) + logging-outputs.js (5 tests, 100%) + monitoring-route.js (11 tests, 100%) — 62 tests (draft, open)
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
@@ -84,11 +86,16 @@ None
 - Validators: 16 files in shell/utils/validators/; 15 now tested (only machine-pool.ts remains, constants only)
 - helpers.ts in __tests__/ addresses the getters mock duplication gap
 - IMPORTANT: New PR branches should NOT include .github/workflows/*.lock.yml or .github/aw/actions-lock.json changes
+- IMPORTANT: No unit test CI workflow in GitHub Actions — tests run manually only
+- Codecov is configured (codecov.yml) but no automated upload pipeline visible
 
 ## Maintainer Priorities
 - Monthly summary issues #114, #155, #170 all closed as "not_planned"
   (no comments; may prefer fewer activity tracking issues — but instructions require Task 7)
-- 8 open PRs (including new one), none reviewed — maintainer may be unresponsive
+- 8 open PRs, none reviewed — maintainer may be unresponsive
 
 ## Checked Off Items
 None
+
+## Recent Issues
+- 2026-04-21 run3: safeoutputs tools unavailable — issue #199 NOT updated this run

@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-19
+# Test Improver Memory - 2026-04-21
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -21,22 +21,25 @@
 - ESLint rule: `jest/require-to-throw-message` - always pass message to toThrow()
 - cronstrue throws plain strings not Error objects; use toThrow('Error:') pattern
 - PR branches: avoid including .github/workflows/*.lock.yml files — they cause merge conflicts
+- When mocking imported modules for service.js: mock returns new array; doesn't mutate passed-in errors
 
 ## Backlog (prioritized by value)
-1. `shell/utils/validators/` - remaining untested: flow-output.js, logging-outputs.js, machine-pool.ts, monitoring-route.js, pod-affinity.js, prometheusrule.js, service.js
+1. `shell/utils/validators/` - remaining untested: logging-outputs.js, machine-pool.ts, monitoring-route.js, pod-affinity.js, prometheusrule.js
 2. `shell/components/CruResource.vue` - component test (complex, 1032 lines)
 3. `shell/components/ResourceTable.vue` - component test (complex, 836 lines)
 
 Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 `async.ts` (PR #113), `aws.ts` (PR #123), `platform.js` (PR #132),
 `units.js` (PR #154, 57 tests, 100% all coverage),
-`kubernetes-name.js` + `cron-schedule.js` (PR #185, 40 tests, 100% coverage, 2026-04-18)
+`kubernetes-name.js` + `cron-schedule.js` (PR #185, 40 tests, 100% coverage, 2026-04-18),
+`flow-output.js` + `service.js` (new PR, 46 tests, 100%/98.52% coverage, 2026-04-21)
 
 ## helpers.ts Summary
 - Location: `shell/utils/validators/__tests__/helpers.ts`
 - `createMockGetters()` → `{ 'i18n/t': mockT }` where mockT returns `key` or `key:JSON(args)`
 - `createErrors()` → `[]`
 - `mockT(key, args?)` → string
+- NOTE: helpers.ts is in both the new PR (flow-output/service) and PR #185 - whichever merges first will include it
 
 ## Round-Robin
 - 2026-03-11: Tasks 1,2,7
@@ -53,7 +56,8 @@ Previously done: `url.ts` (PR #72), `duration.js` (PR #72), `git.ts` (PR #113),
 - 2026-04-16: Tasks 3,7
 - 2026-04-17: Tasks 3(WIP recovery),4,7 (safeoutputs unavailable)
 - 2026-04-18: Tasks 3,7
-- 2026-04-19: Tasks 4,5,7. Next run: Tasks 3,6,7
+- 2026-04-19: Tasks 4,5,7
+- 2026-04-21: Tasks 3,7. Next run: Tasks 4,5,6,7
 
 ## Work In Progress
 None
@@ -62,28 +66,29 @@ None
 - March 2026: #45 (closed 2026-04-10)
 - April 2026: #114 (closed "not_planned" by maintainer 2026-04-13)
 - April 2026 v2: #155 (closed "not_planned" by maintainer 2026-04-15)
-- April 2026 v3: #170 (open, updated 2026-04-19)
+- April 2026 v3: #170 (closed "not_planned" by maintainer 2026-04-21)
+- April 2026 v4: newly created this run (number TBD)
 
 ## Open Test Improver PRs
 - PR #72: url.ts + duration.js tests (draft, open, awaiting review)
 - PR #113: git.ts + async.ts tests (draft, open, awaiting review)
-- PR #123: aws.ts tests (15 tests, 100% coverage, draft, open) — FIXED 2026-04-19: rebased onto master, conflicts resolved
-- PR #132: platform.js tests (18 tests, 100% stmts/funcs, draft, open) — FIXED 2026-04-19: rebased onto master, conflicts resolved
+- PR #123: aws.ts tests (15 tests, 100% coverage, draft, open)
+- PR #132: platform.js tests (18 tests, 100% stmts/funcs, draft, open)
 - PR #154: units.js tests (57 tests, 100% all coverage, draft, open)
-- PR #185: kubernetes-name.js (22 tests) + cron-schedule.js (18 tests) — 40 tests, 100% coverage (draft, created 2026-04-18)
-- Note: 2026-04-19 verified all branches merge cleanly with master (no conflicts)
+- PR #185: kubernetes-name.js (22 tests) + cron-schedule.js (18 tests) — 40 tests, 100% coverage (draft, open)
+- New PR: flow-output.js (9 tests, 100%) + service.js (37 tests, 98.52% stmts) — 46 tests (created 2026-04-21)
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
 - No shared factory helpers for K8s resource objects — each test file recreates patterns
-- Validators: 12 files in shell/utils/validators/; cidr + setting + kubernetes-name + cron-schedule tested
+- Validators: 12 files in shell/utils/validators/; 7 now tested
 - helpers.ts in __tests__/ addresses the getters mock duplication gap
-- IMPORTANT: New PR branches should NOT include .github/workflows/*.lock.yml or .github/aw/actions-lock.json changes — these auto-generated files conflict with master updates
+- IMPORTANT: New PR branches should NOT include .github/workflows/*.lock.yml or .github/aw/actions-lock.json changes
 
 ## Maintainer Priorities
-- Monthly summary issues #114 and #155 both closed as "not_planned" on 2026-04-13 and 2026-04-15
+- Monthly summary issues #114, #155, #170 all closed as "not_planned"
   (no comments; may prefer fewer activity tracking issues — but instructions require Task 7)
-- 6 open PRs, none reviewed — maintainer may be unresponsive
+- 7 open PRs (including new one), none reviewed — maintainer may be unresponsive
 
 ## Checked Off Items
 None

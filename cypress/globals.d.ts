@@ -123,6 +123,7 @@ declare global {
         wait?: number,
       }): Chainable;
       applyDefaultTestTheme(): Chainable<any>;
+      restoreProductDefaultTestTheme(): Chainable<any>;
       getRancherVersion(): Chainable<any>;
       getRancherResource(prefix: 'v3' | 'v1', resourceType: string, resourceId?: string, expectedStatusCode?: number): Chainable;
       setRancherResource(prefix: 'v3' | 'v1', resourceType: string, resourceId: string, body: any): Chainable;
@@ -207,8 +208,6 @@ declare global {
       keyboardControls(triggerKeys: Partial<any>, count: number): Chainable<Element>;
 
       interceptAllRequests(verbs: Verbs, urls: string[], timeout: number): Chainable<string>;
-
-      iFrame(): Chainable<Element>;
 
       // Check if an element is visible to the user on the screen.
       isVisible(): Chainable<Element>;

@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-22
+# Test Improver Memory - 2026-04-23
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -24,9 +24,10 @@
 - When mocking imported modules for service.js: mock returns new array; doesn't mutate passed-in errors
 
 ## Backlog (prioritized by value)
-1. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
-2. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
-3. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
+1. `shell/utils/promise.js` — `allHash`, `allHashSettled`, `eachLimit`, `deferred` have real logic worth testing
+2. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
+3. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
+4. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
 
 Previously done validators: url.ts, duration.js, git.ts, async.ts, aws.ts, platform.js,
 units.js, kubernetes-name.js, cron-schedule.js, flow-output.js, service.js,
@@ -58,8 +59,9 @@ Previously done utils: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs)
 - 2026-04-19: Tasks 4,5,7
 - 2026-04-21 run1: Tasks 3,7
 - 2026-04-21 run2: Tasks 3,4,7
-- 2026-04-21 run3: Tasks 5,6,7. Next run: Tasks 3,4,7
-- 2026-04-22: Tasks 3,4,7. Next run: Tasks 5,6,7
+- 2026-04-21 run3: Tasks 5,6,7
+- 2026-04-22: Tasks 3,4,7
+- 2026-04-23: Tasks 5,6,7. Next run: Tasks 3,4,7
 
 ## Work In Progress
 None
@@ -80,7 +82,7 @@ None
 - PR #185: kubernetes-name.js (22 tests) + cron-schedule.js (18 tests) — 40 tests, 100% coverage (draft, open)
 - PR #198: flow-output.js (9 tests, 100%) + service.js (37 tests, 98.52% stmts) — 46 tests (draft, open)
 - PR #207: pod-affinity.js (26 tests, 100%) + prometheusrule.js (20 tests, 100%) + logging-outputs.js (5 tests, 100%) + monitoring-route.js (11 tests, 100%) — 62 tests (draft, open)
-- PR (queued 2026-04-22): parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs) — branch: test-assist/parse-externalid
+- PR #212: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs) — draft, open
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
@@ -90,15 +92,20 @@ None
 - IMPORTANT: New PR branches should NOT include .github/workflows/*.lock.yml or .github/aw/actions-lock.json changes
 - IMPORTANT: No unit test CI workflow in GitHub Actions — tests run manually only
 - Codecov is configured (codecov.yml) but no automated upload pipeline visible
+- Issue #218: duplicate `wait()` inline patterns — commented that centralizing improves module-level mocking in tests
 
 ## Maintainer Priorities
 - Monthly summary issues #114, #155, #170 all closed as "not_planned"
   (no comments; may prefer fewer activity tracking issues — but instructions require Task 7)
-- 8 open PRs, none reviewed — maintainer may be unresponsive
+- 9 open PRs, none reviewed — maintainer may be unresponsive
 
 ## Checked Off Items
 None
 
 ## Recent Issues
-- 2026-04-22: Task 3 — parse-externalid.js tests (19 tests), PR queued; issue #199 updated via MCP HTTP
-- NOTE: safeoutputs MCP server accessible via HTTP with raw token auth (no Bearer prefix): http://host.docker.internal:80/mcp/safeoutputs
+- 2026-04-23: Task 5 — commented on #218 (wait() utility, testing benefits)
+- 2026-04-23: Task 6 — assessed infrastructure; promise.js added to backlog as top priority
+- 2026-04-22: Task 3 — parse-externalid.js tests (19 tests), PR #212 created
+- NOTE: safeoutputs MCP server: initialize first for session, then use Mcp-Session-Id header
+  - URL: http://host.docker.internal:80/mcp/safeoutputs
+  - Auth: read from /home/runner/.copilot/mcp-config.json (no "Bearer" prefix needed)

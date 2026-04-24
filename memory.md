@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-23
+# Test Improver Memory - 2026-04-24
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -22,17 +22,19 @@
 - cronstrue throws plain strings not Error objects; use toThrow('Error:') pattern
 - PR branches: avoid including .github/workflows/*.lock.yml files — they cause merge conflicts
 - When mocking imported modules for service.js: mock returns new array; doesn't mutate passed-in errors
+- ESLint rule: `jest/no-if` — no if statements OR ternaries inside test bodies; use jest.fn() mockResolvedValueOnce/mockRejectedValueOnce instead
+- ESLint rule: `promise/param-names` — Promise constructor params must be named `resolve`/`reject` (not `r`, `res`, etc.)
 
 ## Backlog (prioritized by value)
-1. `shell/utils/promise.js` — `allHash`, `allHashSettled`, `eachLimit`, `deferred` have real logic worth testing
-2. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
-3. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
-4. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
+1. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
+2. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
+3. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
 
 Previously done validators: url.ts, duration.js, git.ts, async.ts, aws.ts, platform.js,
 units.js, kubernetes-name.js, cron-schedule.js, flow-output.js, service.js,
 logging-outputs.js, monitoring-route.js, prometheusrule.js, pod-affinity.js
-Previously done utils: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs)
+Previously done utils: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs),
+promise.js (26 tests, 89.56% stmts, 100% funcs)
 
 ## helpers.ts Summary
 - Location: `shell/utils/validators/__tests__/helpers.ts`
@@ -61,7 +63,7 @@ Previously done utils: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs)
 - 2026-04-21 run2: Tasks 3,4,7
 - 2026-04-21 run3: Tasks 5,6,7
 - 2026-04-22: Tasks 3,4,7
-- 2026-04-23: Tasks 5,6,7. Next run: Tasks 3,4,7
+- 2026-04-24: Tasks 3,7. Next run: Tasks 4,5,7
 
 ## Work In Progress
 None
@@ -83,6 +85,7 @@ None
 - PR #198: flow-output.js (9 tests, 100%) + service.js (37 tests, 98.52% stmts) — 46 tests (draft, open)
 - PR #207: pod-affinity.js (26 tests, 100%) + prometheusrule.js (20 tests, 100%) + logging-outputs.js (5 tests, 100%) + monitoring-route.js (11 tests, 100%) — 62 tests (draft, open)
 - PR #212: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs) — draft, open
+- PR (queued 2026-04-24): promise.js (26 tests, 89.56% stmts, 100% funcs) — branch test-assist/promise-utils
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
@@ -103,6 +106,7 @@ None
 None
 
 ## Recent Issues
+- 2026-04-24: Task 3 — promise.js tests (26 tests), PR queued (branch test-assist/promise-utils)
 - 2026-04-23: Task 5 — commented on #218 (wait() utility, testing benefits)
 - 2026-04-23: Task 6 — assessed infrastructure; promise.js added to backlog as top priority
 - 2026-04-22: Task 3 — parse-externalid.js tests (19 tests), PR #212 created

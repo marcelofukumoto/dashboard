@@ -5,6 +5,7 @@ import { checkSchemasForFindAllHash } from '@shell/utils/auth';
 import { isHarvesterCluster } from '@shell/utils/cluster';
 import { FLEET } from '@shell/config/types';
 import FleetUtils from '@shell/utils/fleet';
+import { convertSelectorObj, matching as matchSelector } from '@shell/utils/selector';
 import { Expression, Selector, Target, TargetMode } from '@shell/types/fleet';
 import { _CREATE, _EDIT, _VIEW } from '@shell/config/query-params';
 import LabeledSelect from '@shell/components/form/LabeledSelect.vue';
@@ -182,6 +183,63 @@ export default {
         .map((x) => {
           return { label: x.nameDisplay, value: x.metadata.name };
         });
+    },
+
+    matchingByName(): any[] {
+      if (!this.selectedClusters.length) {
+        return [];
+      }
+
+      return this.allClusters.filter((c: any) => c.metadata.namespace === this.namespace && this.selectedClusters.includes(c.metadata.name));
+    },
+
+    matchingByLabel(): any[] {
+      if (!this.clusterSelectors.length) {
+        return [];
+      }
+
+      const namespaceClusters = this.allClusters.filter((c: any) => c.metadata.namespace === this.namespace);
+      const result: any[] = [];
+      const seen = new Set<string>();
+
+      for (const selector of this.clusterSelectors) {
+        const expressions = convertSelectorObj(selector);
+
+        if (expressions.length) {
+          for (const cluster of matchSelector(namespaceClusters, expressions)) {
+            if (!seen.has(cluster.metadata.name)) {
+              seen.add(cluster.metadata.name);
+              result.push(cluster);
+            }
+          }
+        }
+      }
+
+      return result;
+    },
+
+    matchingByGroup(): any[] {
+      if (!this.selectedClusterGroups.length) {
+        return [];
+      }
+
+      const result: any[] = [];
+      const seen = new Set<string>();
+
+      for (const groupName of this.selectedClusterGroups) {
+        const group = this.allClusterGroups.find((g: any) => g.metadata.namespace === this.namespace && g.metadata.name === groupName);
+
+        if (group?.targetClusters) {
+          for (const cluster of group.targetClusters) {
+            if (!seen.has(cluster.metadata.name)) {
+              seen.add(cluster.metadata.name);
+              result.push(cluster);
+            }
+          }
+        }
+      }
+
+      return result;
     },
 
     isLocal() {
@@ -498,7 +556,6 @@ export default {
           mode="with-header"
           type="secondary"
           expandable
-          :expanded="true"
           data-testid="fleet-target-targeted-clusters-section"
         >
           <template #counter>
@@ -507,12 +564,71 @@ export default {
               type="inactive"
             />
           </template>
-          <TargetsList
-            :clusters="matching"
-            :empty-label="t('fleet.clusterTargets.rules.matching.placeholder')"
-            :chips="true"
-            :hide-title="true"
-          />
+          <div class="matching-subsections">
+            <RcSection
+              :title="t('fleet.clusterTargets.rules.matching.fromNames')"
+              mode="with-header"
+              type="secondary"
+              expandable
+              :expanded="matchingByName.length > 0"
+              data-testid="fleet-target-matching-by-name"
+            >
+              <template #counter>
+                <RcCounterBadge
+                  :count="matchingByName.length"
+                  type="inactive"
+                />
+              </template>
+              <TargetsList
+                :clusters="matchingByName"
+                :empty-label="t('fleet.clusterTargets.rules.matching.placeholderNames')"
+                :chips="true"
+                :hide-title="true"
+              />
+            </RcSection>
+            <RcSection
+              :title="t('fleet.clusterTargets.rules.matching.fromLabels')"
+              mode="with-header"
+              type="secondary"
+              expandable
+              :expanded="matchingByLabel.length > 0"
+              data-testid="fleet-target-matching-by-label"
+            >
+              <template #counter>
+                <RcCounterBadge
+                  :count="matchingByLabel.length"
+                  type="inactive"
+                />
+              </template>
+              <TargetsList
+                :clusters="matchingByLabel"
+                :empty-label="t('fleet.clusterTargets.rules.matching.placeholderLabels')"
+                :chips="true"
+                :hide-title="true"
+              />
+            </RcSection>
+            <RcSection
+              :title="t('fleet.clusterTargets.rules.matching.fromGroups')"
+              mode="with-header"
+              type="secondary"
+              expandable
+              :expanded="matchingByGroup.length > 0"
+              data-testid="fleet-target-matching-by-group"
+            >
+              <template #counter>
+                <RcCounterBadge
+                  :count="matchingByGroup.length"
+                  type="inactive"
+                />
+              </template>
+              <TargetsList
+                :clusters="matchingByGroup"
+                :empty-label="t('fleet.clusterTargets.rules.matching.placeholderGroups')"
+                :chips="true"
+                :hide-title="true"
+              />
+            </RcSection>
+          </div>
         </RcSection>
       </div>
     </div>
@@ -668,6 +784,12 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .matching-subsections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .match-expressions-container {

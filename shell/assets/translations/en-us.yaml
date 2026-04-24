@@ -3150,6 +3150,9 @@ fleet:
     rules:
       matching:
         sectionTitle: Targeted clusters
+        fromNames: From Cluster Names
+        fromLabels: From Labels
+        fromGroups: From Cluster Groups
         title: |-
           {n, plural,
             =0 {No clusters selected}
@@ -3157,6 +3160,9 @@ fleet:
             other {{n, number} clusters selected}
             }
         placeholder: Select clusters by name, labels or groups
+        placeholderNames: No clusters selected by name
+        placeholderLabels: No clusters matched by labels
+        placeholderGroups: No clusters matched by cluster groups
         empty: No clusters in the workspace
         plusMore: |-
           {n, plural,

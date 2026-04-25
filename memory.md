@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-24
+# Test Improver Memory - 2026-04-25
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -44,26 +44,12 @@ promise.js (26 tests, 89.56% stmts, 100% funcs)
 - NOTE: helpers.ts is in PRs #185, #198, #207 - whichever merges first includes it
 
 ## Round-Robin
-- 2026-03-11: Tasks 1,2,7
-- 2026-03-31: Tasks 3,4,7
-- 2026-04-09: Task 3 (git.ts - lost), Task 7 (safe-outputs unavailable)
-- 2026-04-10 run1: Tasks 3,4,7
-- 2026-04-10 run2: Tasks 3,7
-- 2026-04-11: Tasks 3,7
-- 2026-04-12: Tasks 5,6,7
-- 2026-04-13: Tasks 3,4,7
-- 2026-04-14: Tasks 5,6,7 (safeoutputs unavailable)
-- 2026-04-15 run1: Tasks 3,4,7
-- 2026-04-15 run2: Tasks 5,6,7 (safeoutputs unavailable)
-- 2026-04-16: Tasks 3,7
-- 2026-04-17: Tasks 3(WIP recovery),4,7 (safeoutputs unavailable)
-- 2026-04-18: Tasks 3,7
 - 2026-04-19: Tasks 4,5,7
-- 2026-04-21 run1: Tasks 3,7
 - 2026-04-21 run2: Tasks 3,4,7
 - 2026-04-21 run3: Tasks 5,6,7
 - 2026-04-22: Tasks 3,4,7
-- 2026-04-24: Tasks 3,7. Next run: Tasks 4,5,7
+- 2026-04-24: Tasks 3,7
+- 2026-04-25: Tasks 4,5,7. Next run: Tasks 1,2,6,7 (long overdue)
 
 ## Work In Progress
 None
@@ -85,7 +71,8 @@ None
 - PR #198: flow-output.js (9 tests, 100%) + service.js (37 tests, 98.52% stmts) — 46 tests (draft, open)
 - PR #207: pod-affinity.js (26 tests, 100%) + prometheusrule.js (20 tests, 100%) + logging-outputs.js (5 tests, 100%) + monitoring-route.js (11 tests, 100%) — 62 tests (draft, open)
 - PR #212: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs) — draft, open
-- PR (queued 2026-04-24): promise.js (26 tests, 89.56% stmts, 100% funcs) — branch test-assist/promise-utils
+- PR #221: promise.js (26 tests, 89.56% stmts, 100% funcs) — draft, open
+- PR #220: DUPLICATE of #221 — commented asking maintainer to close it
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
@@ -100,16 +87,14 @@ None
 ## Maintainer Priorities
 - Monthly summary issues #114, #155, #170 all closed as "not_planned"
   (no comments; may prefer fewer activity tracking issues — but instructions require Task 7)
-- 9 open PRs, none reviewed — maintainer may be unresponsive
+- 10 open Test Improver PRs, none reviewed — maintainer may be unresponsive
 
 ## Checked Off Items
 None
 
 ## Recent Issues
-- 2026-04-24: Task 3 — promise.js tests (26 tests), PR queued (branch test-assist/promise-utils)
+- 2026-04-25: Task 4 — commented on PR #220 (duplicate promise.js PR, close in favour of #221)
+- 2026-04-25: Task 5 — no new testing issues to comment on
+- 2026-04-24: Task 3 — promise.js tests (26 tests), PRs #220 and #221 created (duplicates)
 - 2026-04-23: Task 5 — commented on #218 (wait() utility, testing benefits)
-- 2026-04-23: Task 6 — assessed infrastructure; promise.js added to backlog as top priority
 - 2026-04-22: Task 3 — parse-externalid.js tests (19 tests), PR #212 created
-- NOTE: safeoutputs MCP server: initialize first for session, then use Mcp-Session-Id header
-  - URL: http://host.docker.internal:80/mcp/safeoutputs
-  - Auth: read from /home/runner/.copilot/mcp-config.json (no "Bearer" prefix needed)

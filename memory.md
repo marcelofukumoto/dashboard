@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-25
+# Test Improver Memory - 2026-04-26
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -26,9 +26,14 @@
 - ESLint rule: `promise/param-names` — Promise constructor params must be named `resolve`/`reject` (not `r`, `res`, etc.)
 
 ## Backlog (prioritized by value)
-1. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
-2. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
-3. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
+1. `shell/utils/queue.js` - pure FIFO data structure (70 lines), zero external deps, no tests — HIGH VALUE
+2. `shell/utils/color.js` - color utility functions: hexToRgb, rgbToRgb, colorToRgb, normalizeHex, textColor, contrastColor (148 lines), depends on `color` npm pkg
+3. `shell/utils/validators/formRules/index.ts` - already has comprehensive tests (1351 lines) — SKIP
+4. `shell/components/CruResource.vue` - component test (complex, ~1032 lines)
+5. `shell/components/ResourceTable.vue` - component test (complex, ~836 lines)
+6. `shell/utils/dynamic-content/index.ts` - 272 lines, untested
+7. `shell/utils/gc/gc.ts` - 282 lines, but heavily store-dependent
+8. `shell/utils/validators/machine-pool.ts` - only exports constants, low value
 
 Previously done validators: url.ts, duration.js, git.ts, async.ts, aws.ts, platform.js,
 units.js, kubernetes-name.js, cron-schedule.js, flow-output.js, service.js,
@@ -49,7 +54,8 @@ promise.js (26 tests, 89.56% stmts, 100% funcs)
 - 2026-04-21 run3: Tasks 5,6,7
 - 2026-04-22: Tasks 3,4,7
 - 2026-04-24: Tasks 3,7
-- 2026-04-25: Tasks 4,5,7. Next run: Tasks 1,2,6,7 (long overdue)
+- 2026-04-25: Tasks 4,5,7
+- 2026-04-26: Tasks 1,2,6,7. Next run: Tasks 3,4,5,7
 
 ## Work In Progress
 None
@@ -72,27 +78,30 @@ None
 - PR #207: pod-affinity.js (26 tests, 100%) + prometheusrule.js (20 tests, 100%) + logging-outputs.js (5 tests, 100%) + monitoring-route.js (11 tests, 100%) — 62 tests (draft, open)
 - PR #212: parse-externalid.js (19 tests, ~90%+ stmts, 100% funcs) — draft, open
 - PR #221: promise.js (26 tests, 89.56% stmts, 100% funcs) — draft, open
-- PR #220: DUPLICATE of #221 — commented asking maintainer to close it
+- PR #220: DUPLICATE of #221 — commented asking maintainer to close it (still open)
 
 ## Infrastructure Notes (Task 6)
 - jest.setup.js: good global Vue/i18n/store mocks
 - No shared factory helpers for K8s resource objects — each test file recreates patterns
 - Validators: 16 files in shell/utils/validators/; 15 now tested (only machine-pool.ts remains, constants only)
+- formRules/index.ts (648 lines) already has comprehensive tests (1351 lines in __tests__/index.test.ts)
 - helpers.ts in __tests__/ addresses the getters mock duplication gap
 - IMPORTANT: New PR branches should NOT include .github/workflows/*.lock.yml or .github/aw/actions-lock.json changes
 - IMPORTANT: No unit test CI workflow in GitHub Actions — tests run manually only
 - Codecov is configured (codecov.yml) but no automated upload pipeline visible
 - Issue #218: duplicate `wait()` inline patterns — commented that centralizing improves module-level mocking in tests
+- 151 component tests in shell/components; 27+ utility tests; overall good test coverage infrastructure
 
 ## Maintainer Priorities
 - Monthly summary issues #114, #155, #170 all closed as "not_planned"
   (no comments; may prefer fewer activity tracking issues — but instructions require Task 7)
-- 10 open Test Improver PRs, none reviewed — maintainer may be unresponsive
+- 11 open Test Improver PRs, none reviewed — maintainer may be unresponsive
 
 ## Checked Off Items
 None
 
 ## Recent Issues
+- 2026-04-26: Tasks 1,2,6,7 — surveyed untested files; identified queue.js and color.js as new backlog items; formRules already comprehensively tested; 151 component tests found
 - 2026-04-25: Task 4 — commented on PR #220 (duplicate promise.js PR, close in favour of #221)
 - 2026-04-25: Task 5 — no new testing issues to comment on
 - 2026-04-24: Task 3 — promise.js tests (26 tests), PRs #220 and #221 created (duplicates)

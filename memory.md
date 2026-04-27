@@ -1,4 +1,4 @@
-# Test Improver Memory - 2026-04-26
+# Test Improver Memory - 2026-04-27
 
 ## Commands (validated with YARN_IGNORE_ENGINES=true)
 - Unit tests: `YARN_IGNORE_ENGINES=true yarn test:ci` (Jest+coverage)
@@ -55,10 +55,11 @@ promise.js (26 tests, 89.56% stmts, 100% funcs)
 - 2026-04-22: Tasks 3,4,7
 - 2026-04-24: Tasks 3,7
 - 2026-04-25: Tasks 4,5,7
-- 2026-04-26: Tasks 1,2,6,7. Next run: Tasks 3,4,5,7
+- 2026-04-26: Tasks 1,2,6,7
+- 2026-04-27: Tasks 3,4,5,7 — BLOCKED: safeoutputs+GitHub MCP servers filtered (401 MCP registry). Next run: Tasks 3,4,5,7 (retry)
 
 ## Work In Progress
-None
+- queue.js: 21 tests written (100% coverage), verified locally. Branch deleted as MCP tools unavailable. Recreate on next run.
 
 ## Monthly Summary Issues
 - March 2026: #45 (closed 2026-04-10)
@@ -101,6 +102,7 @@ None
 None
 
 ## Recent Issues
+- 2026-04-27: Tasks 3,4,5,7 BLOCKED — safeoutputs MCP filtered (401 on MCP registry policy). queue.js tests written/verified locally (21 tests, 100% coverage) but not pushed. PR/issue updates impossible.
 - 2026-04-26: Tasks 1,2,6,7 — surveyed untested files; identified queue.js and color.js as new backlog items; formRules already comprehensively tested; 151 component tests found
 - 2026-04-25: Task 4 — commented on PR #220 (duplicate promise.js PR, close in favour of #221)
 - 2026-04-25: Task 5 — no new testing issues to comment on

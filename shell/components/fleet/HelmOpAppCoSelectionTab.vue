@@ -64,6 +64,10 @@ export default {
       type:    Boolean,
       default: false
     },
+    appCoRepoState: {
+      type:    Object,
+      default: null
+    },
   },
 
   emits: [
@@ -429,11 +433,21 @@ export default {
         </AppCoEmptyState>
 
         <AppCoEmptyState
-          v-else-if="appCoChartsFetchError"
+          v-else-if="appCoRepoState?.transitioning"
+          :title="t('fleet.helmOp.add.steps.selection.repoLoading.title')"
+          :badge-state="appCoRepoState"
+          data-testid="appco-selection-repo-loading"
+        >
+          {{ t('fleet.helmOp.add.steps.selection.repoLoading.description') }}
+        </AppCoEmptyState>
+
+        <AppCoEmptyState
+          v-else-if="appCoChartsFetchError || appCoRepoState?.error"
           :title="t('fleet.helmOp.add.steps.selection.emptyState.connectionError.title')"
           data-testid="appco-selection-fetch-error"
         >
-          {{ t('fleet.helmOp.add.steps.selection.emptyState.connectionError.descriptionPre') }}
+          {{ t('fleet.helmOp.add.steps.selection.emptyState.connectionError.descriptionPre') }}<br>
+          {{ t('fleet.helmOp.add.steps.selection.emptyState.connectionError.please') }}
           <a
             href="#"
             @click.prevent="retryFetch"

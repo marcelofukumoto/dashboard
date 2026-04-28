@@ -118,6 +118,8 @@ export default {
       appCoChartsLoading:    false,
       // True when the chart index fetch failed (triggers the connection error empty state)
       appCoChartsFetchError: false,
+      // Current ClusterRepo state while polling (stateDisplay + stateBackground for BadgeState)
+      appCoRepoState:        null,
     };
   },
 
@@ -347,34 +349,6 @@ export default {
         set(this.value, 'metadata.namespace', neu);
       }
     },
-
-    appCoRepoName: {
-      immediate: true,
-      handler(repoName, oldRepoName) {
-        if (!this.isSuseAppCollection) {
-          return;
-        }
-
-        // When auth is cleared (e.g. switching to _BASIC), reset everything
-        if (!repoName) {
-          if (oldRepoName) {
-            this.resetAppCoChartSelection();
-            this.resetAppCoChartData();
-          }
-
-          return;
-        }
-
-        // When switching auth secrets, reset chart selection and chart data so stale values
-        // don't persist if the new chart list doesn't contain the old chart.
-        if (oldRepoName) {
-          this.resetAppCoChartSelection();
-          this.resetAppCoChartData();
-        }
-
-        this.fetchAppCoCharts(repoName);
-      },
-    },
   },
 
   methods: {
@@ -389,11 +363,14 @@ export default {
       this.chartValues = '';
     },
 
-    resetAppCoChartData({ error = false } = {}) {
+    resetAppCoChartData({ error = false, keepAppCoRepoState = false } = {}) {
       this.appCoChartOptions = [];
       this.appCoVersionOptions = [];
       this.appCoChartEntries = {};
       this.appCoChartsFetchError = error;
+      if (!keepAppCoRepoState) {
+        this.appCoRepoState = null;
+      }
     },
 
     goToNextStep() {
@@ -461,9 +438,33 @@ export default {
         delete spec[key];
       }
 
-      if (this.isSuseAppCollection && !doNotUpdateGlobalValuesAndDownstreamSecrets) {
+      if (!this.isSuseAppCollection) {
+        return;
+      }
+      // When auth is cleared (e.g. switching to _BASIC), reset everything
+      if (!this.appCoRepoName) {
+        if (this.oldAppCoRepoName) {
+          this.resetAppCoChartSelection();
+          this.resetAppCoChartData();
+        }
+
+        return;
+      }
+
+      // When switching auth secrets, reset chart selection and chart data so stale values
+      // don't persist if the new chart list doesn't contain the old chart.
+      if (this.oldAppCoRepoName) {
+        this.resetAppCoChartSelection();
+        this.resetAppCoChartData();
+      }
+
+      this.oldAppCoRepoName = this.appCoRepoName;
+
+      if (!doNotUpdateGlobalValuesAndDownstreamSecrets) {
         await this.updateGlobalValuesAndDownstreamSecrets();
       }
+
+      await this.fetchAppCoCharts(this.appCoRepoName);
     },
 
     async onCreateAuth(credentials) {
@@ -813,24 +814,18 @@ export default {
         return;
       }
 
-      this.appCoChartsLoading = true;
       this.appCoChartsFetchError = false;
+      this.appCoRepoState = null;
 
       try {
-        let repo = this.$store.getters[`${ CATALOG._MANAGEMENT }/byId`](CATALOG_TYPES.CLUSTER_REPO, repoName);
+        // Fetch the repo and wait for it to be ready (handles in-progress/transitioning state)
+        const repo = await this.waitForRepoReady(repoName);
 
         if (!repo) {
-          try {
-            repo = await this.$store.dispatch(`${ CATALOG._MANAGEMENT }/find`, {
-              type: CATALOG_TYPES.CLUSTER_REPO,
-              id:   repoName,
-            });
-          } catch (e) {
-            this.resetAppCoChartData({ error: true });
-
-            return;
-          }
+          // waitForRepoReady returned null — the repo ended in an error state or was not found
+          return;
         }
+        this.appCoChartsLoading = true;
 
         const index = await repo.followLink('index');
         const entries = index?.entries || {};
@@ -871,12 +866,61 @@ export default {
       }
     },
 
-    retryAppCoChartsFetch() {
+    /**
+     * Polls the ClusterRepo until its metadata.state resolves from in-progress to
+     * either a ready or error state. Returns the repo when ready, or null on error.
+     */
+    async waitForRepoReady(repoName, { maxAttempts = 30, intervalMs = 5000 } = {}) {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        let repo;
+
+        try {
+          repo = await this.$store.dispatch(`${ CATALOG._MANAGEMENT }/find`, {
+            type: CATALOG_TYPES.CLUSTER_REPO,
+            id:   repoName,
+            opt:  { force: true },
+          });
+        } catch (e) {
+          this.resetAppCoChartData({ error: true });
+
+          return null;
+        }
+
+        const state = repo.metadata?.state;
+
+        // Expose the current state for the loading UI (badge label + color)
+        this.appCoRepoState = {
+          stateDisplay:    repo.stateDisplay,
+          stateBackground: repo.stateBackground,
+          transitioning:   repo.metadata?.state?.transitioning,
+          error:           repo.metadata?.state?.error,
+        };
+        console.log('HERE', repo.metadata.state); // eslint-disable-line no-console
+
+        if (state?.error) {
+          return null;
+        }
+
+        if (!state?.transitioning) {
+          return repo;
+        }
+
+        // Repo is still transitioning — wait before re-fetching
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      }
+
+      // Timed out waiting for repo to become ready
+      this.resetAppCoChartData({ error: true });
+
+      return null;
+    },
+
+    async retryAppCoChartsFetch() {
       const repoName = this.appCoRepoName;
 
       if (repoName) {
         delete this.appCoChartsCache[repoName];
-        this.fetchAppCoCharts(repoName);
+        await this.fetchAppCoCharts(repoName);
       }
     },
 
@@ -948,6 +992,7 @@ export default {
         :app-co-chart-entries="appCoChartEntries"
         :app-co-charts-loading="appCoChartsLoading"
         :app-co-charts-fetch-error="appCoChartsFetchError"
+        :app-co-repo-state="appCoRepoState"
         data-testid="helmop-appco-selection-tab"
         @update:cached-auth="updateCachedAuthVal($event.value, $event.key)"
         @update:auth="updateAuth($event.value, $event.key)"

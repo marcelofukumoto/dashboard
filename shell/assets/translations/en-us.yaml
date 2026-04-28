@@ -3426,7 +3426,8 @@ fleet:
               description: Add your SUSE Application Collection HTTP auth secret in the field above to fetch the charts catalogue.
             connectionError:
               title: Connection error
-              descriptionPre: 'There was an error fetching SUSE Application Collection catalogue. Please, '
+              descriptionPre: 'There was an error fetching SUSE Application Collection catalogue.'
+              please: 'Please, '
               tryAgain: try again
               descriptionPost: ' or contact your system administrator.'
             noMatch:
@@ -3434,6 +3435,9 @@ fleet:
               descriptionPre: 'Tips: use a different search criteria or '
               clearSearch: clear the search bar
               descriptionPost: ' and explore the catalogue.'
+          repoLoading:
+            title: Creating SUSE Application Collection repository
+            description: Please wait while the repository is created
         appcoConfig:
           label: App Bundle config
           title: 'Create: Step 2'

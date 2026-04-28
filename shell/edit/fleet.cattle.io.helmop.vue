@@ -13,6 +13,7 @@ import {
 } from '@shell/config/types';
 import { CATALOG, DESCRIPTION, FLEET as FLEET_LABELS } from '@shell/config/labels-annotations';
 import { SOURCE_TYPE } from '@shell/config/product/fleet';
+import { isRancherPrime } from '@shell/config/version';
 import CreateEditView from '@shell/mixins/create-edit-view';
 import CruResource from '@shell/components/CruResource';
 import Loading from '@shell/components/Loading';
@@ -237,6 +238,10 @@ export default {
     },
 
     isSuseAppCollection() {
+      if (!isRancherPrime()) {
+        return false;
+      }
+
       return this.$route.query[SUB_TYPE] === FLEET.SUSE_APP_COLLECTION ||
         (this.value.spec?.helm?.repo || '').startsWith(SUSE_APP_COLLECTION_REPO_URL);
     },
@@ -438,33 +443,29 @@ export default {
         delete spec[key];
       }
 
-      if (!this.isSuseAppCollection) {
-        return;
-      }
-      // When auth is cleared (e.g. switching to _BASIC), reset everything
-      if (!this.appCoRepoName) {
+      if (this.isSuseAppCollection && !doNotUpdateGlobalValuesAndDownstreamSecrets) {
+        // When auth is cleared (e.g. switching to _BASIC), reset everything
+        if (!this.appCoRepoName) {
+          if (this.oldAppCoRepoName) {
+            this.resetAppCoChartSelection();
+            this.resetAppCoChartData();
+          }
+
+          return;
+        }
+
+        // When switching auth secrets, reset chart selection and chart data so stale values
+        // don't persist if the new chart list doesn't contain the old chart.
         if (this.oldAppCoRepoName) {
           this.resetAppCoChartSelection();
           this.resetAppCoChartData();
         }
 
-        return;
-      }
+        this.oldAppCoRepoName = this.appCoRepoName;
 
-      // When switching auth secrets, reset chart selection and chart data so stale values
-      // don't persist if the new chart list doesn't contain the old chart.
-      if (this.oldAppCoRepoName) {
-        this.resetAppCoChartSelection();
-        this.resetAppCoChartData();
-      }
-
-      this.oldAppCoRepoName = this.appCoRepoName;
-
-      if (!doNotUpdateGlobalValuesAndDownstreamSecrets) {
         await this.updateGlobalValuesAndDownstreamSecrets();
+        await this.fetchAppCoCharts(this.appCoRepoName);
       }
-
-      await this.fetchAppCoCharts(this.appCoRepoName);
     },
 
     async onCreateAuth(credentials) {

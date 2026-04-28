@@ -840,7 +840,7 @@ asyncButton:
   alt:
     iconAlt: Async button icon
   createAppCoAuth:
-    action: Save Secret
+    action: Create Secret
     success: Secret Saved
     waiting: Saving&hellip;
   setAppCoDefault:
@@ -3420,6 +3420,7 @@ fleet:
           noCharts: No charts found in this repository.
           fetchError: Failed to fetch charts from the SUSE Application Collection. Please verify that the selected authentication secret has valid credentials.
           authPrompt: Select an authentication secret above to browse the catalogue.
+          authBanner: 'Two different resources will be created: a Continuous Delivery secret, and an imagePullSecret that will be copied into every downstream cluster selected in the next step.'
           emptyState:
             noAuth:
               title: No authentication available

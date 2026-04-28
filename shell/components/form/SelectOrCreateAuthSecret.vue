@@ -359,6 +359,8 @@ export default {
         addObjects(out, more);
       }
 
+      out = sortBy(out, 'label');
+
       if ( !this.limitToNamespace ) {
         out = sortBy(out, 'group');
         if ( out.length ) {

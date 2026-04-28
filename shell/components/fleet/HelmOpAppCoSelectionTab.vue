@@ -360,44 +360,58 @@ export default {
   >
     <div class="gap-24">
       <div class="auth-section">
-        <SelectOrCreateAuthSecret
-          ref="authSecretRef"
-          :value="value.spec.helmSecretName"
-          :namespace="value.metadata.namespace"
-          :limit-to-namespace="true"
-          :delegate-create-to-parent="true"
-          :register-before-hook="registerBeforeHook"
-          in-store="management"
-          :mode="mode"
-          :generate-name="FLEET_APPCO_AUTH_GENERATE_NAME"
-          label-key="fleet.helmOp.auth.appco"
-          :fixed-http-basic-auth="true"
-          :filter-basic-auth="FLEET_APPCO_AUTH_GENERATE_NAME"
-          :allow-none="false"
-          :pre-select="preSelectValue"
-          :cache-secrets="true"
-          :no-margin-top="true"
-          @update:value="updateAuth($event, 'helmSecretName')"
-          @inputauthval="updateCachedAuthVal($event, 'helmSecretName')"
+        <Banner
+          v-for="(err, i) in createErrors"
+          :key="i"
+          color="error"
+          :label="err"
         />
+        <div class="create-secret-section">
+          <div class="full-width">
+            <SelectOrCreateAuthSecret
+              ref="authSecretRef"
+              :value="value.spec.helmSecretName"
+              :namespace="value.metadata.namespace"
+              :limit-to-namespace="true"
+              :delegate-create-to-parent="true"
+              :register-before-hook="registerBeforeHook"
+              in-store="management"
+              :mode="mode"
+              :generate-name="FLEET_APPCO_AUTH_GENERATE_NAME"
+              label-key="fleet.helmOp.auth.appco"
+              :fixed-http-basic-auth="true"
+              :filter-basic-auth="FLEET_APPCO_AUTH_GENERATE_NAME"
+              :allow-none="false"
+              :pre-select="preSelectValue"
+              :cache-secrets="true"
+              :no-margin-top="true"
+              @update:value="updateAuth($event, 'helmSecretName')"
+              @inputauthval="updateCachedAuthVal($event, 'helmSecretName')"
+            />
+          </div>
+          <div
+            v-if="secretsReady && !isExistingSecretSelected"
+          >
+            <RcButton
+              :disabled="!hasCredentials"
+              variant="secondary"
+              size="small"
+              @click="saveSecret"
+            >
+              {{ t('asyncButton.createAppCoAuth.action') }}
+            </RcButton>
+          </div>
+        </div>
 
         <div
           v-if="secretsReady && !isExistingSecretSelected"
           class="mt-10"
         >
           <Banner
-            v-for="(err, i) in createErrors"
-            :key="i"
-            color="error"
-            :label="err"
+            class="no-margin"
+            color="info"
+            :label="t('fleet.helmOp.add.steps.selection.authBanner')"
           />
-          <RcButton
-            :disabled="!hasCredentials"
-            variant="secondary"
-            @click="saveSecret"
-          >
-            {{ t('asyncButton.createAppCoAuth.action') }}
-          </RcButton>
         </div>
       </div>
 
@@ -537,6 +551,20 @@ export default {
       font-size: 16px;
     }
   }
+}
+
+.create-secret-section {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: center;
+}
+.no-margin {
+  margin: 0 !important;
+}
+
+.full-width {
+  width: 100%;
 }
 
 .chart-cards {

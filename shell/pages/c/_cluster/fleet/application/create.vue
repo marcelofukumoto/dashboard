@@ -1,6 +1,7 @@
 <script>
 import { FLEET } from '@shell/config/types';
 import { SUB_TYPE } from '@shell/config/query-params';
+import { isRancherPrime } from '@shell/config/version';
 import FleetUtils from '@shell/utils/fleet';
 import Masthead from '@shell/components/ResourceDetail/Masthead';
 import suseLogo from '@shell/assets/images/content/suse.svg';
@@ -49,7 +50,7 @@ export default {
             }
           ];
 
-          if (type === FLEET.HELM_OP) {
+          if (type === FLEET.HELM_OP && isRancherPrime()) {
             out = [
               ...out,
               {

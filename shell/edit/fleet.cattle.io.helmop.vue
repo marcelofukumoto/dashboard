@@ -900,10 +900,12 @@ export default {
 
         // Expose the current state for the loading UI (badge label + color)
         this.appCoRepoState = {
+          repoName,
           stateDisplay:    repo.stateDisplay,
           stateBackground: repo.stateBackground,
           transitioning:   repo.metadata?.state?.transitioning,
           error:           repo.metadata?.state?.error,
+          errorMessage:    repo.metadata?.state?.message,
         };
 
         if (state?.error) {

@@ -12,7 +12,7 @@ import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartC
 import Labels from '@shell/components/form/Labels';
 import LabeledInput from '@components/Form/LabeledInput/LabeledInput.vue';
 import { RcSection } from '@components/RcSection';
-import HelmOpResourcesSection from '@shell/components/fleet/HelmOpResourcesSection.vue';
+import HelmOpAppCoResourcesSection from '@shell/components/fleet/HelmOpAppCoResourcesSection.vue';
 import HelmOpTargetOptionsSection from '@shell/components/fleet/HelmOpTargetOptionsSection.vue';
 import HelmOpValuesTab from '@shell/components/fleet/HelmOpValuesTab.vue';
 import HelmOpTargetTab from '@shell/components/fleet/HelmOpTargetTab.vue';
@@ -486,7 +486,10 @@ defineExpose({ refreshYamlEditor });
       data-testid="appco-config-advanced"
     >
       <div class="content-group">
-        <div class="row">
+        <div
+          v-if="isView"
+          class="row"
+        >
           <div class="col span-6">
             <LabeledInput
               v-model:value="value.spec.helm.releaseName"
@@ -505,14 +508,13 @@ defineExpose({ refreshYamlEditor });
           :expanded="true"
           data-testid="appco-config-resources"
         >
-          <HelmOpResourcesSection
+          <HelmOpAppCoResourcesSection
             :value="value"
             :mode="mode"
             :correct-drift-enabled="correctDriftEnabled"
             :downstream-secrets-list="downstreamSecretsList"
             :downstream-config-maps-list="downstreamConfigMapsList"
             :locked-secrets="appCoLockedSecrets"
-            :is-app-collection="true"
             :compact="true"
             data-testid="appco-config-resources-section"
             @update:correct-drift="$emit('update:correct-drift', $event)"
@@ -592,7 +594,10 @@ defineExpose({ refreshYamlEditor });
       v-if="isStandaloneAdvanced"
       class="content-group"
     >
-      <div class="row">
+      <div
+        v-if="isView"
+        class="row"
+      >
         <div class="col span-6">
           <LabeledInput
             v-model:value="value.spec.helm.releaseName"
@@ -612,14 +617,13 @@ defineExpose({ refreshYamlEditor });
         :expanded="true"
         data-testid="appco-config-resources"
       >
-        <HelmOpResourcesSection
+        <HelmOpAppCoResourcesSection
           :value="value"
           :mode="mode"
           :correct-drift-enabled="correctDriftEnabled"
           :downstream-secrets-list="downstreamSecretsList"
           :downstream-config-maps-list="downstreamConfigMapsList"
           :locked-secrets="appCoLockedSecrets"
-          :is-app-collection="true"
           :compact="true"
           data-testid="appco-config-resources-section"
           @update:correct-drift="$emit('update:correct-drift', $event)"

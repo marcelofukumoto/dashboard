@@ -3405,6 +3405,7 @@ fleet:
           title: 'Create: Step 1'
           subtext: 'Select a chart from the SUSE Application Collection'
           description: Browse and select a chart from the SUSE Application Collection catalogue.
+          selectedChart: 'Selected chart:'
           searchPlaceholder: Search the catalogue...
           totalCharts: |-
             {count, plural,
@@ -3440,6 +3441,9 @@ fleet:
           repoLoading:
             title: Creating SUSE Application Collection repository...
             description: Please wait while the repository is created
+          repoError:
+            description: 'Please, check your credentials or the repository in the upstream cluster:'
+            link: SUSE App Collection
         appcoConfig:
           label: App Bundle config
           title: 'Create: Step 2'
@@ -3544,6 +3548,13 @@ fleet:
       keepResourcesTooltip: When enabled, resources will be kept when deleting a HelmOp or Bundle - only Helm release secrets will be deleted.
       correctDrift: Enable self-healing
       correctDriftTooltip: When enabled, Fleet will ensure that the cluster resources are kept in sync with the HelmOp. All resource changes made on the cluster will be lost.
+    appCoResources:
+      helmChartSettings: Helm chart resources settings
+      additionalResources: Additional resources to sync
+      additionalResourcesDescription: You can add Secrets and ConfigMaps to copy those resources to each targeted downstream cluster before deploying the Helm chart.
+      additionalResourcesLinkDescription: Learn more about
+      additionalResourcesLink: Automated propagation of resources to downstream clusters
+      additionalResourcesDocsUrl: https://fleet.rancher.io/experimental-features/experimental-downstream-resource
     polling:
       label: Polling
       enable: Enable Polling

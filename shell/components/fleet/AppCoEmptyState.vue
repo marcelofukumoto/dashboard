@@ -16,10 +16,7 @@ export default {
       type:    Object,
       default: null,
     },
-    loading: {
-      type:    Boolean,
-      default: false,
-    },
+
   },
 };
 </script>
@@ -29,17 +26,25 @@ export default {
     <h1 class="appco-empty-state-title">
       {{ title }}
     </h1>
-    <div :class="['appco-empty-state-body', { 'has-badge': badgeState }]">
-      <RcIcon
-        v-if="loading"
-        type="spinner"
-        size="large"
-      />
-      <BadgeState
-        v-if="badgeState"
-        :color="badgeState.stateBackground"
-        :label="badgeState.stateDisplay"
-      />
+    <div :class="['appco-empty-state-body', { 'has-badge': badgeState, 'direction-column': badgeState?.error }]">
+      <div class="appco-badge-container">
+        <RcIcon
+          v-if="badgeState?.transitioning"
+          type="spinner"
+          size="large"
+        />
+        <BadgeState
+          v-if="badgeState"
+          :color="badgeState.stateBackground"
+          :label="badgeState.stateDisplay"
+        />
+        <p
+          v-if="badgeState?.error && badgeState?.errorMessage"
+          class="error-message"
+        >
+          {{ badgeState.errorMessage }}
+        </p>
+      </div>
       <p>
         <slot />
       </p>
@@ -55,7 +60,6 @@ export default {
   .appco-empty-state-title {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
     margin-bottom: 24px;
   }
 
@@ -67,10 +71,25 @@ export default {
       gap: 16px;
     }
 
+    &.direction-column {
+      flex-direction: column;
+    }
+
     p {
       font-size: 16px;
-      line-height: 32px;
+      line-height: normal;
+
+      &.error-message {
+        color: var(--error);
+      }
     }
+  }
+
+  .appco-badge-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
   }
 }
 </style>

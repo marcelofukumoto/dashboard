@@ -7,8 +7,11 @@ import AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartC
 import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
 import AppCoEmptyState from '@shell/components/fleet/AppCoEmptyState.vue';
 import Banner from '@components/Banner/Banner.vue';
+import LazyImage from '@shell/components/LazyImage';
 import Loading from '@shell/components/Loading';
-import { AUTH_TYPE, FLEET_APPCO_AUTH_GENERATE_NAME, SECRET, ZERO_TIME } from '@shell/config/types';
+import {
+  AUTH_TYPE, CATALOG, FLEET_APPCO_AUTH_GENERATE_NAME, SECRET, ZERO_TIME
+} from '@shell/config/types';
 
 export default {
   name: 'HelmOpAppCoSelectionTab',
@@ -20,6 +23,7 @@ export default {
     SelectOrCreateAuthSecret,
     AppCoEmptyState,
     Banner,
+    LazyImage,
     Loading,
   },
 
@@ -80,8 +84,9 @@ export default {
 
   data() {
     return {
-      searchQuery:  '',
-      secretsReady: false,
+      searchQuery:      '',
+      secretsReady:     false,
+      initialChartName: this.value.spec?.helm?.chart || '',
       FLEET_APPCO_AUTH_GENERATE_NAME,
     };
   },
@@ -215,8 +220,28 @@ export default {
       return Object.keys(this.appCoChartEntries).length > 0;
     },
 
+    initialSelectedChart() {
+      if (!this.initialChartName) {
+        return null;
+      }
+
+      return this.allCharts.find((c) => c.name === this.initialChartName) || null;
+    },
+
     showAuthPrompt() {
       return this.secretsReady && !this.isExistingSecretSelected && !this.hasCharts && !this.appCoChartsLoading;
+    },
+
+    repoListRoute() {
+      return {
+        name:   'c-cluster-product-resource-id',
+        params: {
+          cluster:  'local',
+          product:  'apps',
+          resource: CATALOG.CLUSTER_REPO,
+          id:       this.appCoRepoState?.repoName,
+        },
+      };
     },
   },
 
@@ -398,6 +423,29 @@ export default {
       </div>
 
       <div class="charts-section">
+        <!-- Selected chart -->
+        <div
+          v-if="initialSelectedChart"
+          class="selected-chart"
+          data-testid="appco-selection-selected-chart"
+        >
+          <h3 class="selected-chart-label">
+            {{ t('fleet.helmOp.add.steps.selection.selectedChart') }}
+          </h3>
+          <div class="selected-chart-info">
+            <LazyImage
+              v-if="initialSelectedChart.icon"
+              :src="initialSelectedChart.icon"
+              class="selected-chart-icon"
+              :alt="initialSelectedChart.name"
+            />
+            <i
+              v-else
+              class="icon icon-helm selected-chart-icon-placeholder"
+            />
+            <span class="selected-chart-name">{{ initialSelectedChart.name }}</span>
+          </div>
+        </div>
         <div
           v-if="hasCharts"
           class="search-section"
@@ -429,13 +477,24 @@ export default {
         </AppCoEmptyState>
 
         <AppCoEmptyState
-          v-else-if="appCoRepoState?.transitioning || appCoRepoState?.error"
+          v-else-if="appCoRepoState?.transitioning"
           :title="t('fleet.helmOp.add.steps.selection.repoLoading.title')"
           :badge-state="appCoRepoState"
           data-testid="appco-selection-repo-loading"
-          :loading="appCoRepoState?.transitioning"
         >
           {{ t('fleet.helmOp.add.steps.selection.repoLoading.description') }}
+        </AppCoEmptyState>
+
+        <AppCoEmptyState
+          v-else-if="appCoRepoState?.error"
+          :title="t('fleet.helmOp.add.steps.selection.repoLoading.title')"
+          :badge-state="appCoRepoState"
+          data-testid="appco-selection-repo-loading"
+        >
+          {{ t('fleet.helmOp.add.steps.selection.repoError.description') }}
+          <router-link :to="repoListRoute">
+            {{ t('fleet.helmOp.add.steps.selection.repoError.link') }}
+          </router-link>
         </AppCoEmptyState>
 
         <AppCoEmptyState
@@ -560,5 +619,38 @@ export default {
 
 .single-chart {
   max-width: 500px;
+}
+
+.selected-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .selected-chart-label {
+    color: var(--input-label);
+    margin: 0;
+  }
+
+  .selected-chart-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .selected-chart-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .selected-chart-icon-placeholder {
+    font-size: 24px;
+  }
+
+  .selected-chart-name {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 24px;
+  }
 }
 </style>

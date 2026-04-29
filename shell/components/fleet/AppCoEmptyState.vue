@@ -28,13 +28,13 @@ export default {
   <div class="appco-empty-state">
     <h1 class="appco-empty-state-title">
       {{ title }}
+    </h1>
+    <div :class="['appco-empty-state-body', { 'has-badge': badgeState }]">
       <RcIcon
         v-if="loading"
         type="spinner"
         size="large"
       />
-    </h1>
-    <div :class="['appco-empty-state-body', { 'has-badge': badgeState }]">
       <BadgeState
         v-if="badgeState"
         :color="badgeState.stateBackground"

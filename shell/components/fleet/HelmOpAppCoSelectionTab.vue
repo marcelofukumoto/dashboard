@@ -221,12 +221,6 @@ export default {
   },
 
   watch: {
-    hasCharts(neu) {
-      if (neu) {
-        this.fillTheSearch();
-      }
-    },
-
     appCoChartEntries() {
       if (!this.value.spec?.helm?.chart) {
         this.searchQuery = '';
@@ -236,10 +230,6 @@ export default {
 
   mounted() {
     this.$refs.searchInput?.focus();
-
-    if (this.hasCharts) {
-      this.fillTheSearch();
-    }
 
     // Watch the child component's fetch state to know when secrets are loaded
     const unwatch = this.$watch(
@@ -255,14 +245,6 @@ export default {
   },
 
   methods: {
-    fillTheSearch() {
-      this.$nextTick(() => {
-        if (this.value.spec?.helm?.chart) {
-          this.searchQuery = `"${ this.value.spec.helm.chart }"`;
-        }
-      });
-    },
-
     formatDate(dateString) {
       if (!dateString || dateString === ZERO_TIME) {
         return '';
@@ -405,7 +387,7 @@ export default {
 
         <div
           v-if="secretsReady && !isExistingSecretSelected"
-          class="mt-10"
+          class="mmt-4"
         >
           <Banner
             class="no-margin"
@@ -447,16 +429,17 @@ export default {
         </AppCoEmptyState>
 
         <AppCoEmptyState
-          v-else-if="appCoRepoState?.transitioning"
+          v-else-if="appCoRepoState?.transitioning || appCoRepoState?.error"
           :title="t('fleet.helmOp.add.steps.selection.repoLoading.title')"
           :badge-state="appCoRepoState"
           data-testid="appco-selection-repo-loading"
+          :loading="appCoRepoState?.transitioning"
         >
           {{ t('fleet.helmOp.add.steps.selection.repoLoading.description') }}
         </AppCoEmptyState>
 
         <AppCoEmptyState
-          v-else-if="appCoChartsFetchError || appCoRepoState?.error"
+          v-else-if="appCoChartsFetchError"
           :title="t('fleet.helmOp.add.steps.selection.emptyState.connectionError.title')"
           data-testid="appco-selection-fetch-error"
         >
@@ -472,14 +455,14 @@ export default {
         <template v-else-if="hasCharts">
           <div
             v-if="filteredCharts.length"
-            :class="['chart-cards', { 'single-chart': filteredCharts.length === 1, 'two-charts': filteredCharts.length === 2 }]"
+            class="chart-cards"
             data-testid="appco-selection-chart-cards"
           >
             <rc-item-card
               v-for="card in chartCards"
               :id="card.id"
               :key="card.id"
-              class="chart-card"
+              :class="['chart-card', { 'single-chart': filteredCharts.length === 1 }]"
               :header="card.header"
               :image="card.image"
               :content="card.content"
@@ -568,22 +551,14 @@ export default {
 
 .chart-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   grid-gap: var(--gap-md);
   width: 100%;
   height: max-content;
   overflow: hidden;
+}
 
-  &.single-chart {
-    max-width: 500px;
-  }
-
-  &.two-charts {
-    max-width: 1021px;
-  }
-
-  .chart-card {
-    max-width: 500px;
-  }
+.single-chart {
+  max-width: 500px;
 }
 </style>

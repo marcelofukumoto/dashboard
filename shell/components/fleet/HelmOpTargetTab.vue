@@ -55,7 +55,7 @@ const onTargetsCreated = (value) => {
 
 <template>
   <div data-testid="helmop-target-tab">
-    <div class="gap-6">
+    <div :class="compact ? 'gap-6' : ''">
       <component
         :is="compact ? 'h3' : 'h2'"
       >

@@ -880,7 +880,7 @@ export default {
      * Polls the ClusterRepo until its metadata.state resolves from in-progress to
      * either a ready or error state. Returns the repo when ready, or null on error.
      */
-    async waitForRepoReady(repoName, { maxAttempts = 30, intervalMs = 5000 } = {}) {
+    async waitForRepoReady(repoName, { maxAttempts = 30, intervalMs = 3000 } = {}) {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         let repo;
 

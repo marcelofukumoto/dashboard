@@ -83,7 +83,7 @@ const updateDownstreamResources = (kind, list) => {
     </Banner>
     <div
       class="row"
-      :class="compact ? 'mb-16' : 'mb-20'"
+      :class="compact ? 'mb-16' : 'mt-20 mb-20'"
     >
       <div class="col span-6">
         <FleetSecretSelector

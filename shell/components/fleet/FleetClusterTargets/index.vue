@@ -435,7 +435,7 @@ export default {
 </script>
 
 <template>
-  <div class="gap-24">
+  <div :class="compact ? 'gap-24' : 'gap-20'">
     <div
       v-if="targetMode !== 'advanced'"
       class="row"
@@ -550,6 +550,7 @@ export default {
           mode="with-header"
           type="secondary"
           expandable
+          :expanded="false"
           data-testid="fleet-target-targeted-clusters-section"
         >
           <template #counter>
@@ -740,7 +741,7 @@ export default {
           mode="with-header"
           type="secondary"
           expandable
-          :expanded="true"
+          :expanded="false"
           data-testid="fleet-target-targeted-clusters-section-all"
         >
           <template #counter>
@@ -820,5 +821,10 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 24px;
+  }
+  .gap-20 {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
 </style>

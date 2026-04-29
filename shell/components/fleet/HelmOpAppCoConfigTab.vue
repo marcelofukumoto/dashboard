@@ -256,7 +256,7 @@ const isCreate = computed(() => props.mode === _CREATE);
 const isEdit = computed(() => props.mode === _EDIT);
 
 const valuesTabRef = ref(null);
-const valuesExpanded = ref(false);
+const valuesExpanded = ref(true);
 
 watch(valuesExpanded, (expanded) => {
   if (expanded) {
@@ -502,7 +502,7 @@ defineExpose({ refreshYamlEditor });
           mode="with-header"
           type="secondary"
           expandable
-          :expanded="false"
+          :expanded="true"
           data-testid="appco-config-resources"
         >
           <HelmOpResourcesSection
@@ -524,7 +524,7 @@ defineExpose({ refreshYamlEditor });
           mode="with-header"
           type="secondary"
           expandable
-          :expanded="false"
+          :expanded="true"
           data-testid="appco-config-target-options"
         >
           <HelmOpTargetOptionsSection
@@ -539,7 +539,7 @@ defineExpose({ refreshYamlEditor });
           mode="with-header"
           type="secondary"
           expandable
-          :expanded="false"
+          :expanded="true"
           data-testid="appco-config-labels"
         >
           <Labels

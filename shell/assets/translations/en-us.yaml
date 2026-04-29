@@ -3438,7 +3438,7 @@ fleet:
               clearSearch: clear the search bar
               descriptionPost: ' and explore the catalogue.'
           repoLoading:
-            title: Creating SUSE Application Collection repository
+            title: Creating SUSE Application Collection repository...
             description: Please wait while the repository is created
         appcoConfig:
           label: App Bundle config

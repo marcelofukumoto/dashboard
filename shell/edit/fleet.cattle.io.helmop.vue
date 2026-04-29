@@ -905,7 +905,6 @@ export default {
           transitioning:   repo.metadata?.state?.transitioning,
           error:           repo.metadata?.state?.error,
         };
-        console.log('HERE', repo.metadata.state); // eslint-disable-line no-console
 
         if (state?.error) {
           return null;

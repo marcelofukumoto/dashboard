@@ -489,7 +489,6 @@ export default {
               :selected="value.spec.helm.chart === card.id"
               data-testid="appco-selection-chart-card"
               @card-click="selectChart"
-              @dblclick="selectChartAndNext(card.rawChart)"
             >
               <template #item-card-sub-header>
                 <AppChartCardSubHeader :items="card.subHeaderItems" />

@@ -472,84 +472,78 @@ export default {
           :expanded="true"
           data-testid="fleet-target-clusters-section"
         >
-          <LabeledSelect
-            data-testid="fleet-target-cluster-name-selector"
-            :value="selectedClusters"
-            :label="t('fleet.clusterTargets.clusters.byName.label')"
-            :options="clustersOptions"
-            :taggable="true"
-            :close-on-select="false"
-            :mode="mode"
-            :multiple="true"
-            :placeholder="t('fleet.clusterTargets.clusters.byName.placeholder')"
-            @update:value="selectClusters"
-          />
-          <div
-            v-if="!isView || (clusterSelectors && clusterSelectors.length > 0)"
-          >
-            <component
-              :is="compact ? 'h5' : 'h4'"
-              class="m-0"
-            >
-              {{ t('fleet.clusterTargets.clusters.byLabel.title') }}
-            </component>
-            <div
-              v-for="(selector, i) in clusterSelectors"
-              :key="selector.key"
-              class="match-expressions-container mmt-4"
-            >
-              <MatchExpressions
-                :ref="`match-expression-${ selector.key }`"
-                class="body"
-                :value="selector"
+          <div class="appco-select-clusters">
+            <div>
+              <h4>{{ t('fleet.clusterTargets.clusters.byName.title') }}</h4>
+              <LabeledSelect
+                data-testid="fleet-target-cluster-name-selector"
+                :value="selectedClusters"
+                :label="t('fleet.clusterTargets.clusters.byName.label')"
+                :options="clustersOptions"
+                :taggable="true"
+                :close-on-select="false"
                 :mode="mode"
-                :initial-empty-row="true"
-                :label-key="t('fleet.clusterTargets.clusters.byLabel.labelKey')"
-                :add-icon="'icon-plus'"
-                :add-class="'btn-sm'"
-                @update:value="updateMatchExpressions(i, $event, selector.key)"
+                :multiple="true"
+                :placeholder="t('fleet.clusterTargets.clusters.byName.placeholder')"
+                @update:value="selectClusters"
               />
+            </div>
+            <div
+              v-if="!isView || (clusterSelectors && clusterSelectors.length > 0)"
+            >
+              <h4>{{ t('fleet.clusterTargets.clusters.byLabel.title') }}</h4>
+              <div
+                v-for="(selector, i) in clusterSelectors"
+                :key="selector.key"
+                class="match-expressions-container mmt-4"
+              >
+                <MatchExpressions
+                  :ref="`match-expression-${ selector.key }`"
+                  class="body"
+                  :value="selector"
+                  :mode="mode"
+                  :initial-empty-row="true"
+                  :label-key="t('fleet.clusterTargets.clusters.byLabel.labelKey')"
+                  :add-icon="'icon-plus'"
+                  :add-class="'btn-sm'"
+                  @update:value="updateMatchExpressions(i, $event, selector.key)"
+                />
+                <RcButton
+                  v-if="!isView"
+                  size="small"
+                  variant="link"
+                  @click="removeMatchExpressions(selector.key)"
+                >
+                  <i class="icon icon-x" />
+                </RcButton>
+              </div>
               <RcButton
                 v-if="!isView"
                 size="small"
-                variant="link"
-                @click="removeMatchExpressions(selector.key)"
+                variant="secondary"
+                class="mmt-3"
+                @click="addMatchExpressions"
               >
-                <i class="icon icon-x" />
+                <i class="icon icon-plus" />
+                <span>{{ t('fleet.clusterTargets.clusters.byLabel.addSelector') }}</span>
               </RcButton>
             </div>
-            <RcButton
-              v-if="!isView"
-              size="small"
-              variant="secondary"
-              class="mmt-4"
-              @click="addMatchExpressions"
-            >
-              <i class="icon icon-plus" />
-              <span>{{ t('fleet.clusterTargets.clusters.byLabel.addSelector') }}</span>
-            </RcButton>
+            <div>
+              <h4>{{ t('fleet.clusterTargets.clusterGroups.title') }}</h4>
+              <LabeledSelect
+                data-testid="fleet-target-cluster-group-selector"
+                :value="selectedClusterGroups"
+                :label="t('fleet.clusterTargets.clusterGroups.byName.label')"
+                :options="clusterGroupsOptions"
+                :taggable="true"
+                :close-on-select="false"
+                :mode="mode"
+                :multiple="true"
+                :placeholder="t('fleet.clusterTargets.clusterGroups.byName.placeholder')"
+                @update:value="selectClusterGroups"
+              />
+            </div>
           </div>
-        </RcSection>
-        <RcSection
-          :title="t('fleet.clusterTargets.clusterGroups.title')"
-          mode="with-header"
-          type="secondary"
-          expandable
-          :expanded="true"
-          data-testid="fleet-target-cluster-groups-section"
-        >
-          <LabeledSelect
-            data-testid="fleet-target-cluster-group-selector"
-            :value="selectedClusterGroups"
-            :label="t('fleet.clusterTargets.clusterGroups.byName.label')"
-            :options="clusterGroupsOptions"
-            :taggable="true"
-            :close-on-select="false"
-            :mode="mode"
-            :multiple="true"
-            :placeholder="t('fleet.clusterTargets.clusterGroups.byName.placeholder')"
-            @update:value="selectClusterGroups"
-          />
         </RcSection>
         <RcSection
           :title="t('fleet.clusterTargets.rules.matching.sectionTitle')"
@@ -784,6 +778,16 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .appco-select-clusters {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    h4 {
+      margin: 0 0 12px 0;
+    }
   }
 
   .matching-subsections {

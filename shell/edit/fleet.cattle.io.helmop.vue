@@ -121,6 +121,8 @@ export default {
       appCoChartsFetchError: false,
       // Current ClusterRepo state while polling (stateDisplay + stateBackground for BadgeState)
       appCoRepoState:        null,
+      // Previous repo name for detecting auth secret changes
+      oldAppCoRepoName:      '',
     };
   },
 
@@ -444,27 +446,34 @@ export default {
       }
 
       if (this.isSuseAppCollection && !doNotUpdateGlobalValuesAndDownstreamSecrets) {
+        const newRepoName = this.appCoRepoName;
+
         // When auth is cleared (e.g. switching to _BASIC), reset everything
-        if (!this.appCoRepoName) {
+        if (!newRepoName) {
           if (this.oldAppCoRepoName) {
             this.resetAppCoChartSelection();
             this.resetAppCoChartData();
+            this.oldAppCoRepoName = '';
           }
 
           return;
         }
 
-        // When switching auth secrets, reset chart selection and chart data so stale values
-        // don't persist if the new chart list doesn't contain the old chart.
+        // Same repo selected — nothing to do
+        if (newRepoName === this.oldAppCoRepoName) {
+          return;
+        }
+
+        // Switching to a different auth secret — reset stale chart data
         if (this.oldAppCoRepoName) {
           this.resetAppCoChartSelection();
           this.resetAppCoChartData();
         }
 
-        this.oldAppCoRepoName = this.appCoRepoName;
+        this.oldAppCoRepoName = newRepoName;
 
         await this.updateGlobalValuesAndDownstreamSecrets();
-        await this.fetchAppCoCharts(this.appCoRepoName);
+        await this.fetchAppCoCharts(newRepoName);
       }
     },
 

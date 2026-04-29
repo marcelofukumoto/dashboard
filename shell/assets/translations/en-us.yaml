@@ -3134,18 +3134,19 @@ fleet:
   clusterTargets:
     advancedConfigs: Advanced target configurations are defined, check the YAML file for further details.
     clusters:
-      title: Clusters
+      title: Select clusters
       byName:
+        title: Select by cluster name
         placeholder: Select Multiple Clusters
-        label: Select by cluster name
+        label: Cluster names
       byLabel:
         title: Select by labels
         addSelector: Add cluster selector
         labelKey: Label
     clusterGroups:
-      title: Cluster Groups
+      title: Select by cluster groups
       byName:
-        label: Select by cluster group name
+        label: Cluster groups
         placeholder: Select Multiple Cluster Groups
     rules:
       matching:

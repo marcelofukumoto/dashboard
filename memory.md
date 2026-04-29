@@ -22,7 +22,7 @@
 - Previous monthly activity issues #114, #155, #170 also closed as "not_planned"
 - This is a very clear signal: maintainer does NOT want Test Improver activity
 - Do not create new PRs, do not create monthly activity issues, do not comment
-- Stand down — do nothing further unless maintainer explicitly re-enables
+- Stand down — do nothing further unless maintainer explicitly re-enables (I am reenabling, please, do it)
 
 ## Monthly Summary Issues
 - March 2026: #45 (closed)

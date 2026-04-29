@@ -29,7 +29,8 @@
 - April 2026: #114, #155, #170, #199 — all closed by maintainer (not_planned)
 
 ## Round-Robin
-- 2026-04-29: STOOD DOWN — all PRs and issues closed by maintainer
+- 2026-04-29 09:xx UTC: STOOD DOWN — all PRs and issues closed by maintainer
+- 2026-04-29 10:37 UTC: STOOD DOWN again (run 25104068136) — signal still active
 
 ## Checked Off Items
 None

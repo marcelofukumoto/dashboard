@@ -1,11 +1,11 @@
 <script>
 import { WORKLOAD_TYPES, POD } from '@shell/config/types';
-import Loading from '@shell/components/Loading';
 import { Banner } from '@components/Banner';
 import { STATES } from '@shell/plugins/dashboard-store/resource-class';
 import Card from '@shell/components/Resource/Detail/Card/index.vue';
 import ResourceRow from '@shell/components/Resource/Detail/ResourceRow.vue';
 import StatusCard from '@shell/components/Resource/Detail/Card/StatusCard/index.vue';
+import Favorite from '@shell/components/nav/Favorite';
 
 const WORKLOAD_RESOURCE_TYPES = {
   [WORKLOAD_TYPES.DEPLOYMENT]:   { label: 'Deployments' },
@@ -49,52 +49,77 @@ function toStateColor(state) {
 export default {
   name:       'WorkloadDashboard',
   components: {
-    Loading, Banner, Card, ResourceRow, StatusCard
+    Banner, Card, ResourceRow, StatusCard, Favorite
   },
 
   async fetch() {
-    this.loading = true;
-
-    try {
-      const workloadPromises = Object.keys(WORKLOAD_RESOURCE_TYPES).map(async(type) => {
-        const schema = this.$store.getters['cluster/schemaFor'](type);
-
-        if (!schema) {
-          return {
-            type, summary: null, error: `No access to ${ type }`
-          };
-        }
-
-        try {
-          const res = await this.$store.dispatch('cluster/request', { url: `/v1/${ type }?summary=metadata.state.name` });
-
-          return {
-            type, summary: res.summary || [], error: null
-          };
-        } catch (e) {
-          return {
-            type, summary: null, error: e.message || `Failed to fetch ${ type }`
-          };
-        }
-      });
-
-      this.summaries = await Promise.all(workloadPromises);
-    } catch (e) {
-      this.fetchError = e.message || 'Failed to fetch workload summaries';
-    } finally {
-      this.loading = false;
-    }
+    await this.fetchSummaries();
   },
 
   data() {
     return {
-      loading:    true,
       summaries:  [],
       fetchError: null,
     };
   },
 
+  watch: {
+    activeNamespaces() {
+      this.fetchSummaries();
+    },
+  },
+
+  methods: {
+    async fetchSummaries() {
+      try {
+        const workloadPromises = Object.keys(WORKLOAD_RESOURCE_TYPES).map(async(type) => {
+          const schema = this.$store.getters['cluster/schemaFor'](type);
+
+          if (!schema) {
+            return {
+              type, summary: null, error: `No access to ${ type }`
+            };
+          }
+
+          try {
+            let url = `/v1/${ type }?summary=metadata.state.name`;
+
+            if (!this.isAllNamespaces) {
+              const namespaces = Object.keys(this.activeNamespaces);
+
+              if (namespaces.length) {
+                url += `&projectsornamespaces=${ namespaces.join(',') }`;
+              }
+            }
+
+            const res = await this.$store.dispatch('cluster/request', { url });
+
+            return {
+              type, summary: res.summary || [], error: null
+            };
+          } catch (e) {
+            return {
+              type, summary: null, error: e.message || `Failed to fetch ${ type }`
+            };
+          }
+        });
+
+        this.summaries = await Promise.all(workloadPromises);
+      } catch (e) {
+        this.fetchError = e.message || 'Failed to fetch workload summaries';
+      }
+    },
+  },
+
   computed: {
+    activeNamespaces() {
+      return this.$store.getters['activeNamespaceCache'];
+    },
+
+    isAllNamespaces() {
+      return this.$store.getters['isAllNamespaces'];
+    },
+
     workloadData() {
       return this.summaries.map((entry) => {
         const config = WORKLOAD_RESOURCE_TYPES[entry.type] || { label: entry.type };
@@ -188,14 +213,14 @@ export default {
 </script>
 
 <template>
-  <Loading v-if="loading || $fetchState.pending" />
-  <div
-    v-else
-    class="workload-dashboard"
-  >
-    <h1 class="mb-20">
-      Workloads Overview
-    </h1>
+  <div class="workload-dashboard">
+    <header class="masthead mb-20">
+      <div class="title">
+        <h1 class="m-0">
+          Workloads Overview <Favorite resource="workload-dashboard" />
+        </h1>
+      </div>
+    </header>
 
     <Banner
       v-if="fetchError"
@@ -248,7 +273,16 @@ export default {
 
 <style lang="scss" scoped>
 .workload-dashboard {
-  padding: 0 20px;
+  .masthead {
+    .title {
+      align-items: center;
+      display: flex;
+
+      h1 {
+        margin: 0;
+      }
+    }
+  }
 
   .card-grid {
     display: grid;
@@ -258,10 +292,6 @@ export default {
 
   .state-card {
     min-height: 120px;
-
-    ::v-deep .body {
-      height: 100%;
-    }
 
     ::v-deep .resource-row {
       position: relative;
@@ -281,19 +311,15 @@ export default {
 
     &--error {
       background: var(--error-banner-bg, rgba(var(--error-rgb), 0.1));
-      border-color: var(--error);
     }
     &--warning {
       background: var(--warning-banner-bg, rgba(var(--warning-rgb), 0.1));
-      border-color: var(--warning);
     }
     &--info {
       background: var(--info-banner-bg, rgba(var(--info-rgb), 0.1));
-      border-color: var(--info);
     }
     &--success {
       background: var(--success-banner-bg, rgba(var(--success-rgb), 0.1));
-      border-color: var(--success);
     }
   }
 }

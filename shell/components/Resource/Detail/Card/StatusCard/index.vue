@@ -13,6 +13,7 @@ export interface Props {
   title: string;
   resources?: any[];
   showScaling?: boolean;
+  showPercent?: boolean;
   noResourcesMessage?: string;
 }
 </script>
@@ -24,6 +25,7 @@ const i18n = useI18n(store);
 const props = withDefaults(defineProps<Props>(), {
   resources:          undefined,
   showScaling:        false,
+  showPercent:        true,
   noResourcesMessage: undefined
 });
 const emit = defineEmits(['decrease', 'increase']);
@@ -120,6 +122,7 @@ const rows = computed(() => {
         :label="row.label"
         :count="row.count"
         :percent="row.percent"
+        :showPercent="props.showPercent"
       />
     </div>
     <div

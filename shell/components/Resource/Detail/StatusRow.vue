@@ -7,10 +7,11 @@ export interface Props {
         label: string;
         count: number;
         percent: number;
+        showPercent?: boolean;
 }
 
 const {
-  color, label, count, percent
+  color, label, count, percent, showPercent = true
 } = defineProps<Props>();
 </script>
 
@@ -29,7 +30,10 @@ const {
         type="inactive"
       />
     </div>
-    <div class="percent text-muted">
+    <div
+      v-if="showPercent"
+      class="percent text-muted"
+    >
       {{ percent.toFixed(1) }}%
     </div>
   </div>

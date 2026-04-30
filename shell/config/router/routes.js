@@ -356,6 +356,10 @@ export default [
         component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/fleet-performance.vue')),
         name:      'c-cluster-explorer-fleet-performance'
       }, {
+        path:      '/c/:cluster/explorer/state-reference',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/state-reference.vue')),
+        name:      'c-cluster-explorer-state-reference'
+      }, {
         path:      '/c/:cluster/explorer/tools',
         component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/tools/index.vue')),
         name:      'c-cluster-explorer-tools'

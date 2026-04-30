@@ -103,6 +103,7 @@ export function init(store) {
     'workload-dashboard',
     'summary-api-explorer',
     'fleet-performance',
+    'state-reference',
     WORKLOAD,
     WORKLOAD_TYPES.DEPLOYMENT,
     WORKLOAD_TYPES.DAEMON_SET,
@@ -601,6 +602,18 @@ export function init(store) {
     weight:     98,
     icon:       'folder',
     route:      { name: 'c-cluster-explorer-fleet-performance' },
+    exact:      true,
+    overview:   true,
+  });
+
+  virtualType({
+    label:      'State Reference',
+    group:      'Root',
+    namespaced: true,
+    name:       'state-reference',
+    weight:     97,
+    icon:       'folder',
+    route:      { name: 'c-cluster-explorer-state-reference' },
     exact:      true,
     overview:   true,
   });

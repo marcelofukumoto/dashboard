@@ -1,5 +1,7 @@
 <script>
 import { STATES_ENUM, STATES } from '@shell/plugins/dashboard-store/resource-class';
+import { BadgeState } from '@components/BadgeState';
+import StateDot from '@shell/components/StateDot/index.vue';
 
 /**
  * State Reference Page
@@ -11,16 +13,9 @@ import { STATES_ENUM, STATES } from '@shell/plugins/dashboard-store/resource-cla
  * Source: shell/plugins/dashboard-store/resource-class.js#L170
  */
 
-const COLOR_MAP = {
-  success: '#27AE60',
-  error:   '#E74C3C',
-  warning: '#F39C12',
-  info:    '#3498DB',
-  darker:  '#8E8E8E',
-};
-
 export default {
-  name: 'StateReference',
+  name:       'StateReference',
+  components: { BadgeState, StateDot },
 
   data() {
     const rows = Object.entries(STATES_ENUM).map(([enumKey, enumValue]) => {
@@ -38,7 +33,6 @@ export default {
 
     return {
       rows,
-      COLOR_MAP,
       sortKey:   'enumKey',
       sortOrder: 'asc',
       filter:    '',
@@ -100,8 +94,20 @@ export default {
   },
 
   methods: {
-    hexForColor(color) {
-      return COLOR_MAP[color] || '#999';
+    bgClass(color) {
+      if (color === 'darker') {
+        return 'badge-disabled';
+      }
+
+      return `bg-${ color }`;
+    },
+
+    dotColor(color) {
+      if (color === 'darker') {
+        return 'disabled';
+      }
+
+      return color;
     },
 
     toggleSort(key) {
@@ -142,9 +148,9 @@ export default {
         :key="cs.color"
         class="color-chip"
       >
-        <span
-          class="color-dot"
-          :style="{ backgroundColor: hexForColor(cs.color) }"
+        <StateDot
+          :color="dotColor(cs.color)"
+          size="12px"
         />
         <span class="color-name">{{ cs.color }}</span>
         <span class="color-count">({{ cs.count }})</span>
@@ -207,24 +213,15 @@ export default {
             <td>{{ row.label }}</td>
             <td>
               <span class="color-badge-cell">
-                <span
-                  class="color-dot-sm"
-                  :style="{ backgroundColor: hexForColor(row.color) }"
-                />
+                <StateDot :color="dotColor(row.color)" />
                 {{ row.color }}
               </span>
             </td>
             <td>
-              <span
-                class="state-badge"
-                :style="{
-                  backgroundColor: hexForColor(row.color) + '20',
-                  color: hexForColor(row.color),
-                  borderColor: hexForColor(row.color)
-                }"
-              >
-                {{ row.label }}
-              </span>
+              <BadgeState
+                :color="bgClass(row.color)"
+                :label="row.label"
+              />
             </td>
           </tr>
         </tbody>
@@ -276,12 +273,6 @@ export default {
     align-items: center;
     gap: 6px;
     font-size: 0.9em;
-
-    .color-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
 
     .color-name {
       font-weight: 600;
@@ -369,23 +360,6 @@ export default {
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-
-    .color-dot-sm {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .state-badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border: 1px solid;
-      border-radius: 12px;
-      font-size: 0.82em;
-      font-weight: 600;
-      white-space: nowrap;
     }
   }
 

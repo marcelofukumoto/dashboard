@@ -37,6 +37,7 @@
 - 2026-05-02 19:43 UTC: STOOD DOWN again (run 25260218082) — signal still active, no re-enable from maintainer
 - 2026-05-03 19:42 UTC: STOOD DOWN again (run 25288883410) — signal still active, no re-enable from maintainer
 - 2026-05-04 19:57 UTC: STOOD DOWN again (run 25340241893) — signal still active, no re-enable from maintainer
+- 2026-05-05 19:54 UTC: STOOD DOWN again (run 25398823895) — signal still active, no re-enable from maintainer
 
 ## Checked Off Items
 None

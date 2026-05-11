@@ -9,6 +9,15 @@ description: |
 on:
   schedule: daily
   workflow_dispatch:
+  steps:
+    - name: Check main repo
+      id: repo_check
+      run: |
+        if [ "${{ github.repository }}" != "rancher/dashboard" ]; then
+          echo "Skipping: not the main repository"
+          exit 1
+        fi
+if: needs.pre_activation.outputs.repo_check_result == 'success'
 
 permissions: read-all
 
@@ -30,6 +39,7 @@ tools:
   web-fetch:
   github:
     toolsets: [all]
+    min-integrity: none
 
 timeout-minutes: 60
 
@@ -40,7 +50,7 @@ steps:
       fetch-depth: 1
       persist-credentials: false
   - name: Setup env
-    uses: actions/setup-node@v6.3.0
+    uses: actions/setup-node@v6.4.0
     with:
       node-version-file: '.nvmrc'
   - name: Install packages

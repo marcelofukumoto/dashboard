@@ -8,8 +8,8 @@ on:
         required: false
         type: string
         default: ""
-  schedule:
-    - cron: "17 6 * * 1" # Weekly on Monday at 6:17am UTC
+  # schedule:
+  #   - cron: "17 6 * * 1" # Weekly on Monday at 6:17am UTC
 
 jobs:
   test-matrix:

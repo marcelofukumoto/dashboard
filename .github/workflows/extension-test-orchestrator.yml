@@ -17,6 +17,7 @@ jobs:
     if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'
     strategy:
       fail-fast: false
+      max-parallel: 1 # Sequential to avoid rate limits. Set to 5 for parallel on main branch.
       matrix:
         include:
           - rancher_version: "v2.11-head"

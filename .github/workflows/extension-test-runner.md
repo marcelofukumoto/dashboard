@@ -47,11 +47,6 @@ on:
         required: false
         type: string
         default: "true"
-      attempt:
-        description: "Attempt number (1 or 2, for workflow-level retry)"
-        required: false
-        type: string
-        default: "1"
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ inputs.version_label }}"
@@ -265,7 +260,6 @@ cases using **Playwright** browser automation. You verify that Extension Points
 and Shell API features work correctly.
 
 **Rancher version**: `${{ github.event.inputs.version_label }}`
-**Attempt**: `${{ github.event.inputs.attempt }}` of 2
 
 ## Runtime Environment
 
@@ -330,7 +324,7 @@ The test extension was built and is being served at `http://172.17.0.1:4500`.
 
 ## Step 3 - Start Video Recording
 
-1. Call `browser_start_video` with filename `/tmp/gh-aw/mcp-logs/playwright/ext-test-${{ github.event.inputs.version_label }}-attempt-${{ github.event.inputs.attempt }}.webm`
+1. Call `browser_start_video` with filename `/tmp/gh-aw/mcp-logs/playwright/ext-test-${{ github.event.inputs.version_label }}.webm`
 2. If it fails, log the error but continue — screenshots are still valuable
 
 ## Step 4 - Execute Test Cases
@@ -622,7 +616,6 @@ Compile a results summary in this format:
 ## Extension Compatibility Test Results - Rancher ${{ github.event.inputs.version_label }}
 
 **Rancher version**: `${{ github.event.inputs.rancher_version }}`
-**Attempt**: ${{ github.event.inputs.attempt }} of 2
 **Date**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 ### Summary

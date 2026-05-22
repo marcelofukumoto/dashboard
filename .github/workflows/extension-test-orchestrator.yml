@@ -86,5 +86,4 @@ jobs:
             -f skip_tab_resource_detail_page="${{ matrix.skip_tab_resource_detail_page }}" \
             -f skip_table_hook="${{ matrix.skip_table_hook }}" \
             -f skip_about_top="${{ matrix.skip_about_top }}" \
-            -f skip_cluster_create_rke2="${{ matrix.skip_cluster_create_rke2 }}" \
-            -f attempt="1"
+            -f skip_cluster_create_rke2="${{ matrix.skip_cluster_create_rke2 }}"

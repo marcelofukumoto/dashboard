@@ -53,6 +53,9 @@ on:
         type: string
         default: "1"
 
+concurrency:
+  job-discriminator: ${{ inputs.version_label }}
+
 if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'
 
 permissions: read-all

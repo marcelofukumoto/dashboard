@@ -54,6 +54,7 @@ on:
         default: "1"
 
 concurrency:
+  group: "gh-aw-${{ github.workflow }}-${{ inputs.version_label }}"
   job-discriminator: ${{ inputs.version_label }}
 
 if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'

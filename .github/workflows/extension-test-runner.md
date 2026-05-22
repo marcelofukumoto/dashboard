@@ -167,18 +167,20 @@ steps:
       curl -s http://127.0.0.1:4500/ | head -20
 
   - name: Start Rancher Docker
+    env:
+      RANCHER_HOST_HTTP_PORT: "9080"
+      RANCHER_HOST_HTTPS_PORT: "9443"
+      RANCHER_CONTAINER_NAME: "rancher-ext-test"
     run: |
       REGISTRY="${{ github.event.inputs.rancher_registry }}"
       VERSION="${{ github.event.inputs.rancher_version }}"
       if [ -n "$REGISTRY" ]; then
-        FULL_IMAGE="${REGISTRY}/rancher/rancher:${VERSION}"
-      else
-        FULL_IMAGE="rancher/rancher:${VERSION}"
+        echo "Pulling from registry: ${REGISTRY}"
+        docker pull "${REGISTRY}/rancher/rancher:${VERSION}"
+        docker tag "${REGISTRY}/rancher/rancher:${VERSION}" "rancher/rancher:${VERSION}"
       fi
-      echo "Starting Rancher with image: ${FULL_IMAGE}"
-      RANCHER_HOST_HTTP_PORT=9080 RANCHER_HOST_HTTPS_PORT=9443 \
-        RANCHER_CONTAINER_NAME=rancher-ext-test \
-        ./scripts/e2e-docker-start "${FULL_IMAGE}"
+      echo "Starting Rancher with tag: ${VERSION}"
+      ./scripts/e2e-docker-start "${VERSION}"
 
   - name: Bootstrap Rancher (first-login setup)
     run: |

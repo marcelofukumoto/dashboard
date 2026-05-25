@@ -713,9 +713,11 @@ After writing, call `push_repo_memory`.
 
 - Execute EVERY test case, even if earlier ones fail
 - Always take screenshots with absolute paths: `/tmp/gh-aw/mcp-logs/playwright/<name>.png`
+- **NEVER delete screenshots, videos, or any files under `/tmp/gh-aw/mcp-logs/playwright/`** — they are uploaded as artifacts after the agent finishes
 - Be patient with waits — pages may load slowly
 - Use `data-testid` selectors whenever possible
 - After all tests, ALWAYS verify evidence files exist
 - If `playwright-cli screenshot` fails, retry once with a different filename
 - Respect version gates — check the skip flags before each gated test group
 - When checking console logs, use `playwright-cli console` to read browser console output
+- Do NOT clean up, remove, or reorganize files in the output directory

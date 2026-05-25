@@ -211,8 +211,8 @@ steps:
 
   - name: Prepare Playwright output directory
     run: |
-      mkdir -p /tmp/playwright-output
-      chmod 777 /tmp/playwright-output
+      mkdir -p /tmp/gh-aw/mcp-logs/playwright
+      chmod 777 /tmp/gh-aw/mcp-logs/playwright
 
 safe-outputs:
   mentions: false
@@ -288,7 +288,7 @@ playwright-cli type "hello world"
 playwright-cli press Enter
 
 # Take a screenshot
-playwright-cli screenshot --filename /tmp/playwright-output/screenshot.png
+playwright-cli screenshot --filename /tmp/gh-aw/mcp-logs/playwright/screenshot.png
 
 # Evaluate JavaScript in the page
 playwright-cli eval "document.title"
@@ -298,7 +298,7 @@ playwright-cli eval "document.querySelector('[data-testid=\"some-id\"]') !== nul
 playwright-cli console
 
 # Video recording
-playwright-cli video-start /tmp/playwright-output/video.webm
+playwright-cli video-start /tmp/gh-aw/mcp-logs/playwright/video.webm
 playwright-cli video-chapter "Test 1.1"
 playwright-cli video-stop
 
@@ -348,7 +348,7 @@ cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(non
 3. Fill the password field using `playwright-cli fill <ref> "password"`
 4. Click the "Log In" button using `playwright-cli click <ref>`
 5. Wait for the Rancher Dashboard to load, then run `playwright-cli snapshot` to confirm
-6. Run `playwright-cli screenshot --filename /tmp/playwright-output/01-login-success.png`
+6. Run `playwright-cli screenshot --filename /tmp/gh-aw/mcp-logs/playwright/01-login-success.png`
 
 ## Step 2 - Developer-Load the Extension
 
@@ -358,7 +358,7 @@ The test extension was built and is being served at `http://172.17.0.1:80`.
 1. Click on the user avatar in the header (use `playwright-cli snapshot` to find it, then `playwright-cli click <ref>`)
 2. Click "Preferences"
 3. Under "Advanced Features", tick "Enable Extension developer features"
-4. Screenshot: `playwright-cli screenshot --filename /tmp/playwright-output/02-dev-features-enabled.png`
+4. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/mcp-logs/playwright/02-dev-features-enabled.png`
 
 ### 2.2 Developer-Load the Extension
 1. Navigate to the Extensions page via the sidebar menu
@@ -368,17 +368,17 @@ The test extension was built and is being served at `http://172.17.0.1:80`.
 5. Click "Load"
 6. Wait for the extension loaded notification to appear
 7. Click on the refresh/reload button on the page
-8. Screenshot: `playwright-cli screenshot --filename /tmp/playwright-output/03-extension-loaded.png`
+8. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/mcp-logs/playwright/03-extension-loaded.png`
 
 ## Step 3 - Start Video Recording
 
-1. Run `playwright-cli video-start /tmp/playwright-output/ext-test-${{ github.event.inputs.version_label }}.webm`
+1. Run `playwright-cli video-start /tmp/gh-aw/mcp-logs/playwright/ext-test-${{ github.event.inputs.version_label }}.webm`
 2. If it fails, log the error but continue — screenshots are still valuable
 
 ## Step 4 - Execute Test Cases
 
 Execute ALL test cases below. Even if earlier tests fail, continue with the remaining ones.
-Always take screenshots with absolute paths under `/tmp/playwright-output/`.
+Always take screenshots with absolute paths under `/tmp/gh-aw/mcp-logs/playwright/`.
 
 Remember the retry policy: retry each test up to 3 times before marking as FAILED.
 
@@ -391,14 +391,14 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 2. Check that in the header there's an element with `data-testid="extension-header-action-action-one"`
 3. Click on it
 4. Check the browser console for the log message "action executed 1"
-5. Screenshot: `/tmp/playwright-output/test-1-1-header-action-one.png`
+5. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-1-1-header-action-one.png`
 
 #### Test 1.2: Header Action Button 2
 1. Go to the local cluster via the sidebar menu
 2. Check that in the header there's an element with `data-testid="extension-header-action-action-two"`
 3. Click on it
 4. Check the browser console for the log message "action executed 2"
-5. Screenshot: `/tmp/playwright-output/test-1-2-header-action-two.png`
+5. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-1-2-header-action-two.png`
 
 ---
 
@@ -413,7 +413,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. A new tab should appear with an element with `data-testid="btn-detail-page-id"` and `aria-label="detail-page-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
-7. Screenshot: `/tmp/playwright-output/test-2-1-tab-resource-detail-page.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-2-1-tab-resource-detail-page.png`
 
 #### Test 2.2: Tab RESOURCE_CREATE_PAGE
 **Version gate**: Skip if `${{ github.event.inputs.skip_tab_resource_detail_page }}` is `true`
@@ -425,7 +425,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 5. A new tab should appear with an element with `data-testid="btn-create-page-id"` and `aria-label="create-page-label"`
 6. Click on that tab
 7. New tab content should appear with text "THIS IS A DEMO TAB"
-8. Screenshot: `/tmp/playwright-output/test-2-2-tab-resource-create-page.png`
+8. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-2-2-tab-resource-create-page.png`
 
 #### Test 2.3: Tab RESOURCE_EDIT_PAGE
 **Version gate**: Skip if `${{ github.event.inputs.skip_tab_resource_detail_page }}` is `true`
@@ -436,7 +436,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. A new tab should appear with an element with `data-testid="btn-edit-page-id"` and `aria-label="edit-page-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
-7. Screenshot: `/tmp/playwright-output/test-2-3-tab-resource-edit-page.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-2-3-tab-resource-edit-page.png`
 
 #### Test 2.4: Tab RESOURCE_SHOW_CONFIGURATION
 **Version gate**: Skip if `${{ github.event.inputs.skip_tab_resource_detail_page }}` is `true`
@@ -448,7 +448,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 5. A new tab should appear with an element with `data-testid="btn-show-configuration-id"` and `aria-label="show-configuration-label"`
 6. Click on that tab
 7. New tab content should appear with text "THIS IS A DEMO TAB"
-8. Screenshot: `/tmp/playwright-output/test-2-4-tab-resource-show-config.png`
+8. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-2-4-tab-resource-show-config.png`
 
 #### Test 2.5: Tab CLUSTER_CREATE_RKE2
 **Version gate**: Skip if `${{ github.event.inputs.skip_cluster_create_rke2 }}` is `true`
@@ -459,7 +459,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. A new tab should appear with an element with `data-testid="tab-cluster-create-rke2-id"` and `aria-label="cluster-create-rke2-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
-7. Screenshot: `/tmp/playwright-output/test-2-5-tab-cluster-create-rke2.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-2-5-tab-cluster-create-rke2.png`
 
 #### Test 2.6: Tab RESOURCE_DETAIL (legacy)
 **Note**: This is the legacy tab extension point, available up until v2.14.0
@@ -470,7 +470,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. A new tab should appear with an element with `data-testid="btn-pod-detail-id"` and `aria-label="pod-detail-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
-7. Screenshot: `/tmp/playwright-output/test-2-6-tab-resource-detail-legacy.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-2-6-tab-resource-detail-legacy.png`
 
 ---
 
@@ -487,7 +487,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 8. Check that there's a table action called "Demo bulkable action"
 9. Click on it
 10. Check the browser console for the log message "table action executed 2"
-11. Screenshot: `/tmp/playwright-output/test-3-1-table-action-non-bulkable.png`
+11. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-3-1-table-action-non-bulkable.png`
 
 #### Test 3.2: Table Action (bulkable)
 1. Go to local cluster in the sidebar menu
@@ -496,7 +496,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. There should be appearing above the list an enabled button with the text "Demo bulkable action"
 5. Click on it
 6. Check the browser console for the log message "table action executed 2"
-7. Screenshot: `/tmp/playwright-output/test-3-2-table-action-bulkable.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-3-2-table-action-bulkable.png`
 
 ---
 
@@ -506,7 +506,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 1. Go to local cluster in the sidebar menu
 2. Go to Apps > Repositories list page
 3. There should be a banner displayed with the text "Just a sample banner to show that we can render anything here"
-4. Screenshot: `/tmp/playwright-output/test-4-1-panel-resource-list.png`
+4. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-4-1-panel-resource-list.png`
 
 #### Test 4.2: PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (details view)
 1. Go to local cluster in the sidebar menu
@@ -514,7 +514,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 3. Click on any Repo to see the details page
 4. There should be a banner displayed with the text "This is a generic masthead component example"
 5. There should be a banner displayed with the text "This is an example on DetailTop"
-6. Screenshot: `/tmp/playwright-output/test-4-2-panel-details-masthead-top.png`
+6. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-4-2-panel-details-masthead-top.png`
 
 #### Test 4.3: PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit view)
 1. Go to local cluster in the sidebar menu
@@ -522,14 +522,14 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 3. On any Repo listed, go to the table row actions and click "Edit Config"
 4. There should be a banner displayed with the text "This is a generic masthead component example"
 5. There should be a banner displayed with the text "This is another component example for masthead details - edit view"
-6. Screenshot: `/tmp/playwright-output/test-4-3-panel-details-edit-view.png`
+6. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-4-3-panel-details-edit-view.png`
 
 #### Test 4.4: PanelLocation.ABOUT_TOP
 **Version gate**: Skip if `${{ github.event.inputs.skip_about_top }}` is `true`
 
 1. Go to the About page from the sidebar menu (click on version number on bottom of sidebar)
 2. There should be a banner displayed with the text "Just a sample banner to show that we can render anything here"
-3. Screenshot: `/tmp/playwright-output/test-4-4-panel-about-top.png`
+3. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-4-4-panel-about-top.png`
 
 ---
 
@@ -538,7 +538,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 #### Test 5.1: Dashboard Card
 1. Go to local cluster in the sidebar menu
 2. Check that there's a new card on the cluster explorer page with the text "Demo card title 1"
-3. Screenshot: `/tmp/playwright-output/test-5-1-cluster-dashboard-card.png`
+3. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-5-1-cluster-dashboard-card.png`
 
 ---
 
@@ -554,21 +554,21 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 5. Check the browser console for another "TABLE HOOK TRIGGERED" message
 6. Apply sorting to any table column in the Pods list view
 7. Check the browser console for another "TABLE HOOK TRIGGERED" message
-8. Screenshot: `/tmp/playwright-output/test-6-1-table-hook.png`
+8. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-6-1-table-hook.png`
 
 #### Test 6.2: Add Table Column 1 - Custom Formatter
 1. Go to local cluster in the sidebar menu
 2. Go to Storage > Secrets list page
 3. There should be a new table column with the label "Extension Col - Example 1"
 4. The table cell value should contain the text "Formatter: Custom Cell Value 1"
-5. Screenshot: `/tmp/playwright-output/test-6-2-table-column-1.png`
+5. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-6-2-table-column-1.png`
 
 #### Test 6.3: Add Table Column 2 - Pagination
 1. Go to local cluster in the sidebar menu
 2. Go to Storage > ConfigMaps list page
 3. There should be a new table column with the label "Extension Col - Example 2"
 4. The table cell value should contain the text "Custom Cell Value 2" OR the name of the resource (same as "Name" column value)
-5. Screenshot: `/tmp/playwright-output/test-6-3-table-column-2.png`
+5. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-6-3-table-column-2.png`
 
 ---
 
@@ -580,7 +580,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 2. Click on the sub-menu entry called "shell-api-demo"
 3. Click on "Test Slide-in API"
 4. A new slide-in panel should appear with the title "Hello from SlideIn panel!"
-5. Screenshot: `/tmp/playwright-output/test-7-1-shell-api-slidein.png`
+5. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-7-1-shell-api-slidein.png`
 
 #### Test 7.2: Modal API
 1. Go to the Elemental extension in the sidebar menu
@@ -589,7 +589,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. A new modal should appear with a title "Sample general title"
 5. The modal should have a button "Cancel"
 6. The modal should have a button "Add"
-7. Screenshot: `/tmp/playwright-output/test-7-2-shell-api-modal.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-7-2-shell-api-modal.png`
 
 #### Test 7.3: Notification API
 1. Go to the Elemental extension in the sidebar menu
@@ -597,14 +597,14 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 3. Click on "Test Notification API"
 4. A new notification should appear with a title "Some notification title"
 5. The notification should have a text body "Hello world! Success!"
-6. Screenshot: `/tmp/playwright-output/test-7-3-shell-api-notification.png`
+6. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-7-3-shell-api-notification.png`
 
 #### Test 7.4: System API
 1. Go to the Elemental extension in the sidebar menu
 2. Click on the sub-menu entry called "shell-api-demo"
 3. Click on "Test System API"
 4. The box under "System API Data:" should switch text from "No System Info yet. Press the button to fetch it." to system information containing the keywords: gitCommit, isDevBuild, isPrereleaseVersion, isRancherPrime, kubernetesVersion, rancherVersion
-5. Screenshot: `/tmp/playwright-output/test-7-4-shell-api-system.png`
+5. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-7-4-shell-api-system.png`
 
 ---
 
@@ -621,7 +621,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 8. Go to the Elemental extension in the sidebar menu
 9. Click on the sub-menu entry called "Dashboard"
 10. Page should have title "OS Management Dashboard"
-11. Screenshot: `/tmp/playwright-output/test-8-1-elemental-setup.png`
+11. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-8-1-elemental-setup.png`
 
 #### Test 8.2: Elemental EDIT/CREATE Interface
 1. Go to the Elemental extension in the sidebar menu
@@ -634,7 +634,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 8. There should be a new table entry with name "demo-reg-endpoint-1"
 9. Click on the sub-menu entry called "Dashboard"
 10. There should be a new table entry with name "demo-reg-endpoint-1" on the table "Registration Endpoints" in the dashboard view
-11. Screenshot: `/tmp/playwright-output/test-8-2-elemental-create.png`
+11. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-8-2-elemental-create.png`
 
 #### Test 8.3: Elemental EDIT/CREATE YAML Interface
 1. Go to the Elemental extension in the sidebar menu
@@ -643,7 +643,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 4. Replace "#string" in `metadata.name` for "demo-mach-inv-1"
 5. Click "Create"
 6. There should be a new table entry with name "demo-mach-inv-1"
-7. Screenshot: `/tmp/playwright-output/test-8-3-elemental-create-yaml.png`
+7. Screenshot: `/tmp/gh-aw/mcp-logs/playwright/test-8-3-elemental-create-yaml.png`
 
 ---
 
@@ -653,9 +653,9 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 2. Verify files were captured:
 ```bash
 echo "=== Captured Playwright artifacts ==="
-find /tmp/playwright-output -type f -exec ls -lh {} \;
+find /tmp/gh-aw/mcp-logs/playwright -type f -exec ls -lh {} \;
 echo "=== Total size ==="
-du -sh /tmp/playwright-output/
+du -sh /tmp/gh-aw/mcp-logs/playwright/
 ```
 
 Compile a results summary in this format:
@@ -711,7 +711,7 @@ After writing, call `push_repo_memory`.
 ## Rules
 
 - Execute EVERY test case, even if earlier ones fail
-- Always take screenshots with absolute paths: `/tmp/playwright-output/<name>.png`
+- Always take screenshots with absolute paths: `/tmp/gh-aw/mcp-logs/playwright/<name>.png`
 - Be patient with waits — pages may load slowly
 - Use `data-testid` selectors whenever possible
 - After all tests, ALWAYS verify evidence files exist

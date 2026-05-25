@@ -1,5 +1,6 @@
 ---
-name: "Extension Compatibility Test Runner - ${{ inputs.version_label }}"
+name: Extension Compatibility Test Runner
+run-name: "Extension Compatibility Test Runner - ${{ inputs.version_label }}"
 description: |
   Tests extension compatibility against a specific Rancher version using Playwright CLI.
   Builds a test extension from aalves08/elemental-ui (compatibility-tests-version branch)

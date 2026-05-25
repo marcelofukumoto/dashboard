@@ -228,6 +228,11 @@ jobs:
           GH_AW_GITHUB_EVENT_COMMENT_ID: ${{ github.event.comment.id }}
           GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER: ${{ github.event.discussion.number }}
           GH_AW_GITHUB_EVENT_INPUTS_RANCHER_VERSION: ${{ github.event.inputs.rancher_version }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_ABOUT_TOP: ${{ github.event.inputs.skip_about_top }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_CLUSTER_CREATE_RKE2: ${{ github.event.inputs.skip_cluster_create_rke2 }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_SHELL_API_TESTS: ${{ github.event.inputs.skip_shell_api_tests }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_TABLE_HOOK: ${{ github.event.inputs.skip_table_hook }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_TAB_RESOURCE_DETAIL_PAGE: ${{ github.event.inputs.skip_tab_resource_detail_page }}
           GH_AW_GITHUB_EVENT_INPUTS_VERSION_LABEL: ${{ github.event.inputs.version_label }}
           GH_AW_GITHUB_EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -299,6 +304,11 @@ jobs:
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
           GH_AW_ENGINE_ID: "copilot"
           GH_AW_GITHUB_EVENT_INPUTS_RANCHER_VERSION: ${{ github.event.inputs.rancher_version }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_ABOUT_TOP: ${{ github.event.inputs.skip_about_top }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_CLUSTER_CREATE_RKE2: ${{ github.event.inputs.skip_cluster_create_rke2 }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_SHELL_API_TESTS: ${{ github.event.inputs.skip_shell_api_tests }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_TAB_RESOURCE_DETAIL_PAGE: ${{ github.event.inputs.skip_tab_resource_detail_page }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_TABLE_HOOK: ${{ github.event.inputs.skip_table_hook }}
           GH_AW_GITHUB_EVENT_INPUTS_VERSION_LABEL: ${{ github.event.inputs.version_label }}
         with:
           script: |
@@ -314,6 +324,11 @@ jobs:
           GH_AW_GITHUB_EVENT_COMMENT_ID: ${{ github.event.comment.id }}
           GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER: ${{ github.event.discussion.number }}
           GH_AW_GITHUB_EVENT_INPUTS_RANCHER_VERSION: ${{ github.event.inputs.rancher_version }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_ABOUT_TOP: ${{ github.event.inputs.skip_about_top }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_CLUSTER_CREATE_RKE2: ${{ github.event.inputs.skip_cluster_create_rke2 }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_SHELL_API_TESTS: ${{ github.event.inputs.skip_shell_api_tests }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_TABLE_HOOK: ${{ github.event.inputs.skip_table_hook }}
+          GH_AW_GITHUB_EVENT_INPUTS_SKIP_TAB_RESOURCE_DETAIL_PAGE: ${{ github.event.inputs.skip_tab_resource_detail_page }}
           GH_AW_GITHUB_EVENT_INPUTS_VERSION_LABEL: ${{ github.event.inputs.version_label }}
           GH_AW_GITHUB_EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
           GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
@@ -342,6 +357,11 @@ jobs:
                 GH_AW_GITHUB_EVENT_COMMENT_ID: process.env.GH_AW_GITHUB_EVENT_COMMENT_ID,
                 GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER: process.env.GH_AW_GITHUB_EVENT_DISCUSSION_NUMBER,
                 GH_AW_GITHUB_EVENT_INPUTS_RANCHER_VERSION: process.env.GH_AW_GITHUB_EVENT_INPUTS_RANCHER_VERSION,
+                GH_AW_GITHUB_EVENT_INPUTS_SKIP_ABOUT_TOP: process.env.GH_AW_GITHUB_EVENT_INPUTS_SKIP_ABOUT_TOP,
+                GH_AW_GITHUB_EVENT_INPUTS_SKIP_CLUSTER_CREATE_RKE2: process.env.GH_AW_GITHUB_EVENT_INPUTS_SKIP_CLUSTER_CREATE_RKE2,
+                GH_AW_GITHUB_EVENT_INPUTS_SKIP_SHELL_API_TESTS: process.env.GH_AW_GITHUB_EVENT_INPUTS_SKIP_SHELL_API_TESTS,
+                GH_AW_GITHUB_EVENT_INPUTS_SKIP_TABLE_HOOK: process.env.GH_AW_GITHUB_EVENT_INPUTS_SKIP_TABLE_HOOK,
+                GH_AW_GITHUB_EVENT_INPUTS_SKIP_TAB_RESOURCE_DETAIL_PAGE: process.env.GH_AW_GITHUB_EVENT_INPUTS_SKIP_TAB_RESOURCE_DETAIL_PAGE,
                 GH_AW_GITHUB_EVENT_INPUTS_VERSION_LABEL: process.env.GH_AW_GITHUB_EVENT_INPUTS_VERSION_LABEL,
                 GH_AW_GITHUB_EVENT_ISSUE_NUMBER: process.env.GH_AW_GITHUB_EVENT_ISSUE_NUMBER,
                 GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER: process.env.GH_AW_GITHUB_EVENT_PULL_REQUEST_NUMBER,

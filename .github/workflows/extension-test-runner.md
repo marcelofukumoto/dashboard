@@ -68,8 +68,8 @@ checkout:
   fetch-depth: 1
 
 env:
-  RANCHER_HOST_HTTPS_PORT: "9443"
-  RANCHER_HOST_HTTP_PORT: "9080"
+  RANCHER_HOST_HTTPS_PORT: "443"
+  RANCHER_HOST_HTTP_PORT: "80"
   RANCHER_CONTAINER_NAME: "rancher-ext-test"
   CATTLE_BOOTSTRAP_PASSWORD: "password"
 
@@ -154,16 +154,16 @@ steps:
   - name: Start extension server
     run: |
       cd ${{ github.workspace }}
-      PORT=4500 nohup node shell/scripts/serve-pkgs > serve-pkgs.log 2>&1 &
+      PORT=8080 nohup node shell/scripts/serve-pkgs > serve-pkgs.log 2>&1 &
       echo $! > serve-pkgs.pid
       sleep 3
       echo "Extension server started, verifying catalog..."
-      curl -s http://127.0.0.1:4500/ | head -20
+      curl -s http://127.0.0.1:8080/ | head -20
 
   - name: Start Rancher Docker
     env:
-      RANCHER_HOST_HTTP_PORT: "9080"
-      RANCHER_HOST_HTTPS_PORT: "9443"
+      RANCHER_HOST_HTTP_PORT: "80"
+      RANCHER_HOST_HTTPS_PORT: "443"
       RANCHER_CONTAINER_NAME: "rancher-ext-test"
     run: |
       REGISTRY="${{ github.event.inputs.rancher_registry }}"
@@ -178,7 +178,7 @@ steps:
 
   - name: Bootstrap Rancher (first-login setup)
     run: |
-      RANCHER_URL="https://127.0.0.1:9443"
+      RANCHER_URL="https://127.0.0.1"
       BOOTSTRAP_PASSWORD="password"
 
       echo "Logging in with bootstrap password..."
@@ -252,9 +252,9 @@ and Shell API features work correctly.
 
 ## Runtime Environment
 
-- Rancher Dashboard is running at `https://localhost:9443/dashboard/` (started by prior workflow steps)
+- Rancher Dashboard is running at `https://localhost/dashboard/` (started by prior workflow steps)
 - Admin credentials: username `admin`, password `password`
-- Extension server is running at `http://localhost:4500` (serves the built test extension)
+- Extension server is running at `http://localhost:8080` (serves the built test extension)
 - You run directly on the GitHub Actions runner (not in a container), so `localhost` works for all local services
 - Use `playwright-cli <command>` in bash to drive the browser
 
@@ -263,30 +263,59 @@ and Shell API features work correctly.
 All browser interactions are done via `playwright-cli` commands in bash:
 
 ```bash
-# Navigate to a URL
-playwright-cli browser_navigate --url "https://localhost:9443/dashboard/"
+# Open browser and navigate
+playwright-cli open "https://localhost/dashboard/"
+playwright-cli goto "https://localhost/dashboard/"
+
+# Take an accessibility snapshot (shows page structure with element refs)
+playwright-cli snapshot
+
+# Click an element by ref (from snapshot output)
+playwright-cli click e15
+
+# Click by test ID
+playwright-cli click "getByTestId('submit-button')"
+
+# Fill text into an input field
+playwright-cli fill e12 "some text"
+playwright-cli fill e12 "some text" --submit   # fill + press Enter
+
+# Type text into the currently focused element
+playwright-cli type "hello world"
+
+# Press a key
+playwright-cli press Enter
 
 # Take a screenshot
-playwright-cli browser_take_screenshot --filename /tmp/playwright-output/screenshot.png
+playwright-cli screenshot --filename /tmp/playwright-output/screenshot.png
 
-# Get accessibility snapshot (shows page structure and elements)
-playwright-cli browser_snapshot
+# Evaluate JavaScript in the page
+playwright-cli eval "document.title"
+playwright-cli eval "document.querySelector('[data-testid=\"some-id\"]') !== null"
 
-# Click an element
-playwright-cli browser_click --element "Login" --ref "s1e2"
+# Read browser console messages
+playwright-cli console
 
-# Type text into a field
-playwright-cli browser_type --element "Password" --ref "s1e3" --text "password"
+# Video recording
+playwright-cli video-start /tmp/playwright-output/video.webm
+playwright-cli video-chapter "Test 1.1"
+playwright-cli video-stop
 
-# Evaluate JavaScript (e.g., check console logs)
-playwright-cli browser_evaluate --expression "document.title"
+# Check/uncheck checkboxes
+playwright-cli check e20
+playwright-cli uncheck e20
 
-# Wait for a specific condition
-playwright-cli browser_evaluate --expression "document.querySelector('[data-testid=\"some-id\"]') !== null"
+# Hover over an element
+playwright-cli hover e15
+
+# Navigate back/forward/reload
+playwright-cli go-back
+playwright-cli go-forward
+playwright-cli reload
 ```
 
-Use `browser_snapshot` to see the page structure and find element references (`--ref`)
-before clicking or typing. The snapshot shows elements with ref IDs like `s1e2`.
+Use `playwright-cli snapshot` to see the page structure and find element refs (e.g., `e15`)
+before clicking or filling. Always snapshot first, then interact.
 
 ## Retry Policy
 
@@ -313,36 +342,36 @@ cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(non
 
 ## Step 1 - Login to Rancher
 
-1. Run `playwright-cli browser_navigate --url "https://localhost:9443/dashboard/"`
-2. Run `playwright-cli browser_snapshot` to see the login page structure
-3. Type the password into the password field using `playwright-cli browser_type`
-4. Click the "Log In" button using `playwright-cli browser_click`
-5. Wait for the Rancher Dashboard to load, then take a snapshot to confirm
-6. Take a screenshot: `playwright-cli browser_take_screenshot --filename /tmp/playwright-output/01-login-success.png`
+1. Run `playwright-cli open "https://localhost/dashboard/"`
+2. Run `playwright-cli snapshot` to see the login page structure and find element refs
+3. Fill the password field using `playwright-cli fill <ref> "password"`
+4. Click the "Log In" button using `playwright-cli click <ref>`
+5. Wait for the Rancher Dashboard to load, then run `playwright-cli snapshot` to confirm
+6. Run `playwright-cli screenshot --filename /tmp/playwright-output/01-login-success.png`
 
 ## Step 2 - Developer-Load the Extension
 
-The test extension was built and is being served at `http://localhost:4500`.
+The test extension was built and is being served at `http://localhost:8080`.
 
 ### 2.1 Enable Extension Developer Features
-1. Click on the user avatar in the header (use `browser_snapshot` to find it, then `browser_click`)
+1. Click on the user avatar in the header (use `playwright-cli snapshot` to find it, then `playwright-cli click <ref>`)
 2. Click "Preferences"
 3. Under "Advanced Features", tick "Enable Extension developer features"
-4. Screenshot: `playwright-cli browser_take_screenshot --filename /tmp/playwright-output/02-dev-features-enabled.png`
+4. Screenshot: `playwright-cli screenshot --filename /tmp/playwright-output/02-dev-features-enabled.png`
 
 ### 2.2 Developer-Load the Extension
 1. Navigate to the Extensions page via the sidebar menu
 2. Click on the 3-dot menu (kebab menu)
 3. Select "Developer Load"
-4. In the "Extension URL" field, type: `http://localhost:4500`
+4. In the "Extension URL" field, type: `http://localhost:8080`
 5. Click "Load"
 6. Wait for the extension loaded notification to appear
 7. Click on the refresh/reload button on the page
-8. Screenshot: `playwright-cli browser_take_screenshot --filename /tmp/playwright-output/03-extension-loaded.png`
+8. Screenshot: `playwright-cli screenshot --filename /tmp/playwright-output/03-extension-loaded.png`
 
 ## Step 3 - Start Video Recording
 
-1. Run `playwright-cli browser_start_video --filename /tmp/playwright-output/ext-test-${{ github.event.inputs.version_label }}.webm`
+1. Run `playwright-cli video-start /tmp/playwright-output/ext-test-${{ github.event.inputs.version_label }}.webm`
 2. If it fails, log the error but continue — screenshots are still valuable
 
 ## Step 4 - Execute Test Cases
@@ -619,7 +648,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 
 ## Step 5 - Stop Video and Compile Results
 
-1. Run `playwright-cli browser_stop_video` to finalize the recording
+1. Run `playwright-cli video-stop` to finalize the recording
 2. Verify files were captured:
 ```bash
 echo "=== Captured Playwright artifacts ==="
@@ -685,6 +714,6 @@ After writing, call `push_repo_memory`.
 - Be patient with waits — pages may load slowly
 - Use `data-testid` selectors whenever possible
 - After all tests, ALWAYS verify evidence files exist
-- If `playwright-cli browser_take_screenshot` fails, retry once with a different filename
+- If `playwright-cli screenshot` fails, retry once with a different filename
 - Respect version gates — check the skip flags before each gated test group
-- When checking console logs, use `playwright-cli browser_evaluate --expression "..."` to run JavaScript in the page
+- When checking console logs, use `playwright-cli console` to read browser console output

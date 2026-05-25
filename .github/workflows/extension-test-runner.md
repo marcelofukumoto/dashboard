@@ -210,10 +210,17 @@ steps:
 
       echo "Rancher bootstrap complete"
 
-  - name: Prepare Playwright output directory
+  - name: Prepare Playwright output directory and config
     run: |
       mkdir -p /tmp/gh-aw/mcp-logs/playwright
       chmod 777 /tmp/gh-aw/mcp-logs/playwright
+      mkdir -p .playwright
+      cat > .playwright/cli.config.json << 'PWEOF'
+      {
+        "outputMode": "file",
+        "outputDir": "/tmp/gh-aw/mcp-logs/playwright"
+      }
+      PWEOF
 
 safe-outputs:
   mentions: false

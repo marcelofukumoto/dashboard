@@ -210,17 +210,10 @@ steps:
 
       echo "Rancher bootstrap complete"
 
-  - name: Prepare Playwright output directory and config
+  - name: Prepare Playwright output directory
     run: |
       mkdir -p /tmp/gh-aw/mcp-logs/playwright
       chmod 777 /tmp/gh-aw/mcp-logs/playwright
-      mkdir -p .playwright
-      cat > .playwright/cli.config.json << 'PWEOF'
-      {
-        "outputMode": "file",
-        "outputDir": "/tmp/gh-aw/mcp-logs/playwright"
-      }
-      PWEOF
 
 safe-outputs:
   mentions: false
@@ -720,11 +713,16 @@ After writing, call `push_repo_memory`.
 
 - Execute EVERY test case, even if earlier ones fail
 - Always take screenshots with absolute paths: `/tmp/gh-aw/mcp-logs/playwright/<name>.png`
-- **NEVER delete screenshots, videos, or any files under `/tmp/gh-aw/mcp-logs/playwright/`** — they are uploaded as artifacts after the agent finishes
 - Be patient with waits — pages may load slowly
 - Use `data-testid` selectors whenever possible
 - After all tests, ALWAYS verify evidence files exist
 - If `playwright-cli screenshot` fails, retry once with a different filename
 - Respect version gates — check the skip flags before each gated test group
 - When checking console logs, use `playwright-cli console` to read browser console output
-- Do NOT clean up, remove, or reorganize files in the output directory
+
+## CRITICAL — DO NOT DELETE FILES
+
+**NEVER run `rm`, `unlink`, `rmdir`, or any delete command on files under `/tmp/gh-aw/mcp-logs/playwright/`.**
+These files are uploaded as artifacts AFTER the agent finishes. If you delete them, they are lost forever.
+Do NOT "free up space", "clean up", or "remove old screenshots". Disk space is not a concern.
+This rule has the highest priority and overrides any other consideration.

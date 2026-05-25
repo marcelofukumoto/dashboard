@@ -62,14 +62,15 @@ network:
     - playwright
     - node
     - local
+    - "172.17.0.1"
     - "stgregistry.suse.com"
 
 checkout:
   fetch-depth: 1
 
 env:
-  RANCHER_HOST_HTTPS_PORT: "443"
-  RANCHER_HOST_HTTP_PORT: "80"
+  RANCHER_HOST_HTTPS_PORT: "9443"
+  RANCHER_HOST_HTTP_PORT: "9080"
   RANCHER_CONTAINER_NAME: "rancher-ext-test"
   CATTLE_BOOTSTRAP_PASSWORD: "password"
 
@@ -154,16 +155,16 @@ steps:
   - name: Start extension server
     run: |
       cd ${{ github.workspace }}
-      PORT=8080 nohup node shell/scripts/serve-pkgs > serve-pkgs.log 2>&1 &
+      PORT=4500 nohup node shell/scripts/serve-pkgs > serve-pkgs.log 2>&1 &
       echo $! > serve-pkgs.pid
       sleep 3
       echo "Extension server started, verifying catalog..."
-      curl -s http://127.0.0.1:8080/ | head -20
+      curl -s http://127.0.0.1:4500/ | head -20
 
   - name: Start Rancher Docker
     env:
-      RANCHER_HOST_HTTP_PORT: "80"
-      RANCHER_HOST_HTTPS_PORT: "443"
+      RANCHER_HOST_HTTP_PORT: "9080"
+      RANCHER_HOST_HTTPS_PORT: "9443"
       RANCHER_CONTAINER_NAME: "rancher-ext-test"
     run: |
       REGISTRY="${{ github.event.inputs.rancher_registry }}"
@@ -178,7 +179,7 @@ steps:
 
   - name: Bootstrap Rancher (first-login setup)
     run: |
-      RANCHER_URL="https://127.0.0.1"
+      RANCHER_URL="https://127.0.0.1:9443"
       BOOTSTRAP_PASSWORD="password"
 
       echo "Logging in with bootstrap password..."
@@ -252,10 +253,10 @@ and Shell API features work correctly.
 
 ## Runtime Environment
 
-- Rancher Dashboard is running at `https://localhost/dashboard/` (started by prior workflow steps)
+- Rancher Dashboard is running at `https://172.17.0.1:9443/dashboard/` (started by prior workflow steps)
 - Admin credentials: username `admin`, password `password`
-- Extension server is running at `http://localhost:8080` (serves the built test extension)
-- You run directly on the GitHub Actions runner (not in a container), so `localhost` works for all local services
+- Extension server is running at `http://172.17.0.1:4500` (serves the built test extension)
+- You run inside an AWF sandbox. Use `172.17.0.1` (Docker bridge gateway) to reach host services, NOT `localhost`
 - Use `playwright-cli <command>` in bash to drive the browser
 
 ## Playwright CLI Usage
@@ -264,8 +265,8 @@ All browser interactions are done via `playwright-cli` commands in bash:
 
 ```bash
 # Open browser and navigate
-playwright-cli open "https://localhost/dashboard/"
-playwright-cli goto "https://localhost/dashboard/"
+playwright-cli open "https://172.17.0.1:9443/dashboard/"
+playwright-cli goto "https://172.17.0.1:9443/dashboard/"
 
 # Take an accessibility snapshot (shows page structure with element refs)
 playwright-cli snapshot
@@ -342,7 +343,7 @@ cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(non
 
 ## Step 1 - Login to Rancher
 
-1. Run `playwright-cli open "https://localhost/dashboard/"`
+1. Run `playwright-cli open "https://172.17.0.1:9443/dashboard/"`
 2. Run `playwright-cli snapshot` to see the login page structure and find element refs
 3. Fill the password field using `playwright-cli fill <ref> "password"`
 4. Click the "Log In" button using `playwright-cli click <ref>`
@@ -351,7 +352,7 @@ cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(non
 
 ## Step 2 - Developer-Load the Extension
 
-The test extension was built and is being served at `http://localhost:8080`.
+The test extension was built and is being served at `http://172.17.0.1:4500`.
 
 ### 2.1 Enable Extension Developer Features
 1. Click on the user avatar in the header (use `playwright-cli snapshot` to find it, then `playwright-cli click <ref>`)
@@ -363,7 +364,7 @@ The test extension was built and is being served at `http://localhost:8080`.
 1. Navigate to the Extensions page via the sidebar menu
 2. Click on the 3-dot menu (kebab menu)
 3. Select "Developer Load"
-4. In the "Extension URL" field, type: `http://localhost:8080`
+4. In the "Extension URL" field, type: `http://172.17.0.1:4500`
 5. Click "Load"
 6. Wait for the extension loaded notification to appear
 7. Click on the refresh/reload button on the page

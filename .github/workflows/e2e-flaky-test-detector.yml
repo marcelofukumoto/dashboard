@@ -1,0 +1,200 @@
+name: E2E Flaky Test Detector
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Tests workflow run ID to analyze (e.g. 26298453035)'
+        required: true
+        type: string
+      source_repo:
+        description: 'Repository where the Tests workflow ran'
+        required: false
+        type: string
+        default: 'rancher/dashboard'
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-flaky-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 1
+
+      - name: Identify failed e2e-test jobs
+        id: failed-jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+        run: |
+          echo "Analyzing Tests workflow run $RUN_ID from $SOURCE_REPO..."
+
+          # Get failed e2e-test jobs (skip build, lint, unit-test, etc.)
+          FAILED_JOBS=$(gh run view "$RUN_ID" --repo "$SOURCE_REPO" --json jobs --jq '
+            .jobs[]
+            | select(.name | startswith("e2e-test"))
+            | select(.conclusion == "failure")
+            | .name
+          ')
+
+          if [ -z "$FAILED_JOBS" ]; then
+            echo "No failed e2e-test jobs found in run $RUN_ID"
+            echo "has_failures=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Failed e2e-test jobs:"
+          echo "$FAILED_JOBS"
+          echo "has_failures=true" >> "$GITHUB_OUTPUT"
+
+      - name: Download artifacts from failed run
+        if: steps.failed-jobs.outputs.has_failures == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+        run: |
+          mkdir -p artifacts
+          # Download all test artifacts (includes reports, screenshots, videos)
+          gh run download "$RUN_ID" --repo "$SOURCE_REPO" --dir artifacts/ || {
+            echo "::warning::Failed to download some artifacts. Continuing with available data."
+          }
+
+          echo "Downloaded artifacts:"
+          ls -la artifacts/
+
+      - name: Parse failures and dispatch Runner
+        if: steps.failed-jobs.outputs.has_failures == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+        run: |
+          echo "=== Parsing mochawesome reports for failing tests ==="
+
+          # Find all mochawesome JSON files across all artifact directories
+          REPORT_FILES=$(find artifacts/ -name "*.json" -type f 2>/dev/null)
+
+          if [ -z "$REPORT_FILES" ]; then
+            echo "::warning::No JSON report files found in artifacts"
+            exit 0
+          fi
+
+          # Extract failing spec files from mochawesome reports
+          # The mochawesome JSON has: results[].file and results[].suites[].tests[].fail
+          > /tmp/failures.tsv
+          for report in $REPORT_FILES; do
+            # Check if this is a valid mochawesome report (has .results key)
+            if ! jq -e '.results' "$report" > /dev/null 2>&1; then
+              continue
+            fi
+
+            # Get the artifact directory name to extract tags
+            ARTIFACT_DIR=$(echo "$report" | cut -d'/' -f2)
+
+            # Extract role+feature tags from artifact dir name
+            # Format: {run_number}-{attempt}-artifacts-@adminUser@manager
+            TAGS=$(echo "$ARTIFACT_DIR" | sed 's/^[0-9]*-[0-9]*-artifacts-//')
+
+            # Parse role tag and feature tags
+            ROLE_TAG=$(echo "$TAGS" | grep -o '@[a-zA-Z_]*User' | head -1)
+            FEATURE_TAGS=$(echo "$TAGS" | sed "s/$ROLE_TAG//")
+
+            # Extract failing tests
+            jq -r --arg tags "$TAGS" --arg role "$ROLE_TAG" --arg features "$FEATURE_TAGS" '
+              .results[]
+              | .file as $file
+              | .suites[]
+              | recurse(.suites[]?)
+              | .tests[]?
+              | select(.fail == true)
+              | [$file, .fullTitle, .err.message // "unknown error", $role, $features] | @tsv
+            ' "$report" >> /tmp/failures.tsv 2>/dev/null || true
+          done
+
+          if [ ! -s /tmp/failures.tsv ]; then
+            echo "No failing tests found in mochawesome reports"
+            exit 0
+          fi
+
+          # Group failures by spec file (deduplicate)
+          echo ""
+          echo "=== Failing spec files ==="
+          cut -f1 /tmp/failures.tsv | sort -u > /tmp/failing_specs.txt
+          cat /tmp/failing_specs.txt
+
+          echo ""
+          echo "=== Dispatching Runner for each failing spec ==="
+
+          DISPATCHED=0
+          SKIPPED=0
+
+          while IFS= read -r spec_file; do
+            [ -z "$spec_file" ] && continue
+
+            SPEC_BASENAME=$(basename "$spec_file" .spec.ts)
+
+            # Check if a [Flaky E2E] PR already exists for this spec
+            EXISTING_PR=$(gh pr list \
+              --search "[Flaky E2E] $SPEC_BASENAME" \
+              --state open \
+              --json number \
+              --jq '.[0].number' 2>/dev/null || echo "")
+
+            if [ -n "$EXISTING_PR" ] && [ "$EXISTING_PR" != "null" ]; then
+              echo "SKIP: PR #$EXISTING_PR already tracking $SPEC_BASENAME"
+              SKIPPED=$((SKIPPED + 1))
+              continue
+            fi
+
+            # Get the tags for this spec file from the failures data
+            ROLE_TAG=$(grep "^$spec_file	" /tmp/failures.tsv | head -1 | cut -f4)
+            FEATURE_TAGS=$(grep "^$spec_file	" /tmp/failures.tsv | head -1 | cut -f5)
+
+            # Build grep_tags: @role+@feature
+            if [ -n "$ROLE_TAG" ] && [ -n "$FEATURE_TAGS" ]; then
+              GREP_TAGS="${ROLE_TAG}+${FEATURE_TAGS}"
+            elif [ -n "$ROLE_TAG" ]; then
+              GREP_TAGS="$ROLE_TAG"
+            else
+              GREP_TAGS=""
+            fi
+
+            # Get failing test titles for context
+            FAILING_TESTS=$(grep "^$spec_file	" /tmp/failures.tsv | cut -f2 | head -5)
+
+            echo ""
+            echo "DISPATCH: $spec_file"
+            echo "  Tags: $GREP_TAGS"
+            echo "  Failing tests:"
+            echo "$FAILING_TESTS" | sed 's/^/    - /'
+
+            # Dispatch the Runner agentic workflow
+            AW_CONTEXT=$(jq -n -c \
+              --arg mode "discover" \
+              --arg spec_file "$spec_file" \
+              --arg grep_tags "$GREP_TAGS" \
+              --arg source_run_id "$RUN_ID" \
+              --arg source_repo "$SOURCE_REPO" \
+              '{mode: $mode, spec_file: $spec_file, grep_tags: $grep_tags, source_run_id: $source_run_id, source_repo: $source_repo}')
+
+            gh workflow run e2e-flaky-test-runner.lock.yml \
+              -f aw_context="$AW_CONTEXT" || {
+              echo "::warning::Failed to dispatch Runner for $spec_file"
+              continue
+            }
+
+            DISPATCHED=$((DISPATCHED + 1))
+          done < /tmp/failing_specs.txt
+
+          echo ""
+          echo "=== Summary ==="
+          echo "Failing specs found: $(wc -l < /tmp/failing_specs.txt | tr -d ' ')"
+          echo "Runner dispatched: $DISPATCHED"
+          echo "Skipped (PR exists): $SKIPPED"

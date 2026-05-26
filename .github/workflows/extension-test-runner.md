@@ -52,7 +52,6 @@ on:
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
   cancel-in-progress: false
-  queue: max
   job-discriminator: ${{ inputs.version_label }}
 
 if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'

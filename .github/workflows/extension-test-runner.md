@@ -384,10 +384,11 @@ The test extension was built and is being served at `http://172.17.0.1:80`.
 2. Click on the 3-dot menu (kebab menu)
 3. Select "Developer Load"
 4. In the "Extension URL" field, type: `http://172.17.0.1:80`
-5. Click "Load"
-6. Wait for the extension loaded notification to appear
-7. Click on the refresh/reload button on the page
-8. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
+5. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
+6. Click "Load"
+7. Wait for the extension loaded notification to appear
+8. Click on the refresh/reload button on the page
+9. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
 
 ## Step 3 - Start Video Recording
 

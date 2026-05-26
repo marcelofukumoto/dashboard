@@ -176,7 +176,23 @@ steps:
         docker tag "${REGISTRY}/rancher/rancher:${VERSION}" "rancher/rancher:${VERSION}"
       fi
       echo "Starting Rancher with tag: ${VERSION}"
-      ./scripts/e2e-docker-start "${VERSION}"
+      ./scripts/e2e-docker-start "${VERSION}" || true
+
+  - name: Wait for Rancher to be ready
+    run: |
+      echo "Waiting for Rancher dashboard (up to 5 minutes)..."
+      for i in $(seq 1 60); do
+        STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1/dashboard/ 2>/dev/null || echo "000")
+        echo "Status: $STATUS (Try: $i/60)"
+        if [ "$STATUS" = "200" ]; then
+          echo "Dashboard is ready!"
+          exit 0
+        fi
+        sleep 5
+      done
+      echo "Dashboard did not become available in 5 minutes"
+      docker logs rancher-ext-test --tail 50 || true
+      exit 1
 
   - name: Bootstrap Rancher (first-login setup)
     run: |

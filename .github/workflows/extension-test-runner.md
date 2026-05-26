@@ -50,7 +50,9 @@ on:
         default: "true"
 
 concurrency:
-  group: "gh-aw-${{ github.workflow }}-${{ inputs.version_label }}"
+  group: "gh-aw-${{ github.workflow }}"
+  cancel-in-progress: false
+  queue: max
   job-discriminator: ${{ inputs.version_label }}
 
 if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'
@@ -685,6 +687,10 @@ Compile a results summary in this format:
 
 ### Summary
 **Total Tests**: <N> | **Passed**: <N> | **Failed**: <N> | **Skipped**: <N>
+
+IMPORTANT: Count every row in the results table below to get the totals.
+There are exactly 25 individual tests (1.1, 1.2, 2.1-2.6, 3.1-3.2, 4.1-4.4, 5.1, 6.1-6.3, 7.1-7.4, 8.1-8.3).
+Total = Passed + Failed + Skipped. Verify the math matches the table rows.
 
 ### Results
 

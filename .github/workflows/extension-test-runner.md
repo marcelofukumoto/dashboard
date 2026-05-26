@@ -454,12 +454,16 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 ## Step 5 - Stop Video and Compile Results
 
 1. Run `playwright-cli video-stop` to finalize the recording
-2. Verify files were captured:
+2. Copy evidence into the agent artifact directory so it survives the upload step:
+```bash
+cp -r /tmp/gh-aw/ext-test-evidence /tmp/gh-aw/agent/ext-test-evidence
+```
+3. Verify files were captured:
 ```bash
 echo "=== Captured Playwright artifacts ==="
-find /tmp/gh-aw/ext-test-evidence -type f -exec ls -lh {} \;
+find /tmp/gh-aw/agent/ext-test-evidence -type f -exec ls -lh {} \;
 echo "=== Total size ==="
-du -sh /tmp/gh-aw/ext-test-evidence/
+du -sh /tmp/gh-aw/agent/ext-test-evidence/
 ```
 
 Compile a results summary in this format:

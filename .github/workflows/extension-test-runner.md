@@ -566,6 +566,8 @@ After writing, call `push_repo_memory`.
 
 - **ALWAYS start video recording before executing tests** — this is mandatory, not optional
 - **ALWAYS stop video recording after all tests** — run `playwright-cli video-stop` in Step 5
+- **NEVER use `playwright-cli run-code` or write custom Playwright scripts** — use ONLY the built-in `playwright-cli` commands (open, goto, snapshot, click, fill, eval, screenshot, etc.). If a command doesn't work, retry or try a different selector — do NOT fall back to scripting
+- **Do NOT debug infrastructure** (proxy configs, squid settings, extension server internals, Rancher source code). If something doesn't work, retry with the provided approach or mark the test as FAILED and move on
 - Execute EVERY test case, even if earlier ones fail
 - Always take screenshots with absolute paths: `/tmp/gh-aw/ext-test-evidence/<name>.png`
 - Be patient with waits — pages may load slowly

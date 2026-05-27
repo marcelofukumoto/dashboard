@@ -276,6 +276,8 @@ and Shell API features work correctly.
 - Extension server is running at `http://172.17.0.1:80` (serves the built test extension)
 - You run inside an AWF sandbox. Use `172.17.0.1` (Docker bridge gateway) to reach host services, NOT `localhost`
 - Use `playwright-cli <command>` in bash to drive the browser
+- **IMPORTANT**: Rancher uses a self-signed certificate. You MUST configure Playwright to ignore HTTPS errors before any navigation (see Step 0.5)
+- **IMPORTANT**: The AWF sandbox sets `HTTPS_PROXY`/`HTTP_PROXY` env vars. You MUST unset them before every `playwright-cli` command that navigates to Rancher
 
 ## Playwright CLI Usage
 
@@ -359,9 +361,39 @@ echo "=== Selectors ==="
 cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(none)"
 ```
 
+## Step 0.5 - Configure Playwright for Self-Signed Certificates (MANDATORY)
+
+**You MUST complete this step before ANY `playwright-cli open` or `playwright-cli goto` command.
+Rancher uses a self-signed certificate. Without this config, Playwright will fail with SSL errors
+and you will waste time debugging. Do NOT skip this step.**
+
+1. Create the Playwright config to ignore HTTPS errors:
+```bash
+mkdir -p ~/.playwright && cat > ~/.playwright/cli.config.json << 'EOF'
+{
+  "browser": {
+    "contextOptions": {
+      "ignoreHTTPSErrors": true
+    }
+  }
+}
+EOF
+cat ~/.playwright/cli.config.json
+```
+2. Verify the config file was created and contains `ignoreHTTPSErrors: true`
+3. From this point on, **always unset proxy env vars** before `playwright-cli` commands that navigate:
+```bash
+unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"
+```
+
+**Every `playwright-cli open`, `goto`, and `snapshot` command MUST be prefixed with:**
+```bash
+unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy &&
+```
+
 ## Step 1 - Login to Rancher
 
-1. Run `playwright-cli open "https://172.17.0.1/dashboard/"`
+1. Run `unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"`
 2. Run `playwright-cli snapshot` to see the login page structure and find element refs
 3. Fill the password field using `playwright-cli fill <ref> "password"`
 4. Click the "Log In" button using `playwright-cli click <ref>`
@@ -389,12 +421,23 @@ The test extension was built and is being served at `http://172.17.0.1:80`.
 8. Click on the refresh/reload button on the page
 9. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
 
-## Step 3 - Start Video Recording
+## Step 3 - Start Video Recording (MANDATORY)
 
-1. Run `playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm`
-2. If it fails, log the error but continue — screenshots are still valuable
+**You MUST complete this step before proceeding to Step 4. Do NOT skip it.**
+
+1. Run the following command to start video recording:
+```bash
+playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm
+```
+2. Verify the recording started by checking the command output for success
+3. If the first attempt fails, retry up to 2 more times with a 3-second wait between attempts
+4. If all 3 attempts fail, log the error and continue — but you MUST attempt it 3 times first
 
 ## Step 4 - Execute Test Cases
+
+**Pre-flight checklist — confirm ALL before proceeding:**
+- [ ] Video recording started in Step 3
+- [ ] Evidence directory exists at `/tmp/gh-aw/ext-test-evidence/`
 
 Execute ALL test cases below. Even if earlier tests fail, continue with the remaining ones.
 Always take screenshots with absolute paths under `/tmp/gh-aw/ext-test-evidence/`.
@@ -521,11 +564,13 @@ After writing, call `push_repo_memory`.
 
 ## Rules
 
+- **ALWAYS start video recording before executing tests** — this is mandatory, not optional
+- **ALWAYS stop video recording after all tests** — run `playwright-cli video-stop` in Step 5
 - Execute EVERY test case, even if earlier ones fail
 - Always take screenshots with absolute paths: `/tmp/gh-aw/ext-test-evidence/<name>.png`
 - Be patient with waits — pages may load slowly
 - Use `data-testid` selectors whenever possible
-- After all tests, ALWAYS verify evidence files exist
+- After all tests, ALWAYS verify evidence files exist (both screenshots AND video)
 - If `playwright-cli screenshot` fails, retry once with a different filename
 - Respect version gates — check the skip flags before each gated test group
 - When checking console logs, use `playwright-cli console` to read browser console output

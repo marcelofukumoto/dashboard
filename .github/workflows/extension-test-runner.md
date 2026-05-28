@@ -391,6 +391,18 @@ unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "http
 unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy &&
 ```
 
+## Step 0.7 - Start Video Recording (MANDATORY)
+
+**You MUST complete this step before proceeding to Step 1. Do NOT skip it.**
+
+1. Run the following command to start video recording:
+```bash
+playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm
+```
+2. Verify the recording started by checking the command output for success
+3. If the first attempt fails, retry up to 2 more times with a 3-second wait between attempts
+4. If all 3 attempts fail, log the error and continue — but you MUST attempt it 3 times first
+
 ## Step 1 - Login to Rancher
 
 1. Run `unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"`
@@ -416,27 +428,16 @@ The test extension was built and is being served at `http://172.17.0.1:80`.
 3. Select "Developer Load"
 4. In the "Extension URL" field, type: `http://172.17.0.1:80`
 5. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
-6. Click "Load"
+6. **Before clicking Load**, verify the persist checkbox is checked using `playwright-cli snapshot` — confirm the checkbox is ticked. If it is not checked, check it and verify again
+7. Click "Load"
 7. Wait for the extension loaded notification to appear
 8. Click on the refresh/reload button on the page
 9. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
 
-## Step 3 - Start Video Recording (MANDATORY)
-
-**You MUST complete this step before proceeding to Step 4. Do NOT skip it.**
-
-1. Run the following command to start video recording:
-```bash
-playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm
-```
-2. Verify the recording started by checking the command output for success
-3. If the first attempt fails, retry up to 2 more times with a 3-second wait between attempts
-4. If all 3 attempts fail, log the error and continue — but you MUST attempt it 3 times first
-
-## Step 4 - Execute Test Cases
+## Step 3 - Execute Test Cases
 
 **Pre-flight checklist — confirm ALL before proceeding:**
-- [ ] Video recording started in Step 3
+- [ ] Video recording started in Step 0.7
 - [ ] Evidence directory exists at `/tmp/gh-aw/ext-test-evidence/`
 
 Execute ALL test cases below. Even if earlier tests fail, continue with the remaining ones.
@@ -494,7 +495,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 
 ---
 
-## Step 5 - Stop Video and Compile Results
+## Step 4 - Stop Video and Compile Results
 
 1. Run `playwright-cli video-stop` to finalize the recording
 2. Copy evidence into the agent artifact directory so it survives the upload step:
@@ -538,13 +539,13 @@ For each failed test: what was expected, what actually happened, which step fail
 - Screenshots: list all .png files
 ```
 
-## Step 6 - Create Issue with Results
+## Step 5 - Create Issue with Results
 
 Use `create-issue` to create a GitHub issue with the full results.
 
 The issue title should be: `[extension-test] Rancher ${{ github.event.inputs.version_label }} - <PASSED/FAILED> (<X>/<Y> tests)`
 
-## Step 7 - Update Learnings (failures only)
+## Step 6 - Update Learnings (failures only)
 
 Skip this step entirely if all tests passed.
 
@@ -565,7 +566,7 @@ After writing, call `push_repo_memory`.
 ## Rules
 
 - **ALWAYS start video recording before executing tests** — this is mandatory, not optional
-- **ALWAYS stop video recording after all tests** — run `playwright-cli video-stop` in Step 5
+- **ALWAYS stop video recording after all tests** — run `playwright-cli video-stop` in Step 4
 - **NEVER use `playwright-cli run-code` or write custom Playwright scripts** — use ONLY the built-in `playwright-cli` commands (open, goto, snapshot, click, fill, eval, screenshot, etc.). If a command doesn't work, retry or try a different selector — do NOT fall back to scripting
 - **Do NOT debug infrastructure** (proxy configs, squid settings, extension server internals, Rancher source code). If something doesn't work, retry with the provided approach or mark the test as FAILED and move on
 - Execute EVERY test case, even if earlier ones fail

@@ -389,6 +389,7 @@ jobs:
   agent:
     needs: activation
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     permissions: read-all
     concurrency:
       group: "gh-aw-copilot-${{ github.workflow }}-${{ inputs.version_label }}"

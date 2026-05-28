@@ -416,6 +416,13 @@ playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.even
 
 The test extension was built and is being served at `http://172.17.0.1:80`.
 
+### 2.0 Discover the extension module name
+Before loading the extension, query the extension server catalog to find the correct module name:
+```bash
+curl -s http://172.17.0.1:80/ | python3 -c "import sys,json; data=json.load(sys.stdin); [print(f'name={p[\"name\"]} version={p[\"version\"]} main={p.get(\"main\",\"N/A\")}') for p in data]"
+```
+Note the `name` field (e.g. `elemental`) — this is the extension module name you will need.
+
 ### 2.1 Enable Extension Developer Features
 1. Click on the user avatar in the header (use `playwright-cli snapshot` to find it, then `playwright-cli click <ref>`)
 2. Click "Preferences"
@@ -430,9 +437,13 @@ The test extension was built and is being served at `http://172.17.0.1:80`.
 5. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
 6. **Before clicking Load**, verify the persist checkbox is checked using `playwright-cli snapshot` — confirm the checkbox is ticked. If it is not checked, check it and verify again
 7. Click "Load"
-7. Wait for the extension loaded notification to appear
-8. Click on the refresh/reload button on the page
-9. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
+8. Wait for the extension loaded notification to appear
+9. Reload the page and verify the extension is listed on the Extensions page
+10. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
+
+**If the extension fails to load**, check the browser console for errors and verify:
+- The extension server is reachable: `curl -s http://172.17.0.1:80/`
+- The JS bundle exists: `curl -s -o /dev/null -w "%{http_code}" http://172.17.0.1:80/<module-name>/<main-field-from-catalog>`
 
 ## Step 3 - Execute Test Cases
 

@@ -227,6 +227,17 @@ steps:
 
       echo "Rancher bootstrap complete"
 
+  - name: Pre-install Playwright ffmpeg
+    run: |
+      FFMPEG_DIR="$HOME/.cache/ms-playwright/ffmpeg-1011"
+      mkdir -p "$FFMPEG_DIR"
+      curl -sL "https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip" -o /tmp/ffmpeg-pw.zip
+      unzip -qo /tmp/ffmpeg-pw.zip -d "$FFMPEG_DIR"
+      chmod +x "$FFMPEG_DIR"/ffmpeg-linux 2>/dev/null || true
+      rm -f /tmp/ffmpeg-pw.zip
+      echo "Playwright ffmpeg pre-installed to $FFMPEG_DIR"
+      ls -la "$FFMPEG_DIR"
+
   - name: Prepare Playwright output directory
     run: |
       mkdir -p /tmp/gh-aw/ext-test-evidence
@@ -402,17 +413,13 @@ unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy &&
 
 **You MUST complete this step before proceeding to Step 1. Do NOT skip it.**
 
-Video recording requires ffmpeg AND an open browser session. Follow this exact order:
+Video recording requires an open browser session. Follow this exact order:
 
-1. Install ffmpeg (required by Playwright for video encoding):
-```bash
-npx playwright install ffmpeg
-```
-2. Open the browser first (video-start needs an active browser session):
+1. Open the browser first (video-start needs an active browser session):
 ```bash
 unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"
 ```
-3. Start video recording:
+2. Start video recording:
 ```bash
 playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm
 ```

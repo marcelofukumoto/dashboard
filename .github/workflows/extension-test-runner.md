@@ -143,6 +143,10 @@ steps:
       git clone --depth 1 --branch compatibility-tests-version \
         https://github.com/aalves08/elemental-ui.git /tmp/elemental-ui
       cd /tmp/elemental-ui
+      # Strip RC/pre-release suffixes from extension version to avoid
+      # CRD version parsing bugs in Rancher <= 2.13 (split('-').pop() breaks on RC versions)
+      sed -i.bak -e 's/\("version": "[0-9]*\.[0-9]*\.[0-9]*\)-[^"]*"/\1"/g' pkg/elemental/package.json
+      rm pkg/elemental/package.json.bak
       yarn install --frozen-lockfile
       # Switch to Verdaccio to get local shell
       yarn config set registry ${VERDACCIO_NPM_REGISTRY}
@@ -452,8 +456,8 @@ for p in data:
 "
 ```
 Save these two values — you will need them in Step 2.2:
-- **EXTENSION_URL**: the full path to the UMD JS bundle (e.g. `http://172.17.0.1:80/elemental-3.0.2-rc.1/elemental-3.0.2-rc.1.umd.min.js`)
-- **MODULE_NAME**: `{name}-{version}` (e.g. `elemental-3.0.2-rc.1`)
+- **EXTENSION_URL**: the full path to the UMD JS bundle (e.g. `http://172.17.0.1:80/elemental-3.0.2/elemental-3.0.2.umd.min.js`)
+- **MODULE_NAME**: `{name}-{version}` (e.g. `elemental-3.0.2`)
 
 ### 2.1 Enable Extension Developer Features
 1. Click on the user avatar in the header (use `playwright-cli snapshot` to find it, then `playwright-cli click <ref>`)
@@ -466,7 +470,7 @@ Save these two values — you will need them in Step 2.2:
 2. Click on the 3-dot menu (kebab menu)
 3. Select "Developer Load"
 4. In the "Extension URL" field, fill the **EXTENSION_URL** from Step 2.0 (the full path to the UMD JS bundle, NOT the base URL)
-5. In the "Extension module name" field, fill the **MODULE_NAME** from Step 2.0 (`{name}-{version}`, e.g. `elemental-3.0.2-rc.1`). The field may auto-fill incorrectly — always clear it and set the correct value
+5. In the "Extension module name" field, fill the **MODULE_NAME** from Step 2.0 (`{name}-{version}`, e.g. `elemental-3.0.2`). The field may auto-fill incorrectly — always clear it and set the correct value
 6. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
 7. **Before clicking Load**, use `playwright-cli snapshot` to verify all three fields:
    - Extension URL contains the full path to the `.umd.min.js` file

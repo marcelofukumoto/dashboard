@@ -1,6 +1,6 @@
 ---
 name: Extension Compatibility Test Runner
-run-name: "Extension Compatibility Test Runner - ${{ inputs.version_label }}"
+run-name: "Extension Test Runner - ${{ inputs.version_label }} - Group ${{ inputs.test_group }}"
 description: |
   Tests extension compatibility against a specific Rancher version using Playwright CLI.
   Builds a test extension from aalves08/elemental-ui (compatibility-tests-version branch)
@@ -48,9 +48,14 @@ on:
         required: false
         type: string
         default: "true"
+      test_group:
+        description: "Test group to execute (1-8, or 'all')"
+        required: false
+        type: string
+        default: "all"
 
 concurrency:
-  group: "gh-aw-${{ github.workflow }}-${{ inputs.version_label }}"
+  group: "gh-aw-${{ github.workflow }}-${{ inputs.version_label }}-${{ inputs.test_group }}"
   cancel-in-progress: false
   job-discriminator: ${{ inputs.version_label }}
 
@@ -365,6 +370,15 @@ echo ""
 echo "=== Selectors ==="
 cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(none)"
 ```
+
+## Test Group Selection
+
+**Test group to execute**: `${{ github.event.inputs.test_group }}`
+
+- If the value is `all`, execute ALL test groups (1 through 8)
+- If the value is a number (1-8), execute **ONLY** that test group and skip all others
+- For skipped groups, mark each test as "SKIPPED (not in this session)" in the results table
+- You MUST still complete Steps 0 through 2 (setup, login, developer-load) regardless of which group is selected
 
 ## Step 0.5 - Configure Playwright for Self-Signed Certificates (MANDATORY)
 
@@ -856,7 +870,7 @@ For each failed test: what was expected, what actually happened, which step fail
 
 Use `create-issue` to create a GitHub issue with the full results.
 
-The issue title should be: `[extension-test] Rancher ${{ github.event.inputs.version_label }} - <PASSED/FAILED> (<X>/<Y> tests)`
+The issue title should be: `[extension-test] Rancher ${{ github.event.inputs.version_label }} - Group ${{ github.event.inputs.test_group }} - <PASSED/FAILED> (<X>/<Y> tests)`
 
 ## Step 6 - Update Learnings (failures only)
 

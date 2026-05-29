@@ -50,7 +50,7 @@ on:
         default: "true"
 
 concurrency:
-  group: "gh-aw-${{ github.workflow }}"
+  group: "gh-aw-${{ github.workflow }}-${{ inputs.version_label }}"
   cancel-in-progress: false
   job-discriminator: ${{ inputs.version_label }}
 

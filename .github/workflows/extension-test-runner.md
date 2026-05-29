@@ -829,8 +829,9 @@ Compile a results summary in this format:
 ### Summary
 **Total Tests**: <N> | **Passed**: <N> | **Failed**: <N> | **Skipped**: <N>
 
-IMPORTANT: Count every row in the results table below to get the totals.
-Total = Passed + Failed + Skipped. Verify the math matches the table rows.
+IMPORTANT: Each row in the results table is ONE test. Count the rows to get the totals.
+There are 25 tests total (1.1, 1.2, 2.1-2.6, 3.1, 3.2, 4.1-4.4, 5.1, 6.1-6.3, 7.1-7.4, 8.1-8.3).
+Total = Passed + Failed + Skipped. Verify the math matches the number of table rows.
 
 ### Results
 

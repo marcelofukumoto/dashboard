@@ -157,7 +157,7 @@ steps:
       # CRD version parsing bugs in Rancher <= 2.13 (split('-').pop() breaks on RC versions)
       sed -i.bak -e 's/\("version": "[0-9]*\.[0-9]*\.[0-9]*\)-[^"]*"/\1"/g' pkg/elemental/package.json
       rm pkg/elemental/package.json.bak
-      yarn install --frozen-lockfile
+      yarn install
       # Switch to Verdaccio to get local shell
       yarn config set registry ${VERDACCIO_NPM_REGISTRY}
       sed -i.bak -e "s/\"\@rancher\/shell\": \"[0-9]*.[0-9]*.[0-9]*\",/\"\@rancher\/shell\": \"${SHELL_VERSION}\",/g" package.json

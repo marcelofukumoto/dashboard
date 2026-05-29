@@ -75,6 +75,7 @@ env:
   RANCHER_HOST_HTTP_PORT: "9080"
   RANCHER_CONTAINER_NAME: "rancher-ext-test"
   CATTLE_BOOTSTRAP_PASSWORD: "password"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
 steps:
   - name: Setup env
@@ -226,17 +227,6 @@ steps:
         -d "{\"name\":\"first-login\",\"value\":\"false\"}"
 
       echo "Rancher bootstrap complete"
-
-  - name: Pre-install Playwright ffmpeg
-    run: |
-      FFMPEG_DIR="$HOME/.cache/ms-playwright/ffmpeg-1011"
-      mkdir -p "$FFMPEG_DIR"
-      curl -sL "https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip" -o /tmp/ffmpeg-pw.zip
-      unzip -qo /tmp/ffmpeg-pw.zip -d "$FFMPEG_DIR"
-      chmod +x "$FFMPEG_DIR"/ffmpeg-linux 2>/dev/null || true
-      rm -f /tmp/ffmpeg-pw.zip
-      echo "Playwright ffmpeg pre-installed to $FFMPEG_DIR"
-      ls -la "$FFMPEG_DIR"
 
   - name: Prepare Playwright output directory
     run: |
@@ -413,13 +403,17 @@ unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy &&
 
 **You MUST complete this step before proceeding to Step 1. Do NOT skip it.**
 
-Video recording requires an open browser session. Follow this exact order:
+Video recording requires ffmpeg AND an open browser session. Follow this exact order:
 
-1. Open the browser first (video-start needs an active browser session):
+1. Install ffmpeg (required by Playwright for video encoding):
+```bash
+npx playwright install ffmpeg
+```
+2. Open the browser (video-start needs an active browser session):
 ```bash
 unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"
 ```
-2. Start video recording:
+3. Start video recording:
 ```bash
 playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm
 ```

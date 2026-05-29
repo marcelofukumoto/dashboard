@@ -441,12 +441,25 @@ The browser should already be open from Step 0.7. If not, open it now.
 
 The test extension was built and is being served at `http://172.17.0.1:80`.
 
-### 2.0 Discover the extension module name
-Before loading the extension, query the extension server catalog to find the correct module name:
+### 2.0 Discover the extension details and build the developer-load values
+Before loading the extension, query the extension server catalog and compute the exact URL and module name:
 ```bash
-curl -s http://172.17.0.1:80/ | python3 -c "import sys,json; data=json.load(sys.stdin); [print(f'name={p[\"name\"]} version={p[\"version\"]} main={p.get(\"main\",\"N/A\")}') for p in data]"
+curl -s http://172.17.0.1:80/ | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for p in data:
+    name = p['name']
+    version = p['version']
+    main = p.get('main', 'N/A')
+    module = f'{name}-{version}'
+    url = f'http://172.17.0.1:80/{module}/{main}'
+    print(f'EXTENSION_URL={url}')
+    print(f'MODULE_NAME={module}')
+"
 ```
-Note the `name` field (e.g. `elemental`) — this is the extension module name you will need.
+Save these two values — you will need them in Step 2.2:
+- **EXTENSION_URL**: the full path to the UMD JS bundle (e.g. `http://172.17.0.1:80/elemental-3.0.2-rc.1/elemental-3.0.2-rc.1.umd.min.js`)
+- **MODULE_NAME**: `{name}-{version}` (e.g. `elemental-3.0.2-rc.1`)
 
 ### 2.1 Enable Extension Developer Features
 1. Click on the user avatar in the header (use `playwright-cli snapshot` to find it, then `playwright-cli click <ref>`)
@@ -458,12 +471,13 @@ Note the `name` field (e.g. `elemental`) — this is the extension module name y
 1. Navigate to the Extensions page via the sidebar menu
 2. Click on the 3-dot menu (kebab menu)
 3. Select "Developer Load"
-4. In the "Extension URL" field, type: `http://172.17.0.1:80`
-5. **IMPORTANT — Module name auto-fill**: After filling the URL, the "Module Name" field may auto-fill incorrectly (e.g. with the hostname `172.17.0.1:80` instead of the actual module name). Use `playwright-cli snapshot` to check the module name field. If it does not match the module name from Step 2.0, **clear it** and fill it with the correct module name (e.g. `elemental`)
+4. In the "Extension URL" field, fill the **EXTENSION_URL** from Step 2.0 (the full path to the UMD JS bundle, NOT the base URL)
+5. In the "Extension module name" field, fill the **MODULE_NAME** from Step 2.0 (`{name}-{version}`, e.g. `elemental-3.0.2-rc.1`). The field may auto-fill incorrectly — always clear it and set the correct value
 6. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
-7. **Before clicking Load**, use `playwright-cli snapshot` to verify:
-   - The persist checkbox is checked. If not, check it and verify again
-   - The module name field contains the correct value from Step 2.0 (NOT the URL hostname)
+7. **Before clicking Load**, use `playwright-cli snapshot` to verify all three fields:
+   - Extension URL contains the full path to the `.umd.min.js` file
+   - Module name is `{name}-{version}` (NOT just the name, NOT the URL hostname)
+   - Persist checkbox is checked
 8. Click "Load"
 9. Wait for the extension loaded notification to appear
 10. Reload the page and verify the extension is listed on the Extensions page
@@ -471,9 +485,9 @@ Note the `name` field (e.g. `elemental`) — this is the extension module name y
 
 **If the extension fails to load**, check the browser console for errors:
 - `curl -s http://172.17.0.1:80/` — verify the extension server is reachable
-- `curl -s -o /dev/null -w "%{http_code}" http://172.17.0.1:80/<module-name>/<main-field-from-catalog>` — verify the JS bundle exists
+- `curl -s -o /dev/null -w "%{http_code}" <EXTENSION_URL>` — verify the JS bundle exists at the URL from Step 2.0
 - If you see "Mixed Content" errors, the Playwright config from Step 0.5 was not applied correctly. Verify that `~/.playwright/cli.config.json` contains the `launchOptions.args` with `--allow-running-insecure-content`. You may need to close and reopen the browser for the config to take effect
-- **Do NOT** debug by reading Rancher source code, trying alternative URLs, or manually constructing JS bundle paths. The developer load dialog handles URL resolution automatically — just ensure the base URL and module name are correct
+- **Do NOT** debug by reading Rancher source code or trying alternative URL patterns — use the exact values from Step 2.0
 
 ## Step 3 - Execute Test Cases
 

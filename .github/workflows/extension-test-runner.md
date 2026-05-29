@@ -482,6 +482,49 @@ Save these two values — you will need them in Step 2.2:
 - If you see "Mixed Content" errors, the Playwright config from Step 0.5 was not applied correctly. Verify that `~/.playwright/cli.config.json` contains the `launchOptions.args` with `--allow-running-insecure-content`. You may need to close and reopen the browser for the config to take effect
 - **Do NOT** debug by reading Rancher source code or trying alternative URL patterns — use the exact values from Step 2.0
 
+## Selector Fallback Strategy
+
+Some extension-injected elements may not have `data-testid` attributes in all Rancher versions. When looking for an element, **always try `data-testid` first**, then fall back to `aria-label` or text-based selectors.
+
+Use this pattern to check and fall back:
+```bash
+# Try data-testid first, then aria-label
+playwright-cli eval "
+  document.querySelector('[data-testid=\"TESTID\"]') ||
+  document.querySelector('[aria-label=\"ARIA_LABEL\"]')
+  ? 'found' : 'not found'
+"
+```
+
+When clicking an element with fallback:
+```bash
+# Try clicking by data-testid, if not found try aria-label
+playwright-cli eval "
+  const el = document.querySelector('[data-testid=\"TESTID\"]') ||
+             document.querySelector('[aria-label=\"ARIA_LABEL\"]');
+  if (el) { el.click(); 'clicked'; } else { 'not found'; }
+"
+```
+
+If **neither** `data-testid` nor `aria-label` finds the element, use `playwright-cli snapshot` to inspect the page structure and locate the element by its visible text or position.
+
+### Fallback selector reference
+
+| Test | Primary (`data-testid`) | Fallback (`aria-label`) |
+|------|------------------------|------------------------|
+| 1.1 | `extension-header-action-action-one` | _(use snapshot to find action button in header)_ |
+| 1.2 | `extension-header-action-action-two` | _(use snapshot to find action button in header)_ |
+| 2.1 | `btn-detail-page-id` | `detail-page-label` |
+| 2.2 | `btn-create-page-id` | `create-page-label` |
+| 2.3 | `btn-edit-page-id` | `edit-page-label` |
+| 2.4 | `btn-show-configuration-id` | `show-configuration-label` |
+| 2.5 | `tab-cluster-create-rke2-id` | `cluster-create-rke2-label` |
+| 2.6 | `btn-pod-detail-id` | `pod-detail-label` |
+
+For tests 3.x–8.x, elements are already identified by visible text content (banner text, button labels, column headers), so no `data-testid` fallback is needed.
+
+---
+
 ## Step 3 - Execute Test Cases
 
 **Pre-flight checklist — confirm ALL before proceeding:**
@@ -492,6 +535,7 @@ Execute ALL test cases below. Even if earlier tests fail, continue with the rema
 Always take screenshots with absolute paths under `/tmp/gh-aw/ext-test-evidence/`.
 
 Remember the retry policy: retry each test up to 3 times before marking as FAILED.
+Apply the **Selector Fallback Strategy** above whenever a `data-testid` selector is not found.
 
 ---
 
@@ -499,14 +543,14 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 
 #### Test 1.1: Header Action Button 1
 1. Go to the home page via the sidebar menu
-2. Check that in the header there's an element with `data-testid="extension-header-action-action-one"`
+2. Check that in the header there's an element with `data-testid="extension-header-action-action-one"`. If not found, use `playwright-cli snapshot` to locate the action button in the header area and click it by ref
 3. Click on it
 4. Check the browser console for the log message "action executed 1"
 5. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-1-1-header-action-one.png`
 
 #### Test 1.2: Header Action Button 2
 1. Go to the local cluster via the sidebar menu
-2. Check that in the header there's an element with `data-testid="extension-header-action-action-two"`
+2. Check that in the header there's an element with `data-testid="extension-header-action-action-two"`. If not found, use `playwright-cli snapshot` to locate the action button in the header area and click it by ref
 3. Click on it
 4. Check the browser console for the log message "action executed 2"
 5. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-1-2-header-action-two.png`
@@ -521,7 +565,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 1. Go to local cluster in the sidebar menu
 2. Go to Service Discovery > Services list page
 3. Click on any given service to check the details page
-4. A new tab should appear with an element with `data-testid="btn-detail-page-id"` and `aria-label="detail-page-label"`
+4. A new tab should appear with an element with `data-testid="btn-detail-page-id"`. **Fallback**: if not found, look for `aria-label="detail-page-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
 7. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-2-1-tab-resource-detail-page.png`
@@ -533,7 +577,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 2. Go to Service Discovery > Services list page
 3. Click on "Create" to create a new service
 4. Select "Cluster IP"
-5. A new tab should appear with an element with `data-testid="btn-create-page-id"` and `aria-label="create-page-label"`
+5. A new tab should appear with an element with `data-testid="btn-create-page-id"`. **Fallback**: if not found, look for `aria-label="create-page-label"`
 6. Click on that tab
 7. New tab content should appear with text "THIS IS A DEMO TAB"
 8. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-2-2-tab-resource-create-page.png`
@@ -544,7 +588,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 1. Go to local cluster in the sidebar menu
 2. Go to Service Discovery > Services list page
 3. On any service listed, go to the table row actions and click "Edit Config"
-4. A new tab should appear with an element with `data-testid="btn-edit-page-id"` and `aria-label="edit-page-label"`
+4. A new tab should appear with an element with `data-testid="btn-edit-page-id"`. **Fallback**: if not found, look for `aria-label="edit-page-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
 7. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-2-3-tab-resource-edit-page.png`
@@ -556,7 +600,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 2. Go to Service Discovery > Services list page
 3. Click on any given service to check the details page
 4. Click on "Show Configuration"
-5. A new tab should appear with an element with `data-testid="btn-show-configuration-id"` and `aria-label="show-configuration-label"`
+5. A new tab should appear with an element with `data-testid="btn-show-configuration-id"`. **Fallback**: if not found, look for `aria-label="show-configuration-label"`
 6. Click on that tab
 7. New tab content should appear with text "THIS IS A DEMO TAB"
 8. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-2-4-tab-resource-show-config.png`
@@ -567,7 +611,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 1. Go to "Cluster Management" in the sidebar menu
 2. Click "Create"
 3. Select "Custom" cluster
-4. A new tab should appear with an element with `data-testid="tab-cluster-create-rke2-id"` and `aria-label="cluster-create-rke2-label"`
+4. A new tab should appear with an element with `data-testid="tab-cluster-create-rke2-id"`. **Fallback**: if not found, look for `aria-label="cluster-create-rke2-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
 7. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-2-5-tab-cluster-create-rke2.png`
@@ -578,7 +622,7 @@ Remember the retry policy: retry each test up to 3 times before marking as FAILE
 1. Go to local cluster in the sidebar menu
 2. Go to Workloads > Pods list page
 3. Click on any given pod to check the details page
-4. A new tab should appear with an element with `data-testid="btn-pod-detail-id"` and `aria-label="pod-detail-label"`
+4. A new tab should appear with an element with `data-testid="btn-pod-detail-id"`. **Fallback**: if not found, look for `aria-label="pod-detail-label"`
 5. Click on that tab
 6. New tab content should appear with text "THIS IS A DEMO TAB"
 7. Screenshot: `/tmp/gh-aw/ext-test-evidence/test-2-6-tab-resource-detail-legacy.png`
@@ -835,7 +879,7 @@ After writing, call `push_repo_memory`.
 - Execute EVERY test case, even if earlier ones fail
 - Always take screenshots with absolute paths: `/tmp/gh-aw/ext-test-evidence/<name>.png`
 - Be patient with waits — pages may load slowly
-- Use `data-testid` selectors whenever possible
+- Use `data-testid` selectors as primary, falling back to `aria-label` or text selectors per the **Selector Fallback Strategy** section above
 - After all tests, ALWAYS verify evidence files exist (both screenshots AND video)
 - If `playwright-cli screenshot` fails, retry once with a different filename
 - Respect version gates — check the skip flags before each gated test group

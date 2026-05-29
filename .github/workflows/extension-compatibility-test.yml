@@ -243,7 +243,7 @@ jobs:
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         env:
-          TEST_BASE_URL: https://127.0.0.1
+          TEST_BASE_URL: https://127.0.0.1/dashboard
           TEST_USERNAME: admin
           TEST_PASSWORD: ${{ env.CATTLE_BOOTSTRAP_PASSWORD }}
           CYPRESS_extension_server_url: http://127.0.0.1:80

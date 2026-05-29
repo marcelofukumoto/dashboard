@@ -65,7 +65,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 1: ActionLocation.HEADER', () => {
     it('1.1 Header Action Button 1', () => {
-      cy.visit('/dashboard/home');
+      cy.visit('/home');
 
       cy.window().then((win) => {
         cy.spy(win.console, 'log').as('consoleLog');
@@ -76,7 +76,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     it('1.2 Header Action Button 2', () => {
-      cy.visit('/dashboard/c/local/explorer');
+      cy.visit('/c/local/explorer');
 
       cy.window().then((win) => {
         cy.spy(win.console, 'log').as('consoleLog');
@@ -93,14 +93,14 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     const conditionalIt = skipTabDetailPage ? it.skip : it;
 
     conditionalIt('2.1 Tab RESOURCE_DETAIL_PAGE', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.service');
+      cy.visit('/c/local/explorer/core.v1.service');
       cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
       cy.getId('btn-detail-page-id').should('exist').click();
       cy.contains('THIS IS A DEMO TAB').should('be.visible');
     });
 
     conditionalIt('2.2 Tab RESOURCE_CREATE_PAGE', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.service');
+      cy.visit('/c/local/explorer/core.v1.service');
       cy.contains('Create').click();
       cy.contains('Cluster IP').click();
       cy.getId('btn-create-page-id').should('exist').click();
@@ -108,7 +108,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     conditionalIt('2.3 Tab RESOURCE_EDIT_PAGE', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.service');
+      cy.visit('/c/local/explorer/core.v1.service');
       cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('button.btn-sm').click();
       cy.contains('Edit Config').click();
       cy.getId('btn-edit-page-id').should('exist').click();
@@ -116,7 +116,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     conditionalIt('2.4 Tab RESOURCE_SHOW_CONFIGURATION', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.service');
+      cy.visit('/c/local/explorer/core.v1.service');
       cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
       cy.contains('Show Configuration').click();
       cy.getId('btn-show-configuration-id').should('exist').click();
@@ -124,14 +124,14 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     (skipClusterRke2 ? it.skip : it)('2.5 Tab CLUSTER_CREATE_RKE2', () => {
-      cy.visit('/dashboard/c/local/manager/provisioning.cattle.io.cluster/create');
+      cy.visit('/c/local/manager/provisioning.cattle.io.cluster/create');
       cy.contains('Custom').click();
       cy.getId('tab-cluster-create-rke2-id').should('exist').click();
       cy.contains('THIS IS A DEMO TAB').should('be.visible');
     });
 
     it('2.6 Tab RESOURCE_DETAIL (legacy)', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.pod');
+      cy.visit('/c/local/explorer/core.v1.pod');
       cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
       cy.getId('btn-pod-detail-id').should('exist').click();
       cy.contains('THIS IS A DEMO TAB').should('be.visible');
@@ -142,7 +142,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 3: ActionLocation.TABLE', () => {
     it('3.1 Table Action (non-bulkable)', () => {
-      cy.visit('/dashboard/c/local/apps/catalog.cattle.io.clusterrepo');
+      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
 
       cy.window().then((win) => {
         cy.spy(win.console, 'log').as('consoleLog');
@@ -158,7 +158,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     it('3.2 Table Action (bulkable)', () => {
-      cy.visit('/dashboard/c/local/apps/catalog.cattle.io.clusterrepo');
+      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
 
       cy.window().then((win) => {
         cy.spy(win.console, 'log').as('consoleLog');
@@ -175,19 +175,19 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 4: PanelLocation Extension Points', () => {
     it('4.1 PanelLocation.RESOURCE_LIST', () => {
-      cy.visit('/dashboard/c/local/apps/catalog.cattle.io.clusterrepo');
+      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
       cy.contains('Just a sample banner to show that we can render anything here', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('4.2 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (details)', () => {
-      cy.visit('/dashboard/c/local/apps/catalog.cattle.io.clusterrepo');
+      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
       cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
       cy.contains('This is a generic masthead component example').should('be.visible');
       cy.contains('This is an example on DetailTop').should('be.visible');
     });
 
     it('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
-      cy.visit('/dashboard/c/local/apps/catalog.cattle.io.clusterrepo');
+      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
       cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('button.btn-sm').click();
       cy.contains('Edit Config').click();
       cy.contains('This is a generic masthead component example').should('be.visible');
@@ -195,7 +195,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     (skipAboutTop ? it.skip : it)('4.4 PanelLocation.ABOUT_TOP', () => {
-      cy.visit('/dashboard/about');
+      cy.visit('/about');
       cy.contains('Just a sample banner to show that we can render anything here', LONG_TIMEOUT_OPT).should('be.visible');
     });
   });
@@ -204,7 +204,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 5: CLUSTER_DASHBOARD_CARD', () => {
     it('5.1 Dashboard Card', () => {
-      cy.visit('/dashboard/c/local/explorer');
+      cy.visit('/c/local/explorer');
       cy.contains('Demo card title 1', LONG_TIMEOUT_OPT).should('be.visible');
     });
   });
@@ -213,7 +213,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 6: Table Hook & Table Columns', () => {
     (skipTableHook ? it.skip : it)('6.1 Table Hook', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.pod');
+      cy.visit('/c/local/explorer/core.v1.pod');
 
       cy.window().then((win) => {
         cy.spy(win.console, 'error').as('consoleError');
@@ -224,13 +224,13 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     it('6.2 Add Table Column 1 - Custom Formatter', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.secret');
+      cy.visit('/c/local/explorer/core.v1.secret');
       cy.contains('Extension Col - Example 1', LONG_TIMEOUT_OPT).should('be.visible');
       cy.contains('Formatter: Custom Cell Value 1').should('be.visible');
     });
 
     it('6.3 Add Table Column 2 - Pagination', () => {
-      cy.visit('/dashboard/c/local/explorer/core.v1.configmap');
+      cy.visit('/c/local/explorer/core.v1.configmap');
       cy.contains('Extension Col - Example 2', LONG_TIMEOUT_OPT).should('be.visible');
     });
   });
@@ -241,13 +241,13 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     const conditionalIt = skipShellApi ? it.skip : it;
 
     conditionalIt('7.1 Slide-in API', () => {
-      cy.visit('/dashboard/c/local/elemental/shell-api-demo');
+      cy.visit('/c/local/elemental/shell-api-demo');
       cy.contains('Test Slide-in API', LONG_TIMEOUT_OPT).click();
       cy.contains('Hello from SlideIn panel!').should('be.visible');
     });
 
     conditionalIt('7.2 Modal API', () => {
-      cy.visit('/dashboard/c/local/elemental/shell-api-demo');
+      cy.visit('/c/local/elemental/shell-api-demo');
       cy.contains('Test Modal API', LONG_TIMEOUT_OPT).click();
       cy.contains('Sample general title').should('be.visible');
       cy.contains('Cancel').should('be.visible');
@@ -255,14 +255,14 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     conditionalIt('7.3 Notification API', () => {
-      cy.visit('/dashboard/c/local/elemental/shell-api-demo');
+      cy.visit('/c/local/elemental/shell-api-demo');
       cy.contains('Test Notification API', LONG_TIMEOUT_OPT).click();
       cy.contains('Some notification title').should('be.visible');
       cy.contains('Hello world! Success!').should('be.visible');
     });
 
     conditionalIt('7.4 System API', () => {
-      cy.visit('/dashboard/c/local/elemental/shell-api-demo');
+      cy.visit('/c/local/elemental/shell-api-demo');
       cy.contains('Test System API', LONG_TIMEOUT_OPT).click();
       cy.contains('gitCommit').should('be.visible');
       cy.contains('rancherVersion').should('be.visible');
@@ -274,7 +274,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 8: Elemental Extension Tests', () => {
     it('8.1 Elemental Extension Setup', () => {
-      cy.visit('/dashboard/c/local/elemental');
+      cy.visit('/c/local/elemental');
       cy.contains('Dashboard', LONG_TIMEOUT_OPT).click();
       cy.contains('Install Elemental Operator').click();
       cy.contains('Next').click();
@@ -285,13 +285,13 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
       // Close the terminal and verify dashboard
       cy.get('.closer').click();
-      cy.visit('/dashboard/c/local/elemental');
+      cy.visit('/c/local/elemental');
       cy.contains('Dashboard').click();
       cy.contains('OS Management Dashboard', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('8.2 Elemental EDIT/CREATE Interface', () => {
-      cy.visit('/dashboard/c/local/elemental');
+      cy.visit('/c/local/elemental');
       cy.contains('Registration Endpoint', LONG_TIMEOUT_OPT).click();
       cy.contains('Create').click();
 
@@ -306,13 +306,13 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');
 
       // Verify in list
-      cy.visit('/dashboard/c/local/elemental');
+      cy.visit('/c/local/elemental');
       cy.contains('Registration Endpoint').click();
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('8.3 Elemental EDIT/CREATE YAML Interface', () => {
-      cy.visit('/dashboard/c/local/elemental');
+      cy.visit('/c/local/elemental');
       cy.contains('Inventory of Machines', LONG_TIMEOUT_OPT).click();
       cy.contains('Create from YAML').click();
 

@@ -8,6 +8,16 @@ on:
         required: false
         type: string
         default: ""
+      extension_repo:
+        description: "Test extension git repo URL"
+        required: false
+        type: string
+        default: "https://github.com/aalves08/elemental-ui.git"
+      extension_branch:
+        description: "Test extension git branch or tag"
+        required: false
+        type: string
+        default: "compatibility-tests-version"
   # schedule:
   #   - cron: "17 6 * * 1" # Weekly on Monday at 6:17am UTC
 
@@ -20,7 +30,7 @@ env:
 jobs:
   test-matrix:
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'rancher' || vars.ENABLE_EXTENSION_COMPAT_TEST == 'true'
+    if: github.repository_owner == 'rancher' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -148,8 +158,8 @@ jobs:
           DEFAULT_NPM_REGISTRY="https://registry.npmjs.org/"
           VERDACCIO_NPM_REGISTRY="http://localhost:4873"
           yarn config set registry ${DEFAULT_NPM_REGISTRY}
-          git clone --depth 1 --branch compatibility-tests-version \
-            https://github.com/aalves08/elemental-ui.git /tmp/elemental-ui
+          git clone --depth 1 --branch ${{ github.event.inputs.extension_branch || 'compatibility-tests-version' }} \
+            ${{ github.event.inputs.extension_repo || 'https://github.com/aalves08/elemental-ui.git' }} /tmp/elemental-ui
           cd /tmp/elemental-ui
           sed -i 's/\("version": "[0-9]*\.[0-9]*\.[0-9]*\)-[^"]*"/\1"/g' pkg/elemental/package.json
           yarn install --frozen-lockfile

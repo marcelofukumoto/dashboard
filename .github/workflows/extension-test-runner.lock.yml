@@ -1,4 +1,4 @@
-# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"dcdf7913671a0d21259dea39fa39f54d91610aa3af36889f2cd7ea5891983e6a","compiler_version":"v0.71.5","strict":true,"agent_id":"copilot"}
+# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"5619a390429079bc84b41379764e41c1619bd246f0460a9063c78ccc02d4854e","compiler_version":"v0.71.5","strict":true,"agent_id":"copilot"}
 # gh-aw-manifest: {"version":1,"secrets":["COPILOT_GITHUB_TOKEN","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/checkout","sha":"de0fac2e4500dabe0009e67214ff5f5447ce83dd","version":"v6.0.2"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"373c709c69115d41ff229c7e5df9f8788daa9553","version":"v9"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/github-script","sha":"d746ffe35508b1917358783b479e04febd2b8f71","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","version":"v6.4.0"},{"repo":"actions/setup-python","sha":"a309ff8b426b58ec0e2a45f0f869d46889d02405","version":"v6.2.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"b8068426813005612b960b5ab0b8bd2c27142323","version":"v0.71.5"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.25.40","digest":"sha256:14ff567e8d9d4c2fbc5e55c973488381c71d7e0fdbe72d30ee7b8a738fd86504","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.25.40@sha256:14ff567e8d9d4c2fbc5e55c973488381c71d7e0fdbe72d30ee7b8a738fd86504"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.25.40","digest":"sha256:2883ca3e5ae9f330cafdd9345bfd4ae17fc8da36c96d4c9a1f76e922b4c45280","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.25.40@sha256:2883ca3e5ae9f330cafdd9345bfd4ae17fc8da36c96d4c9a1f76e922b4c45280"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.25.40","digest":"sha256:b084f4a2c771f584ee68084ced52fa6b3245197a1889645d817462d307d3ac51","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.25.40@sha256:b084f4a2c771f584ee68084ced52fa6b3245197a1889645d817462d307d3ac51"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.3.6","digest":"sha256:2bb8eef86006a4c5963c55616a9c51c32f27bfdecb023b8aa6f91f6718d9171c","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.3.6@sha256:2bb8eef86006a4c5963c55616a9c51c32f27bfdecb023b8aa6f91f6718d9171c"},{"image":"ghcr.io/github/github-mcp-server:v1.0.3","digest":"sha256:2ac27ef03461ef2b877031b838a7d1fd7f12b12d4ace7796d8cad91446d55959","pinned_image":"ghcr.io/github/github-mcp-server:v1.0.3@sha256:2ac27ef03461ef2b877031b838a7d1fd7f12b12d4ace7796d8cad91446d55959"},{"image":"node:lts-alpine","digest":"sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f","pinned_image":"node:lts-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f"}]}
 #    ___                   _   _      
 #   / _ \                 | | (_)     
@@ -66,6 +66,16 @@ name: "Extension Compatibility Test Runner"
       aw_context:
         default: ""
         description: Agent caller context (used internally by Agentic Workflows).
+        required: false
+        type: string
+      extension_branch:
+        default: compatibility-tests-version
+        description: Test extension git branch or tag
+        required: false
+        type: string
+      extension_repo:
+        default: https://github.com/aalves08/elemental-ui.git
+        description: Test extension git repo URL
         required: false
         type: string
       rancher_registry:
@@ -247,22 +257,22 @@ jobs:
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh"
           {
-          cat << 'GH_AW_PROMPT_61decbe9a1112af3_EOF'
+          cat << 'GH_AW_PROMPT_538976e1a4771b77_EOF'
           <system>
-          GH_AW_PROMPT_61decbe9a1112af3_EOF
+          GH_AW_PROMPT_538976e1a4771b77_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/playwright_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/repo_memory_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_61decbe9a1112af3_EOF'
+          cat << 'GH_AW_PROMPT_538976e1a4771b77_EOF'
           <safe-output-tools>
           Tools: create_issue, missing_tool, missing_data, noop
           </safe-output-tools>
-          GH_AW_PROMPT_61decbe9a1112af3_EOF
+          GH_AW_PROMPT_538976e1a4771b77_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/mcp_cli_tools_prompt.md"
-          cat << 'GH_AW_PROMPT_61decbe9a1112af3_EOF'
+          cat << 'GH_AW_PROMPT_538976e1a4771b77_EOF'
           <github-context>
           The following GitHub context information is available for this workflow:
           {{#if __GH_AW_GITHUB_ACTOR__ }}
@@ -294,12 +304,12 @@ jobs:
             - **Note**: If a branch you need is not in the list above and is not listed as an additional fetched ref, it has NOT been checked out. For private repositories you cannot fetch it without proper authentication. If the branch is required and not available, exit with an error and ask the user to add it to the `fetch:` option of the `checkout:` configuration (e.g., `fetch: ["refs/pulls/open/*"]` for all open PR refs, or `fetch: ["main", "feature/my-branch"]` for specific branches).
           </github-context>
           
-          GH_AW_PROMPT_61decbe9a1112af3_EOF
+          GH_AW_PROMPT_538976e1a4771b77_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_61decbe9a1112af3_EOF'
+          cat << 'GH_AW_PROMPT_538976e1a4771b77_EOF'
           </system>
           {{#runtime-import .github/workflows/extension-test-runner.md}}
-          GH_AW_PROMPT_61decbe9a1112af3_EOF
+          GH_AW_PROMPT_538976e1a4771b77_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
@@ -518,6 +528,8 @@ jobs:
           yarn config set registry ${VERDACCIO_NPM_REGISTRY}
           yarn publish:lib
       - env:
+          GH_AW_GITHUB_EVENT_INPUTS_EXTENSION_BRANCH: ${{ github.event.inputs.extension_branch }}
+          GH_AW_GITHUB_EVENT_INPUTS_EXTENSION_REPO: ${{ github.event.inputs.extension_repo }}
           GH_AW_GITHUB_WORKSPACE: ${{ github.workspace }}
         name: Clone and build test extension
         run: |
@@ -526,8 +538,8 @@ jobs:
           VERDACCIO_NPM_REGISTRY="http://localhost:4873"
           # Clone with default registry for initial deps
           yarn config set registry ${DEFAULT_NPM_REGISTRY}
-          git clone --depth 1 --branch compatibility-tests-version \
-            https://github.com/aalves08/elemental-ui.git /tmp/elemental-ui
+          git clone --depth 1 --branch $GH_AW_GITHUB_EVENT_INPUTS_EXTENSION_BRANCH \
+            $GH_AW_GITHUB_EVENT_INPUTS_EXTENSION_REPO /tmp/elemental-ui
           cd /tmp/elemental-ui
           # Strip RC/pre-release suffixes from extension version to avoid
           # CRD version parsing bugs in Rancher <= 2.13 (split('-').pop() breaks on RC versions)
@@ -697,9 +709,9 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/gh-aw/safeoutputs"
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_70efe1234313be8c_EOF'
+          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_8191295d773eb779_EOF'
           {"create_issue":{"expires":168,"labels":["bot/extension-test"],"max":1,"title_prefix":"[extension-test] "},"create_report_incomplete_issue":{},"mentions":{"enabled":false},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"push_repo_memory":{"memories":[{"dir":"/tmp/gh-aw/repo-memory/default","id":"default","max_file_count":100,"max_file_size":102400,"max_patch_size":102400}]},"report_incomplete":{}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_70efe1234313be8c_EOF
+          GH_AW_SAFE_OUTPUTS_CONFIG_8191295d773eb779_EOF
       - name: Generate Safe Outputs Tools
         env:
           GH_AW_TOOLS_META_JSON: |
@@ -899,7 +911,7 @@ jobs:
           
           mkdir -p /home/runner/.copilot
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_7ea398248756a241_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_7607141942c7cf92_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
               "github": {
@@ -940,7 +952,7 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_7ea398248756a241_EOF
+          GH_AW_MCP_CONFIG_7607141942c7cf92_EOF
       - name: Mount MCP servers as CLIs
         id: mount-mcp-clis
         continue-on-error: true

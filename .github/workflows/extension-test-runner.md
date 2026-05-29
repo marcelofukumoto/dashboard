@@ -48,6 +48,16 @@ on:
         required: false
         type: string
         default: "true"
+      extension_repo:
+        description: "Test extension git repo URL"
+        required: false
+        type: string
+        default: "https://github.com/aalves08/elemental-ui.git"
+      extension_branch:
+        description: "Test extension git branch or tag"
+        required: false
+        type: string
+        default: "compatibility-tests-version"
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
@@ -140,8 +150,8 @@ steps:
       VERDACCIO_NPM_REGISTRY="http://localhost:4873"
       # Clone with default registry for initial deps
       yarn config set registry ${DEFAULT_NPM_REGISTRY}
-      git clone --depth 1 --branch compatibility-tests-version \
-        https://github.com/aalves08/elemental-ui.git /tmp/elemental-ui
+      git clone --depth 1 --branch ${{ github.event.inputs.extension_branch }} \
+        ${{ github.event.inputs.extension_repo }} /tmp/elemental-ui
       cd /tmp/elemental-ui
       # Strip RC/pre-release suffixes from extension version to avoid
       # CRD version parsing bugs in Rancher <= 2.13 (split('-').pop() breaks on RC versions)

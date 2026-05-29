@@ -69,25 +69,21 @@ jobs:
           echo "Skipping ${{ matrix.version_label }} (only testing ${{ github.event.inputs.rancher_version }})"
           exit 0
 
-      - name: Dispatch extension-test-runner groups
+      - name: Dispatch extension-test-runner
         if: >-
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for group in 1 2 3 4 5 6 7 8; do
-            echo "Dispatching group $group for Rancher ${{ matrix.version_label }} (${{ matrix.rancher_version }})"
-            gh workflow run extension-test-runner.lock.yml \
-              --repo "${{ github.repository }}" \
-              -f rancher_version="${{ matrix.rancher_version }}" \
-              -f rancher_registry="${{ matrix.rancher_registry }}" \
-              -f version_label="${{ matrix.version_label }}" \
-              -f test_group="$group" \
-              -f skip_shell_api_tests="${{ matrix.skip_shell_api_tests }}" \
-              -f skip_tab_resource_detail_page="${{ matrix.skip_tab_resource_detail_page }}" \
-              -f skip_table_hook="${{ matrix.skip_table_hook }}" \
-              -f skip_about_top="${{ matrix.skip_about_top }}" \
-              -f skip_cluster_create_rke2="${{ matrix.skip_cluster_create_rke2 }}"
-            sleep 5
-          done
+          echo "Dispatching extension-test-runner for Rancher ${{ matrix.version_label }} (${{ matrix.rancher_version }})"
+          gh workflow run extension-test-runner.lock.yml \
+            --repo "${{ github.repository }}" \
+            -f rancher_version="${{ matrix.rancher_version }}" \
+            -f rancher_registry="${{ matrix.rancher_registry }}" \
+            -f version_label="${{ matrix.version_label }}" \
+            -f skip_shell_api_tests="${{ matrix.skip_shell_api_tests }}" \
+            -f skip_tab_resource_detail_page="${{ matrix.skip_tab_resource_detail_page }}" \
+            -f skip_table_hook="${{ matrix.skip_table_hook }}" \
+            -f skip_about_top="${{ matrix.skip_about_top }}" \
+            -f skip_cluster_create_rke2="${{ matrix.skip_cluster_create_rke2 }}"

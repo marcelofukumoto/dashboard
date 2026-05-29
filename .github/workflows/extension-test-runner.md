@@ -364,23 +364,30 @@ cat /tmp/gh-aw/repo-memory/extension-test/selectors.md 2>/dev/null || echo "(non
 ## Step 0.5 - Configure Playwright for Self-Signed Certificates (MANDATORY)
 
 **You MUST complete this step before ANY `playwright-cli open` or `playwright-cli goto` command.
-Rancher uses a self-signed certificate. Without this config, Playwright will fail with SSL errors
-and you will waste time debugging. Do NOT skip this step.**
+Rancher uses a self-signed certificate and the extension server uses HTTP while Rancher uses HTTPS.
+Without this config, Playwright will fail with SSL errors or Mixed Content blocking.
+Do NOT skip this step.**
 
-1. Create the Playwright config to ignore HTTPS errors:
+1. Create the Playwright config to ignore HTTPS errors AND allow mixed content (HTTP scripts on HTTPS pages):
 ```bash
 mkdir -p ~/.playwright && cat > ~/.playwright/cli.config.json << 'EOF'
 {
   "browser": {
     "contextOptions": {
       "ignoreHTTPSErrors": true
+    },
+    "launchOptions": {
+      "args": [
+        "--allow-running-insecure-content",
+        "--unsafely-treat-insecure-origin-as-secure=http://172.17.0.1"
+      ]
     }
   }
 }
 EOF
 cat ~/.playwright/cli.config.json
 ```
-2. Verify the config file was created and contains `ignoreHTTPSErrors: true`
+2. Verify the config file was created and contains both `ignoreHTTPSErrors: true` and the `launchOptions.args`
 3. From this point on, **always unset proxy env vars** before `playwright-cli` commands that navigate:
 ```bash
 unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"
@@ -434,16 +441,21 @@ Note the `name` field (e.g. `elemental`) — this is the extension module name y
 2. Click on the 3-dot menu (kebab menu)
 3. Select "Developer Load"
 4. In the "Extension URL" field, type: `http://172.17.0.1:80`
-5. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
-6. **Before clicking Load**, verify the persist checkbox is checked using `playwright-cli snapshot` — confirm the checkbox is ticked. If it is not checked, check it and verify again
-7. Click "Load"
-8. Wait for the extension loaded notification to appear
-9. Reload the page and verify the extension is listed on the Extensions page
-10. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
+5. **IMPORTANT — Module name auto-fill**: After filling the URL, the "Module Name" field may auto-fill incorrectly (e.g. with the hostname `172.17.0.1:80` instead of the actual module name). Use `playwright-cli snapshot` to check the module name field. If it does not match the module name from Step 2.0, **clear it** and fill it with the correct module name (e.g. `elemental`)
+6. Check the "Persist extension by creating custom resource" checkbox (this ensures the extension survives page reloads)
+7. **Before clicking Load**, use `playwright-cli snapshot` to verify:
+   - The persist checkbox is checked. If not, check it and verify again
+   - The module name field contains the correct value from Step 2.0 (NOT the URL hostname)
+8. Click "Load"
+9. Wait for the extension loaded notification to appear
+10. Reload the page and verify the extension is listed on the Extensions page
+11. Screenshot: `playwright-cli screenshot --filename /tmp/gh-aw/ext-test-evidence/03-extension-loaded.png`
 
-**If the extension fails to load**, check the browser console for errors and verify:
-- The extension server is reachable: `curl -s http://172.17.0.1:80/`
-- The JS bundle exists: `curl -s -o /dev/null -w "%{http_code}" http://172.17.0.1:80/<module-name>/<main-field-from-catalog>`
+**If the extension fails to load**, check the browser console for errors:
+- `curl -s http://172.17.0.1:80/` — verify the extension server is reachable
+- `curl -s -o /dev/null -w "%{http_code}" http://172.17.0.1:80/<module-name>/<main-field-from-catalog>` — verify the JS bundle exists
+- If you see "Mixed Content" errors, the Playwright config from Step 0.5 was not applied correctly. Verify that `~/.playwright/cli.config.json` contains the `launchOptions.args` with `--allow-running-insecure-content`. You may need to close and reopen the browser for the config to take effect
+- **Do NOT** debug by reading Rancher source code, trying alternative URLs, or manually constructing JS bundle paths. The developer load dialog handles URL resolution automatically — just ensure the base URL and module name are correct
 
 ## Step 3 - Execute Test Cases
 

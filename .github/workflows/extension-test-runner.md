@@ -402,18 +402,29 @@ unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy &&
 
 **You MUST complete this step before proceeding to Step 1. Do NOT skip it.**
 
-1. Run the following command to start video recording:
+Video recording requires ffmpeg AND an open browser session. Follow this exact order:
+
+1. Install ffmpeg (required by Playwright for video encoding):
+```bash
+npx playwright install ffmpeg
+```
+2. Open the browser first (video-start needs an active browser session):
+```bash
+unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"
+```
+3. Start video recording:
 ```bash
 playwright-cli video-start /tmp/gh-aw/ext-test-evidence/ext-test-${{ github.event.inputs.version_label }}.webm
 ```
-2. Verify the recording started by checking the command output for success
-3. If the first attempt fails, retry up to 2 more times with a 3-second wait between attempts
-4. If all 3 attempts fail, log the error and continue — but you MUST attempt it 3 times first
+4. Verify the recording started by checking the command output for success
+5. If the `video-start` command fails, retry up to 2 more times with a 3-second wait between attempts
+6. If all 3 attempts fail, log the error and continue — but you MUST attempt it 3 times first
 
 ## Step 1 - Login to Rancher
 
-1. Run `unset https_proxy HTTPS_PROXY HTTP_PROXY http_proxy && playwright-cli open "https://172.17.0.1/dashboard/"`
-2. Run `playwright-cli snapshot` to see the login page structure and find element refs
+The browser should already be open from Step 0.7. If not, open it now.
+
+1. Run `playwright-cli snapshot` to see the login page structure and find element refs
 3. Fill the password field using `playwright-cli fill <ref> "password"`
 4. Click the "Log In" button using `playwright-cli click <ref>`
 5. Wait for the Rancher Dashboard to load, then run `playwright-cli snapshot` to confirm

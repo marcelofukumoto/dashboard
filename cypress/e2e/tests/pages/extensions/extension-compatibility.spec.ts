@@ -14,7 +14,7 @@ const skipClusterRke2 = Cypress.env('skip_cluster_create_rke2') === 'true';
 let extensionUrl = '';
 let moduleName = '';
 
-describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () => {
+describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retries: 0 }, () => {
   before(() => {
     cy.login();
 

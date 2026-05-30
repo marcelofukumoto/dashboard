@@ -163,32 +163,13 @@ steps:
       sed -i.bak -e "s/\"\@rancher\/shell\": \"[0-9]*.[0-9]*.[0-9]*\",/\"\@rancher\/shell\": \"${SHELL_VERSION}\",/g" package.json
       rm package.json.bak
       yarn add @rancher/shell@${SHELL_VERSION} -W
+      # Patch source for backward compatibility: guard methods that don't exist in older Rancher versions
+      sed -i 's/\$plugin\.addTableHook(/typeof \$plugin.addTableHook === "function" \&\& \$plugin.addTableHook(/g' pkg/elemental/index.ts
       yarn build-pkg elemental
       # Copy built extension back to workspace
       cp -r dist-pkg ${{ github.workspace }}/dist-pkg
       # Reset registry
       yarn config set registry ${DEFAULT_NPM_REGISTRY}
-
-  - name: Patch extension for backward compatibility
-    run: |
-      # Add shims for methods that don't exist in older Rancher versions (< 2.14)
-      # This allows the extension to initialize without crashing on missing APIs
-      SHIM_CODE='
-      (function() {
-        var origDefault = window[Object.keys(window).find(function(k) { return k.startsWith("elemental-"); })].default;
-        var shimmedDefault = function(plugin, internal) {
-          if (!plugin.addTableHook) {
-            plugin.addTableHook = function() {};
-          }
-          return origDefault(plugin, internal);
-        };
-        window[Object.keys(window).find(function(k) { return k.startsWith("elemental-"); })].default = shimmedDefault;
-      })();'
-      # Append shim to each built UMD bundle
-      find dist-pkg -name "*.umd.min.js" | while read f; do
-        echo "$SHIM_CODE" >> "$f"
-        echo "Patched $f with backward-compatibility shims"
-      done
 
   - name: Start extension server
     run: |

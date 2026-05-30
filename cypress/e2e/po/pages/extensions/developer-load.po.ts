@@ -6,15 +6,15 @@ export default class DeveloperLoadDialogPo {
   }
 
   urlInput() {
-    return this.self().find('[label-key="plugins.developer.fields.url"] input');
+    return this.self().find('.labeled-input').first().find('input');
   }
 
   nameInput() {
-    return this.self().find('[label-key="plugins.developer.fields.name"] input');
+    return this.self().find('.labeled-input').eq(1).find('input');
   }
 
   persistCheckbox() {
-    return this.self().find('[label-key="plugins.developer.fields.persist"]');
+    return this.self().find('[data-checkbox-ctrl]');
   }
 
   loadButton() {

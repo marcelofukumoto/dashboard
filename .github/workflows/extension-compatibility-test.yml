@@ -29,7 +29,7 @@ env:
 
 jobs:
   test-matrix:
-    timeout-minutes: 30
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     if: github.repository_owner == 'rancher' || github.event_name == 'workflow_dispatch'
     strategy:

@@ -59,6 +59,8 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   beforeEach(() => {
     cy.login();
+    cy.visit('/c/local/explorer');
+    cy.get('.cluster-dashboard-glance', LONG_TIMEOUT_OPT).should('exist');
   });
 
   // ── Test Group 1: ActionLocation.HEADER ──

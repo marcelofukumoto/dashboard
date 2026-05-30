@@ -59,7 +59,6 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   beforeEach(() => {
     cy.login();
-    cy.updateNamespaceFilter('local', '', '{"local":["all://user"]}');
   });
 
   // ── Test Group 1: ActionLocation.HEADER ──

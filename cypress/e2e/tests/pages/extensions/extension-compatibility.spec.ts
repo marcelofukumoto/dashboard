@@ -37,7 +37,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     const extensionsPo = new ExtensionsPagePo();
 
     extensionsPo.goTo();
-    extensionsPo.waitForPage(null, 'available');
+    extensionsPo.waitForTitle();
 
     extensionsPo.extensionMenuToggle();
     new ActionMenuPo(extensionsPo.self()).getMenuItem('Developer Load').click();

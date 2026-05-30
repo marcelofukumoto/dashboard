@@ -19,7 +19,7 @@
 - Stand down — do nothing unless maintainer explicitly re-enables.
 
 ## Round-Robin (stood down since 2026-04-29)
-- Last runs: 2026-04-29, 2026-05-01 through 2026-05-07, 2026-05-22 through 2026-05-29 — all stood down, no re-enable signal.
+- Last runs: 2026-04-29 through 2026-05-30 — all stood down, no re-enable signal.
 
 ## Checked Off Items
 None

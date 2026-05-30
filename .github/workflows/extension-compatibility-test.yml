@@ -252,6 +252,29 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"name":"first-login","value":"false"}'
 
+      - name: Wait for cluster API schemas
+        if: >-
+          github.event.inputs.rancher_version == ''
+          || github.event.inputs.rancher_version == matrix.rancher_version
+        run: |
+          RANCHER_URL="https://127.0.0.1"
+          TOKEN=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local?action=login" \
+            -H "Content-Type: application/json" \
+            -d '{"username":"admin","password":"${{ env.CATTLE_BOOTSTRAP_PASSWORD }}"}' \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+          echo "Waiting for local cluster API schemas (up to 3 minutes)..."
+          for i in $(seq 1 36); do
+            if curl -sk -H "Authorization: Bearer ${TOKEN}" \
+              "${RANCHER_URL}/v1/schemas/core.v1.service" 2>/dev/null | \
+              python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if d.get('id')=='core.v1.service' else 1)" 2>/dev/null; then
+              echo "Cluster API schemas are ready!"
+              exit 0
+            fi
+            echo "  Waiting... ($i/36)"
+            sleep 5
+          done
+          echo "Warning: cluster API schemas may not be fully ready"
+
       - name: Run Cypress extension compatibility tests
         if: >-
           github.event.inputs.rancher_version == ''

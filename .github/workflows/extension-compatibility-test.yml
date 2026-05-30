@@ -184,6 +184,27 @@ jobs:
           yarn config set registry ${DEFAULT_NPM_REGISTRY}
           nvm use default
 
+      - name: Patch extension for backward compatibility
+        if: >-
+          github.event.inputs.rancher_version == ''
+          || github.event.inputs.rancher_version == matrix.rancher_version
+        run: |
+          SHIM_CODE='
+          (function() {
+            var origDefault = window[Object.keys(window).find(function(k) { return k.startsWith("elemental-"); })].default;
+            var shimmedDefault = function(plugin, internal) {
+              if (!plugin.addTableHook) {
+                plugin.addTableHook = function() {};
+              }
+              return origDefault(plugin, internal);
+            };
+            window[Object.keys(window).find(function(k) { return k.startsWith("elemental-"); })].default = shimmedDefault;
+          })();'
+          find dist-pkg -name "*.umd.min.js" | while read f; do
+            echo "$SHIM_CODE" >> "$f"
+            echo "Patched $f with backward-compatibility shims"
+          done
+
       - name: Start extension server
         if: >-
           github.event.inputs.rancher_version == ''

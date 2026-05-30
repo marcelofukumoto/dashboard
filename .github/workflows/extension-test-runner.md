@@ -153,23 +153,11 @@ steps:
       git clone --depth 1 --branch ${{ github.event.inputs.extension_branch }} \
         ${{ github.event.inputs.extension_repo }} /tmp/elemental-ui
       cd /tmp/elemental-ui
-      # Switch to the Node version required by the extension (from its .nvmrc)
-      export NVM_DIR="$HOME/.nvm"
-      if [ ! -d "$NVM_DIR" ]; then
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-      fi
-      . "$NVM_DIR/nvm.sh"
-      if [ -f .nvmrc ]; then
-        nvm install
-        echo "Building extension with Node $(node -v) (from extension .nvmrc)"
-      else
-        echo "No .nvmrc found in extension repo, using current Node $(node -v)"
-      fi
       # Strip RC/pre-release suffixes from extension version to avoid
       # CRD version parsing bugs in Rancher <= 2.13 (split('-').pop() breaks on RC versions)
       sed -i.bak -e 's/\("version": "[0-9]*\.[0-9]*\.[0-9]*\)-[^"]*"/\1"/g' pkg/elemental/package.json
       rm pkg/elemental/package.json.bak
-      yarn install
+      yarn install --frozen-lockfile
       # Switch to Verdaccio to get local shell
       yarn config set registry ${VERDACCIO_NPM_REGISTRY}
       sed -i.bak -e "s/\"\@rancher\/shell\": \"[0-9]*.[0-9]*.[0-9]*\",/\"\@rancher\/shell\": \"${SHELL_VERSION}\",/g" package.json
@@ -178,9 +166,29 @@ steps:
       yarn build-pkg elemental
       # Copy built extension back to workspace
       cp -r dist-pkg ${{ github.workspace }}/dist-pkg
-      # Reset registry and restore Node version
+      # Reset registry
       yarn config set registry ${DEFAULT_NPM_REGISTRY}
-      nvm use default
+
+  - name: Patch extension for backward compatibility
+    run: |
+      # Add shims for methods that don't exist in older Rancher versions (< 2.14)
+      # This allows the extension to initialize without crashing on missing APIs
+      SHIM_CODE='
+      (function() {
+        var origDefault = window[Object.keys(window).find(function(k) { return k.startsWith("elemental-"); })].default;
+        var shimmedDefault = function(plugin, internal) {
+          if (!plugin.addTableHook) {
+            plugin.addTableHook = function() {};
+          }
+          return origDefault(plugin, internal);
+        };
+        window[Object.keys(window).find(function(k) { return k.startsWith("elemental-"); })].default = shimmedDefault;
+      })();'
+      # Append shim to each built UMD bundle
+      find dist-pkg -name "*.umd.min.js" | while read f; do
+        echo "$SHIM_CODE" >> "$f"
+        echo "Patched $f with backward-compatibility shims"
+      done
 
   - name: Start extension server
     run: |

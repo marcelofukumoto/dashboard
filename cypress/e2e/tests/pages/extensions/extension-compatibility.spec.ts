@@ -59,6 +59,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   beforeEach(() => {
     cy.login();
+    cy.updateNamespaceFilter('local', '', '{"local":["all://user"]}');
   });
 
   // ── Test Group 1: ActionLocation.HEADER ──
@@ -109,7 +110,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
     conditionalIt('2.3 Tab RESOURCE_EDIT_PAGE', () => {
       cy.visit('/c/local/explorer/core.v1.service');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('button.btn-sm').click();
+      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('[data-testid$="-action-button"]').click();
       cy.contains('Edit Config').click();
       cy.getId('btn-edit-page-id').should('exist').click();
       cy.contains('THIS IS A DEMO TAB').should('be.visible');
@@ -148,16 +149,17 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
         cy.spy(win.console, 'log').as('consoleLog');
       });
 
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('button.btn-sm').click();
+      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('[data-testid$="-action-button"]').click();
       cy.contains('Demo table action').should('exist').click();
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 1/);
 
-      cy.get('table tbody tr').first().find('button.btn-sm').click();
+      cy.get('table tbody tr').first().find('[data-testid$="-action-button"]').click();
       cy.contains('Demo bulkable action').should('exist').click();
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 2/);
     });
 
     it('3.2 Table Action (bulkable)', () => {
+      cy.viewport(1920, 1080);
       cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
 
       cy.window().then((win) => {
@@ -188,7 +190,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
     it('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
       cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('button.btn-sm').click();
+      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('[data-testid$="-action-button"]').click();
       cy.contains('Edit Config').click();
       cy.contains('This is a generic masthead component example').should('be.visible');
       cy.contains('This is another component example for masthead details - edit view').should('be.visible');

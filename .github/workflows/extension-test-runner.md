@@ -153,11 +153,23 @@ steps:
       git clone --depth 1 --branch ${{ github.event.inputs.extension_branch }} \
         ${{ github.event.inputs.extension_repo }} /tmp/elemental-ui
       cd /tmp/elemental-ui
+      # Switch to the Node version required by the extension (from its .nvmrc)
+      export NVM_DIR="$HOME/.nvm"
+      if [ ! -d "$NVM_DIR" ]; then
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+      fi
+      . "$NVM_DIR/nvm.sh"
+      if [ -f .nvmrc ]; then
+        nvm install
+        echo "Building extension with Node $(node -v) (from extension .nvmrc)"
+      else
+        echo "No .nvmrc found in extension repo, using current Node $(node -v)"
+      fi
       # Strip RC/pre-release suffixes from extension version to avoid
       # CRD version parsing bugs in Rancher <= 2.13 (split('-').pop() breaks on RC versions)
       sed -i.bak -e 's/\("version": "[0-9]*\.[0-9]*\.[0-9]*\)-[^"]*"/\1"/g' pkg/elemental/package.json
       rm pkg/elemental/package.json.bak
-      yarn install --ignore-engines
+      yarn install
       # Switch to Verdaccio to get local shell
       yarn config set registry ${VERDACCIO_NPM_REGISTRY}
       sed -i.bak -e "s/\"\@rancher\/shell\": \"[0-9]*.[0-9]*.[0-9]*\",/\"\@rancher\/shell\": \"${SHELL_VERSION}\",/g" package.json
@@ -166,8 +178,9 @@ steps:
       yarn build-pkg elemental
       # Copy built extension back to workspace
       cp -r dist-pkg ${{ github.workspace }}/dist-pkg
-      # Reset registry
+      # Reset registry and restore Node version
       yarn config set registry ${DEFAULT_NPM_REGISTRY}
+      nvm use default
 
   - name: Start extension server
     run: |

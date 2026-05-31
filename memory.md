@@ -23,3 +23,6 @@
 
 ## Checked Off Items
 None
+
+## Round-Robin Log
+- 2026-05-31: Stood down — maintainer signal still active (no re-enable observed).

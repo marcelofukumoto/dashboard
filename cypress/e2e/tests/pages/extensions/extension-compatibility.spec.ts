@@ -122,10 +122,17 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     cy.get('.side-nav').contains('a', label, LONG_TIMEOUT_OPT).click();
   };
 
-  /** Click an extension-injected tab (by its documented data-testid) and assert its demo content */
-  const clickDemoTabAndAssert = (tabTestId: string) => {
-    cy.get(`[data-testid="${ tabTestId }"]`, LONG_TIMEOUT_OPT).should('be.visible').click();
-    cy.contains('THIS IS A DEMO TAB', MEDIUM_TIMEOUT_OPT).should('be.visible');
+  /**
+   * Click an extension-injected tab by its registered name and assert the demo content in its
+   * (now active/visible) panel. The tab button is `btn-<name>` (or `tab-<name>` for RKE2) and the
+   * content section has `id="<name>"`. Scoping to the panel avoids matching the same
+   * "THIS IS A DEMO TAB" text in other (hidden) demo-tab panels.
+   */
+  const clickDemoTabAndAssert = (tabName: string) => {
+    cy.get(`[data-testid="btn-${ tabName }"], [data-testid="tab-${ tabName }"]`, LONG_TIMEOUT_OPT)
+      .should('be.visible')
+      .click();
+    cy.get(`#${ tabName }`, MEDIUM_TIMEOUT_OPT).should('be.visible').and('contain', 'THIS IS A DEMO TAB');
   };
 
   /** Navigate to the Services list, filter to the test service and return its (string-backed) table */
@@ -197,10 +204,9 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     const conditionalIt = skipTabDetailPage ? it.skip : it;
 
     conditionalIt('2.1 Tab RESOURCE_DETAIL_PAGE', () => {
-      const table = goToServicesList();
-
-      table.detailsPageLinkWithName(svcName).click();
-      clickDemoTabAndAssert('btn-detail-page-id');
+      // Visit the service detail (view) page directly - clicking the name link can land on edit.
+      cy.visit(`/c/${ CLUSTER_ID }/explorer/service/${ NS }/${ svcName }`);
+      clickDemoTabAndAssert('detail-page-id');
     });
 
     conditionalIt('2.2 Tab RESOURCE_CREATE_PAGE', () => {
@@ -211,27 +217,27 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       services.clickCreate();
 
       cy.contains('Cluster IP', MEDIUM_TIMEOUT_OPT).click();
-      clickDemoTabAndAssert('btn-create-page-id');
+      clickDemoTabAndAssert('create-page-id');
     });
 
     conditionalIt('2.3 Tab RESOURCE_EDIT_PAGE', () => {
       const table = goToServicesList();
 
       table.rowActionMenuOpen(svcName).getMenuItem('Edit Config').click();
-      clickDemoTabAndAssert('btn-edit-page-id');
+      clickDemoTabAndAssert('edit-page-id');
     });
 
     conditionalIt('2.4 Tab RESOURCE_SHOW_CONFIGURATION', () => {
-      const table = goToServicesList();
-
-      table.detailsPageLinkWithName(svcName).click();
+      cy.visit(`/c/${ CLUSTER_ID }/explorer/service/${ NS }/${ svcName }`);
       cy.contains('Show Configuration', MEDIUM_TIMEOUT_OPT).click();
-      clickDemoTabAndAssert('btn-show-configuration-id');
+      clickDemoTabAndAssert('show-configuration-id');
     });
 
     (skipClusterRke2 ? it.skip : it)('2.5 Tab CLUSTER_CREATE_RKE2', () => {
       cy.visit(`/c/${ CLUSTER_ID }/manager/provisioning.cattle.io.cluster/create?type=custom#basic`);
-      clickDemoTabAndAssert('tab-cluster-create-rke2-id');
+      // Wait for the RKE2 config form's tab bar to render before looking for the extension tab.
+      cy.get('[data-testid="tabbed"], .tabbed', LONG_TIMEOUT_OPT).should('exist');
+      clickDemoTabAndAssert('cluster-create-rke2-id');
     });
 
     (skipResourceDetailLegacy ? it.skip : it)('2.6 Tab RESOURCE_DETAIL (legacy, up to v2.14)', () => {
@@ -245,7 +251,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       table.checkLoadingIndicatorNotVisible();
       table.filter(podName);
       table.detailsPageLinkWithName(podName).click();
-      clickDemoTabAndAssert('btn-pod-detail-id');
+      clickDemoTabAndAssert('pod-detail-id');
     });
   });
 
@@ -269,6 +275,9 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     it('3.2 Table Action (bulkable, via selection + bulk bar)', () => {
+      // Wide viewport so the bulk action button renders inline (it collapses into a dropdown otherwise)
+      cy.viewport(1920, 1080);
+
       const table = goToReposTable();
 
       cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
@@ -276,7 +285,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       new CheckboxInputPo(table.row(0).column(0)).check();
       new CheckboxInputPo(table.row(1).column(0)).check();
 
-      table.bulkActionButton('Demo bulkable action').should('not.be.disabled').click();
+      table.bulkActionButton('Demo bulkable action').should('be.visible').and('not.be.disabled').click();
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 2/);
     });
   });
@@ -327,10 +336,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   describe('Test Group 6: Table Hook & Table Columns', () => {
     (skipTableHook ? it.skip : it)('6.1 Table Hook (load, filter, sort)', () => {
-      // Spy must be attached before the table renders so the initial hook call is captured.
+      // The extension's table hook logs via console.error (see elemental index.ts).
+      // The spy must be attached before the table renders so the initial hook call is captured.
       cy.visit(`/c/${ CLUSTER_ID }/explorer/pod`, {
         onBeforeLoad: (win) => {
-          cy.spy(win.console, 'log').as('consoleLog');
+          cy.spy(win.console, 'error').as('consoleError');
         }
       });
 
@@ -341,18 +351,18 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       table.rowElementWithName(podName).should('be.visible');
 
       // on initial load
-      cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
+      cy.get('@consoleError').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
 
       // on filter
-      cy.get('@consoleLog').then((spy: any) => spy.resetHistory());
+      cy.get('@consoleError').then((spy: any) => spy.resetHistory());
       table.resetFilter();
       table.filter(podName);
-      cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
+      cy.get('@consoleError').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
 
       // on sort
-      cy.get('@consoleLog').then((spy: any) => spy.resetHistory());
+      cy.get('@consoleError').then((spy: any) => spy.resetHistory());
       table.self().find('thead tr th').contains('Name').click();
-      cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
+      cy.get('@consoleError').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
     });
 
     it('6.2 Add Table Column 1 - Custom Formatter', () => {

@@ -77,11 +77,17 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     // Enable extension developer features
     cy.setUserPreference({ 'plugin-developer': true });
 
+    // Warm up the local cluster first - on a freshly booted Rancher the explorer/uiplugins
+    // pages can race the cluster becoming ready, which would flake this (non-retryable) hook.
+    cy.visit(`/c/${ CLUSTER_ID }/explorer`);
+    cy.get('.cluster-dashboard-glance', LONG_TIMEOUT_OPT).should('exist');
+
     // Developer-load the extension
     const extensionsPo = new ExtensionsPagePo();
 
     extensionsPo.goTo();
-    extensionsPo.waitForTitle();
+    // Long timeout - the uiplugins page can take a while to render right after boot.
+    cy.get('[data-testid="extensions-page-title"]', LONG_TIMEOUT_OPT).should('contain', 'Extensions');
     extensionsPo.extensionMenuToggle();
     new ActionMenuPo(extensionsPo.self()).getMenuItem('Developer Load').click();
 

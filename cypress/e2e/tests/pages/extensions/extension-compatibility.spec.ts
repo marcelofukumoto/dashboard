@@ -7,8 +7,15 @@ import { WorkloadsPodsListPagePo } from '@/cypress/e2e/po/pages/explorer/workloa
 import { SecretsListPagePo } from '@/cypress/e2e/po/pages/explorer/secrets.po';
 import { ConfigMapListPagePo } from '@/cypress/e2e/po/pages/explorer/config-map.po';
 import ChartRepositoriesPagePo from '@/cypress/e2e/po/pages/chart-repositories.po';
+import SortableTablePo from '@/cypress/e2e/po/components/sortable-table.po';
 import { createPodBlueprint } from '@/cypress/e2e/blueprints/explorer/workload-pods';
 import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
+
+// Build the sortable table from a string selector so its `self()` re-queries the DOM on every
+// call. Constructing a SortableTablePo from a chainable (e.g. list().resourceTable()...) reuses a
+// single consumed chainable, so calls after `filter()` resolve to the search box instead of the table.
+const STANDARD_LIST = '[data-testid="sortable-table-list-container"]';
+const REPO_LIST = '[data-testid="app-cluster-repo-list"]';
 
 /**
  * Extension compatibility test suite.
@@ -117,23 +124,39 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
   /** Click an extension-injected tab (by its documented data-testid) and assert its demo content */
   const clickDemoTabAndAssert = (tabTestId: string) => {
-    cy.getId(tabTestId).should('be.visible').click();
+    cy.get(`[data-testid="${ tabTestId }"]`, LONG_TIMEOUT_OPT).should('be.visible').click();
     cy.contains('THIS IS A DEMO TAB', MEDIUM_TIMEOUT_OPT).should('be.visible');
   };
 
-  const goToServicesList = () => {
+  /** Navigate to the Services list, filter to the test service and return its (string-backed) table */
+  const goToServicesList = (): SortableTablePo => {
     const services = new ServicesPagePo(CLUSTER_ID);
 
     services.goTo();
     services.waitForPage();
 
-    const table = services.list().resourceTable().sortableTable();
+    const table = new SortableTablePo(STANDARD_LIST);
 
     table.checkLoadingIndicatorNotVisible();
     table.filter(svcName);
-    table.rowWithName(svcName).column(2).should('be.visible');
+    table.rowElementWithName(svcName).should('be.visible');
 
-    return services;
+    return table;
+  };
+
+  /** Navigate to the Apps > Repositories list and return its (string-backed) table */
+  const goToReposTable = (): SortableTablePo => {
+    const repos = new ChartRepositoriesPagePo(CLUSTER_ID, 'apps');
+
+    repos.goTo(CLUSTER_ID, 'apps');
+    repos.waitForPage();
+
+    const table = new SortableTablePo(REPO_LIST);
+
+    table.noRowsShouldNotExist();
+    table.checkLoadingIndicatorNotVisible();
+
+    return table;
   };
 
   // ── Test Group 1: ActionLocation.HEADER ──
@@ -174,9 +197,9 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     const conditionalIt = skipTabDetailPage ? it.skip : it;
 
     conditionalIt('2.1 Tab RESOURCE_DETAIL_PAGE', () => {
-      const services = goToServicesList();
+      const table = goToServicesList();
 
-      services.list().resourceTable().goToDetailsPage(svcName);
+      table.detailsPageLinkWithName(svcName).click();
       clickDemoTabAndAssert('btn-detail-page-id');
     });
 
@@ -192,18 +215,16 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     conditionalIt('2.3 Tab RESOURCE_EDIT_PAGE', () => {
-      const services = goToServicesList();
+      const table = goToServicesList();
 
-      services.list().resourceTable().sortableTable().rowActionMenuOpen(svcName)
-        .getMenuItem('Edit Config')
-        .click();
+      table.rowActionMenuOpen(svcName).getMenuItem('Edit Config').click();
       clickDemoTabAndAssert('btn-edit-page-id');
     });
 
     conditionalIt('2.4 Tab RESOURCE_SHOW_CONFIGURATION', () => {
-      const services = goToServicesList();
+      const table = goToServicesList();
 
-      services.list().resourceTable().goToDetailsPage(svcName);
+      table.detailsPageLinkWithName(svcName).click();
       cy.contains('Show Configuration', MEDIUM_TIMEOUT_OPT).click();
       clickDemoTabAndAssert('btn-show-configuration-id');
     });
@@ -219,11 +240,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       pods.goTo();
       pods.waitForPage();
 
-      const table = pods.list().resourceTable().sortableTable();
+      const table = new SortableTablePo(STANDARD_LIST);
 
       table.checkLoadingIndicatorNotVisible();
       table.filter(podName);
-      pods.list().resourceTable().goToDetailsPage(podName);
+      table.detailsPageLinkWithName(podName).click();
       clickDemoTabAndAssert('btn-pod-detail-id');
     });
   });
@@ -231,40 +252,24 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
   // ── Test Group 3: ActionLocation.TABLE ──
 
   describe('Test Group 3: ActionLocation.TABLE', () => {
-    const goToRepos = () => {
-      const repos = new ChartRepositoriesPagePo(CLUSTER_ID, 'apps');
-
-      repos.goTo(CLUSTER_ID, 'apps');
-      repos.waitForPage();
-
-      const table = repos.sortableTable();
-
-      table.noRowsShouldNotExist();
-      table.checkLoadingIndicatorNotVisible();
-
-      return repos;
-    };
-
     it('3.1 Table Action (row actions, non-bulkable + bulkable)', () => {
-      const repos = goToRepos();
-      const table = repos.sortableTable();
+      const table = goToReposTable();
 
       cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
 
       // "Demo table action" - scoped to the open row action menu (avoids the hidden bulk button)
       table.row(0).actionBtn().click();
-      table.rowActionMenu().getMenuItem('Demo table action').should('be.visible').click();
+      table.rowActionMenu().getMenuItem('Demo table action').click({ force: true });
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 1/);
 
       // "Demo bulkable action" as a row action
       table.row(0).actionBtn().click();
-      table.rowActionMenu().getMenuItem('Demo bulkable action').should('be.visible').click();
+      table.rowActionMenu().getMenuItem('Demo bulkable action').click({ force: true });
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 2/);
     });
 
     it('3.2 Table Action (bulkable, via selection + bulk bar)', () => {
-      const repos = goToRepos();
-      const table = repos.sortableTable();
+      const table = goToReposTable();
 
       cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
 
@@ -279,25 +284,15 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
   // ── Test Group 4: PanelLocation Extension Points ──
 
   describe('Test Group 4: PanelLocation Extension Points', () => {
-    const goToRepos = () => {
-      const repos = new ChartRepositoriesPagePo(CLUSTER_ID, 'apps');
-
-      repos.goTo(CLUSTER_ID, 'apps');
-      repos.waitForPage();
-      repos.sortableTable().noRowsShouldNotExist();
-
-      return repos;
-    };
-
     it('4.1 PanelLocation.RESOURCE_LIST', () => {
-      goToRepos();
+      goToReposTable();
       cy.contains('Just a sample banner to show that we can render anything here', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('4.2 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (details)', () => {
-      const repos = goToRepos();
+      const table = goToReposTable();
 
-      repos.sortableTable().row(0).self().find('a')
+      table.row(0).self().find('a')
         .first()
         .click();
       cy.contains('This is a generic masthead component example', MEDIUM_TIMEOUT_OPT).should('be.visible');
@@ -305,11 +300,10 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     });
 
     it('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
-      const repos = goToRepos();
-      const table = repos.sortableTable();
+      const table = goToReposTable();
 
       table.row(0).actionBtn().click();
-      table.rowActionMenu().getMenuItem('Edit Config').click();
+      table.rowActionMenu().getMenuItem('Edit Config').click({ force: true });
       cy.contains('This is a generic masthead component example', MEDIUM_TIMEOUT_OPT).should('be.visible');
       cy.contains('This is another component example for masthead details - edit view').should('be.visible');
     });
@@ -340,12 +334,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
         }
       });
 
-      const pods = new WorkloadsPodsListPagePo(CLUSTER_ID);
-      const table = pods.list().resourceTable().sortableTable();
+      const table = new SortableTablePo(STANDARD_LIST);
 
       table.checkLoadingIndicatorNotVisible();
       table.filter(podName);
-      table.rowWithName(podName).column(2).should('be.visible');
+      table.rowElementWithName(podName).should('be.visible');
 
       // on initial load
       cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
@@ -368,11 +361,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       secrets.goTo();
       secrets.waitForPage();
 
-      const table = secrets.list().resourceTable().sortableTable();
+      const table = new SortableTablePo(STANDARD_LIST);
 
       table.checkLoadingIndicatorNotVisible();
       table.filter(secretName);
-      table.rowWithName(secretName).column(2).should('be.visible');
+      table.rowElementWithName(secretName).should('be.visible');
 
       cy.contains('Extension Col - Example 1', MEDIUM_TIMEOUT_OPT).should('be.visible');
       cy.contains('Formatter: Custom Cell Value 1').should('be.visible');
@@ -384,11 +377,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       configMaps.goTo();
       configMaps.waitForPage();
 
-      const table = configMaps.list().resourceTable().sortableTable();
+      const table = new SortableTablePo(STANDARD_LIST);
 
       table.checkLoadingIndicatorNotVisible();
       table.filter(cmName);
-      table.rowWithName(cmName).column(2).should('be.visible');
+      table.rowElementWithName(cmName).should('be.visible');
 
       cy.contains('Extension Col - Example 2', MEDIUM_TIMEOUT_OPT).should('be.visible');
     });
@@ -452,12 +445,14 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
     it('8.2 Elemental EDIT/CREATE Interface', () => {
       navToElementalEntry('Registration Endpoint');
-      cy.contains('Create', MEDIUM_TIMEOUT_OPT).click();
+      // Exact match so we don't accidentally hit "Create from YAML"
+      cy.contains(/^Create$/, MEDIUM_TIMEOUT_OPT).click();
 
-      cy.get('input[placeholder*="name" i]', MEDIUM_TIMEOUT_OPT).first()
+      cy.get('[data-testid="name-ns-description-name"] input, input#name, input[placeholder*="name" i]', MEDIUM_TIMEOUT_OPT)
+        .first()
         .clear()
         .type('demo-reg-endpoint-1');
-      cy.contains('button', 'Create').click();
+      cy.contains('button', /^Create$/).click();
 
       // details page
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');

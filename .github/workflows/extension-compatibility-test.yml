@@ -37,38 +37,44 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - rancher_version: "v2.11-head"
-            rancher_registry: "stgregistry.suse.com"
-            version_label: "2.11"
-            skip_shell_api_tests: "true"
-            skip_tab_resource_detail_page: "true"
-            skip_table_hook: "true"
-            skip_about_top: "true"
-            skip_cluster_create_rke2: "true"
-          - rancher_version: "v2.12-head"
-            rancher_registry: "stgregistry.suse.com"
-            version_label: "2.12"
-            skip_shell_api_tests: "true"
-            skip_tab_resource_detail_page: "false"
-            skip_table_hook: "true"
-            skip_about_top: "true"
-            skip_cluster_create_rke2: "true"
-          - rancher_version: "v2.13-head"
-            rancher_registry: "stgregistry.suse.com"
-            version_label: "2.13"
-            skip_shell_api_tests: "true"
-            skip_tab_resource_detail_page: "false"
-            skip_table_hook: "true"
-            skip_about_top: "false"
-            skip_cluster_create_rke2: "false"
-          - rancher_version: "v2.14-head"
-            rancher_registry: ""
-            version_label: "2.14"
-            skip_shell_api_tests: "false"
-            skip_tab_resource_detail_page: "false"
-            skip_table_hook: "false"
-            skip_about_top: "false"
-            skip_cluster_create_rke2: "false"
+          # NOTE: For this phase we only test `latest` (Rancher head = 2.15). The older versions
+          # below are intentionally commented out and kept for easy restoration in a later phase.
+          # - rancher_version: "v2.11-head"
+          #   rancher_registry: "stgregistry.suse.com"
+          #   version_label: "2.11"
+          #   skip_shell_api_tests: "true"
+          #   skip_tab_resource_detail_page: "true"
+          #   skip_table_hook: "true"
+          #   skip_about_top: "true"
+          #   skip_cluster_create_rke2: "true"
+          #   skip_resource_detail_legacy: "false"
+          # - rancher_version: "v2.12-head"
+          #   rancher_registry: "stgregistry.suse.com"
+          #   version_label: "2.12"
+          #   skip_shell_api_tests: "true"
+          #   skip_tab_resource_detail_page: "false"
+          #   skip_table_hook: "true"
+          #   skip_about_top: "true"
+          #   skip_cluster_create_rke2: "true"
+          #   skip_resource_detail_legacy: "false"
+          # - rancher_version: "v2.13-head"
+          #   rancher_registry: "stgregistry.suse.com"
+          #   version_label: "2.13"
+          #   skip_shell_api_tests: "true"
+          #   skip_tab_resource_detail_page: "false"
+          #   skip_table_hook: "true"
+          #   skip_about_top: "false"
+          #   skip_cluster_create_rke2: "false"
+          #   skip_resource_detail_legacy: "false"
+          # - rancher_version: "v2.14-head"
+          #   rancher_registry: ""
+          #   version_label: "2.14"
+          #   skip_shell_api_tests: "false"
+          #   skip_tab_resource_detail_page: "false"
+          #   skip_table_hook: "false"
+          #   skip_about_top: "false"
+          #   skip_cluster_create_rke2: "false"
+          #   skip_resource_detail_legacy: "false"
           - rancher_version: "head"
             rancher_registry: ""
             version_label: "latest"
@@ -77,6 +83,8 @@ jobs:
             skip_table_hook: "false"
             skip_about_top: "false"
             skip_cluster_create_rke2: "false"
+            # Legacy RESOURCE_DETAIL extension point is gone from v2.15 onwards
+            skip_resource_detail_legacy: "true"
 
     name: "Rancher ${{ matrix.version_label }}"
 
@@ -291,6 +299,7 @@ jobs:
           CYPRESS_skip_table_hook: ${{ matrix.skip_table_hook }}
           CYPRESS_skip_about_top: ${{ matrix.skip_about_top }}
           CYPRESS_skip_cluster_create_rke2: ${{ matrix.skip_cluster_create_rke2 }}
+          CYPRESS_skip_resource_detail_legacy: ${{ matrix.skip_resource_detail_legacy }}
         run: |
           yarn cy:run --spec cypress/e2e/tests/pages/extensions/extension-compatibility.spec.ts
 

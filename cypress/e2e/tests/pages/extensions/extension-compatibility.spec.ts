@@ -1,7 +1,25 @@
 import ExtensionsPagePo from '@/cypress/e2e/po/pages/extensions.po';
 import DeveloperLoadDialogPo from '@/cypress/e2e/po/pages/extensions/developer-load.po';
 import ActionMenuPo from '@/cypress/e2e/po/components/action-menu.po';
-import { LONG_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
+import CheckboxInputPo from '@/cypress/e2e/po/components/checkbox-input.po';
+import { ServicesPagePo } from '@/cypress/e2e/po/pages/explorer/services.po';
+import { WorkloadsPodsListPagePo } from '@/cypress/e2e/po/pages/explorer/workloads-pods.po';
+import { SecretsListPagePo } from '@/cypress/e2e/po/pages/explorer/secrets.po';
+import { ConfigMapListPagePo } from '@/cypress/e2e/po/pages/explorer/config-map.po';
+import ChartRepositoriesPagePo from '@/cypress/e2e/po/pages/chart-repositories.po';
+import { createPodBlueprint } from '@/cypress/e2e/blueprints/explorer/workload-pods';
+import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
+
+/**
+ * Extension compatibility test suite.
+ *
+ * Developer-loads a stable "compatibility-tests-version" of the elemental-ui extension into a
+ * freshly booted Rancher and asserts every extension point / Shell API documented in
+ * `.github/prompts/extension-test.pdf`.
+ *
+ * Version differences are handled via the `CYPRESS_skip_*` env flags wired from the workflow
+ * matrix - extension points that don't exist on a given Rancher version are skipped there.
+ */
 
 const EXTENSION_SERVER_URL = Cypress.env('extension_server_url') || 'http://127.0.0.1:80';
 
@@ -10,27 +28,39 @@ const skipTabDetailPage = Cypress.env('skip_tab_resource_detail_page') === 'true
 const skipTableHook = Cypress.env('skip_table_hook') === 'true';
 const skipAboutTop = Cypress.env('skip_about_top') === 'true';
 const skipClusterRke2 = Cypress.env('skip_cluster_create_rke2') === 'true';
+// The legacy RESOURCE_DETAIL extension point only exists up until Rancher v2.14.0 (per the PDF).
+const skipResourceDetailLegacy = Cypress.env('skip_resource_detail_legacy') === 'true';
+
+// On Linux/Windows CI the header-action shortcut combos use 'ctrl', on macOS they use 'meta'
+// (see shell/core/plugin-helpers.ts -> shortcutKey { windows: ['ctrl', x], mac: ['meta', x] }).
+const MOD_KEY = Cypress.platform === 'darwin' ? '{meta}' : '{ctrl}';
+
+const CLUSTER_ID = 'local';
+const NS = 'default';
+
+// Deterministic resources created via API so list pages are never empty regardless of the
+// namespace filter (kube-system/cattle-system pods are hidden by default).
+const svcName = 'ext-compat-svc';
+const podName = 'ext-compat-pod';
+const secretName = 'ext-compat-secret';
+const cmName = 'ext-compat-cm';
 
 let extensionUrl = '';
 let moduleName = '';
 
-describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retries: 0 }, () => {
+describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () => {
   before(() => {
     cy.login();
 
-    // Discover extension details from the catalog
+    // Discover extension details from the locally-served catalog (serve-pkgs output)
     cy.request(`${ EXTENSION_SERVER_URL }/`).then((resp) => {
-      const catalog = resp.body;
-      const ext = catalog[0];
-      const name = ext.name;
-      const version = ext.version;
-      const main = ext.main;
+      const ext = resp.body[0];
 
-      moduleName = `${ name }-${ version }`;
-      extensionUrl = `${ EXTENSION_SERVER_URL }/${ moduleName }/${ main }`;
+      moduleName = `${ ext.name }-${ ext.version }`;
+      extensionUrl = `${ EXTENSION_SERVER_URL }/${ moduleName }/${ ext.main }`;
     });
 
-    // Enable developer features
+    // Enable extension developer features
     cy.setUserPreference({ 'plugin-developer': true });
 
     // Developer-load the extension
@@ -38,7 +68,6 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
 
     extensionsPo.goTo();
     extensionsPo.waitForTitle();
-
     extensionsPo.extensionMenuToggle();
     new ActionMenuPo(extensionsPo.self()).getMenuItem('Developer Load').click();
 
@@ -48,43 +77,93 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       devLoadDialog.fillAndLoad(extensionUrl, moduleName, true);
     });
 
-    // Wait for extension to load
     extensionsPo.extensionReloadBanner(LONG_TIMEOUT_OPT).should('be.visible');
     extensionsPo.extensionReloadClick();
 
-    // Verify extension is installed
     extensionsPo.waitForPage(null, 'installed');
     extensionsPo.extensionTabInstalledClick();
+
+    // Deterministic test data - recreate from scratch each run
+    cy.deleteRancherResource('v1', 'services', `${ NS }/${ svcName }`, false);
+    cy.deleteRancherResource('v1', 'pods', `${ NS }/${ podName }`, false);
+    cy.deleteRancherResource('v1', 'secrets', `${ NS }/${ secretName }`, false);
+    cy.deleteRancherResource('v1', 'configmaps', `${ NS }/${ cmName }`, false);
+
+    cy.createService(NS, svcName);
+    cy.createSecret(NS, secretName);
+    cy.createConfigMap(NS, cmName);
+
+    const podBlueprint: any = structuredClone(createPodBlueprint);
+
+    podBlueprint.metadata.name = podName;
+    podBlueprint.metadata.namespace = NS;
+    cy.createRancherResource('v1', 'pods', JSON.stringify(podBlueprint));
+    cy.waitForRancherResource('v1', 'pods', `${ NS }/${ podName }`, (resp: any) => resp.status === 200);
   });
 
   beforeEach(() => {
     cy.login();
-    cy.visit('/c/local/explorer');
-    cy.get('.cluster-dashboard-glance', LONG_TIMEOUT_OPT).should('exist');
   });
+
+  /**
+   * Navigate into the elemental extension product and click one of its side-nav sub-entries.
+   * Loading the product root first ensures the product nav is registered before we click.
+   */
+  const navToElementalEntry = (label: string) => {
+    cy.visit(`/c/${ CLUSTER_ID }/elemental`);
+    cy.get('.side-nav', LONG_TIMEOUT_OPT).should('exist');
+    cy.get('.side-nav').contains('a', label, LONG_TIMEOUT_OPT).click();
+  };
+
+  /** Click an extension-injected tab (by its documented data-testid) and assert its demo content */
+  const clickDemoTabAndAssert = (tabTestId: string) => {
+    cy.getId(tabTestId).should('be.visible').click();
+    cy.contains('THIS IS A DEMO TAB', MEDIUM_TIMEOUT_OPT).should('be.visible');
+  };
+
+  const goToServicesList = () => {
+    const services = new ServicesPagePo(CLUSTER_ID);
+
+    services.goTo();
+    services.waitForPage();
+
+    const table = services.list().resourceTable().sortableTable();
+
+    table.checkLoadingIndicatorNotVisible();
+    table.filter(svcName);
+    table.rowWithName(svcName).column(2).should('be.visible');
+
+    return services;
+  };
 
   // ── Test Group 1: ActionLocation.HEADER ──
 
   describe('Test Group 1: ActionLocation.HEADER', () => {
-    it('1.1 Header Action Button 1', () => {
+    it('1.1 Header Action Button 1 (click + CMD+M shortcut)', () => {
       cy.visit('/home');
+      cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
 
-      cy.window().then((win) => {
-        cy.spy(win.console, 'log').as('consoleLog');
-      });
-
+      // click
       cy.getId('extension-header-action-action-one').should('exist').click();
+      cy.get('@consoleLog').should('be.calledWithMatch', /action executed 1/);
+
+      // keyboard shortcut
+      cy.get('@consoleLog').then((spy: any) => spy.resetHistory());
+      cy.get('body').type(`${ MOD_KEY }m`);
       cy.get('@consoleLog').should('be.calledWithMatch', /action executed 1/);
     });
 
-    it('1.2 Header Action Button 2', () => {
-      cy.visit('/c/local/explorer');
+    it('1.2 Header Action Button 2 (click + CMD+B shortcut)', () => {
+      cy.visit(`/c/${ CLUSTER_ID }/explorer`);
+      cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
 
-      cy.window().then((win) => {
-        cy.spy(win.console, 'log').as('consoleLog');
-      });
-
+      // click
       cy.getId('extension-header-action-action-two').should('exist').click();
+      cy.get('@consoleLog').should('be.calledWithMatch', /action executed 2/);
+
+      // keyboard shortcut
+      cy.get('@consoleLog').then((spy: any) => spy.resetHistory());
+      cy.get('body').type(`${ MOD_KEY }b`);
       cy.get('@consoleLog').should('be.calledWithMatch', /action executed 2/);
     });
   });
@@ -95,81 +174,104 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     const conditionalIt = skipTabDetailPage ? it.skip : it;
 
     conditionalIt('2.1 Tab RESOURCE_DETAIL_PAGE', () => {
-      cy.visit('/c/local/explorer/core.v1.service');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
-      cy.getId('btn-detail-page-id').should('exist').click();
-      cy.contains('THIS IS A DEMO TAB').should('be.visible');
+      const services = goToServicesList();
+
+      services.list().resourceTable().goToDetailsPage(svcName);
+      clickDemoTabAndAssert('btn-detail-page-id');
     });
 
     conditionalIt('2.2 Tab RESOURCE_CREATE_PAGE', () => {
-      cy.visit('/c/local/explorer/core.v1.service');
-      cy.contains('Create').click();
-      cy.contains('Cluster IP').click();
-      cy.getId('btn-create-page-id').should('exist').click();
-      cy.contains('THIS IS A DEMO TAB').should('be.visible');
+      const services = new ServicesPagePo(CLUSTER_ID);
+
+      services.goTo();
+      services.waitForPage();
+      services.clickCreate();
+
+      cy.contains('Cluster IP', MEDIUM_TIMEOUT_OPT).click();
+      clickDemoTabAndAssert('btn-create-page-id');
     });
 
     conditionalIt('2.3 Tab RESOURCE_EDIT_PAGE', () => {
-      cy.visit('/c/local/explorer/core.v1.service');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('[data-testid$="-action-button"]').click();
-      cy.contains('Edit Config').click();
-      cy.getId('btn-edit-page-id').should('exist').click();
-      cy.contains('THIS IS A DEMO TAB').should('be.visible');
+      const services = goToServicesList();
+
+      services.list().resourceTable().sortableTable().rowActionMenuOpen(svcName)
+        .getMenuItem('Edit Config')
+        .click();
+      clickDemoTabAndAssert('btn-edit-page-id');
     });
 
     conditionalIt('2.4 Tab RESOURCE_SHOW_CONFIGURATION', () => {
-      cy.visit('/c/local/explorer/core.v1.service');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
-      cy.contains('Show Configuration').click();
-      cy.getId('btn-show-configuration-id').should('exist').click();
-      cy.contains('THIS IS A DEMO TAB').should('be.visible');
+      const services = goToServicesList();
+
+      services.list().resourceTable().goToDetailsPage(svcName);
+      cy.contains('Show Configuration', MEDIUM_TIMEOUT_OPT).click();
+      clickDemoTabAndAssert('btn-show-configuration-id');
     });
 
     (skipClusterRke2 ? it.skip : it)('2.5 Tab CLUSTER_CREATE_RKE2', () => {
-      cy.visit('/c/local/manager/provisioning.cattle.io.cluster/create');
-      cy.contains('Custom').click();
-      cy.getId('tab-cluster-create-rke2-id').should('exist').click();
-      cy.contains('THIS IS A DEMO TAB').should('be.visible');
+      cy.visit(`/c/${ CLUSTER_ID }/manager/provisioning.cattle.io.cluster/create?type=custom#basic`);
+      clickDemoTabAndAssert('tab-cluster-create-rke2-id');
     });
 
-    it('2.6 Tab RESOURCE_DETAIL (legacy)', () => {
-      cy.visit('/c/local/explorer/core.v1.pod');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
-      cy.getId('btn-pod-detail-id').should('exist').click();
-      cy.contains('THIS IS A DEMO TAB').should('be.visible');
+    (skipResourceDetailLegacy ? it.skip : it)('2.6 Tab RESOURCE_DETAIL (legacy, up to v2.14)', () => {
+      const pods = new WorkloadsPodsListPagePo(CLUSTER_ID);
+
+      pods.goTo();
+      pods.waitForPage();
+
+      const table = pods.list().resourceTable().sortableTable();
+
+      table.checkLoadingIndicatorNotVisible();
+      table.filter(podName);
+      pods.list().resourceTable().goToDetailsPage(podName);
+      clickDemoTabAndAssert('btn-pod-detail-id');
     });
   });
 
   // ── Test Group 3: ActionLocation.TABLE ──
 
   describe('Test Group 3: ActionLocation.TABLE', () => {
-    it('3.1 Table Action (non-bulkable)', () => {
-      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
+    const goToRepos = () => {
+      const repos = new ChartRepositoriesPagePo(CLUSTER_ID, 'apps');
 
-      cy.window().then((win) => {
-        cy.spy(win.console, 'log').as('consoleLog');
-      });
+      repos.goTo(CLUSTER_ID, 'apps');
+      repos.waitForPage();
 
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('[data-testid$="-action-button"]').click();
-      cy.contains('Demo table action').should('exist').click();
+      const table = repos.sortableTable();
+
+      table.noRowsShouldNotExist();
+      table.checkLoadingIndicatorNotVisible();
+
+      return repos;
+    };
+
+    it('3.1 Table Action (row actions, non-bulkable + bulkable)', () => {
+      const repos = goToRepos();
+      const table = repos.sortableTable();
+
+      cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
+
+      // "Demo table action" - scoped to the open row action menu (avoids the hidden bulk button)
+      table.row(0).actionBtn().click();
+      table.rowActionMenu().getMenuItem('Demo table action').should('be.visible').click();
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 1/);
 
-      cy.get('table tbody tr').first().find('[data-testid$="-action-button"]').click();
-      cy.contains('Demo bulkable action').should('exist').click();
+      // "Demo bulkable action" as a row action
+      table.row(0).actionBtn().click();
+      table.rowActionMenu().getMenuItem('Demo bulkable action').should('be.visible').click();
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 2/);
     });
 
-    it('3.2 Table Action (bulkable)', () => {
-      cy.viewport(1920, 1080);
-      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
+    it('3.2 Table Action (bulkable, via selection + bulk bar)', () => {
+      const repos = goToRepos();
+      const table = repos.sortableTable();
 
-      cy.window().then((win) => {
-        cy.spy(win.console, 'log').as('consoleLog');
-      });
+      cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
 
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:first-child input[type="checkbox"]').check({ force: true });
-      cy.get('table tbody tr').eq(1).find('td:first-child input[type="checkbox"]').check({ force: true });
-      cy.contains('Demo bulkable action').should('be.visible').click();
+      new CheckboxInputPo(table.row(0).column(0)).check();
+      new CheckboxInputPo(table.row(1).column(0)).check();
+
+      table.bulkActionButton('Demo bulkable action').should('not.be.disabled').click();
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 2/);
     });
   });
@@ -177,23 +279,38 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
   // ── Test Group 4: PanelLocation Extension Points ──
 
   describe('Test Group 4: PanelLocation Extension Points', () => {
+    const goToRepos = () => {
+      const repos = new ChartRepositoriesPagePo(CLUSTER_ID, 'apps');
+
+      repos.goTo(CLUSTER_ID, 'apps');
+      repos.waitForPage();
+      repos.sortableTable().noRowsShouldNotExist();
+
+      return repos;
+    };
+
     it('4.1 PanelLocation.RESOURCE_LIST', () => {
-      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
+      goToRepos();
       cy.contains('Just a sample banner to show that we can render anything here', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('4.2 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (details)', () => {
-      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('td:nth-child(3) a').click();
-      cy.contains('This is a generic masthead component example').should('be.visible');
+      const repos = goToRepos();
+
+      repos.sortableTable().row(0).self().find('a')
+        .first()
+        .click();
+      cy.contains('This is a generic masthead component example', MEDIUM_TIMEOUT_OPT).should('be.visible');
       cy.contains('This is an example on DetailTop').should('be.visible');
     });
 
     it('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
-      cy.visit('/c/local/apps/catalog.cattle.io.clusterrepo');
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).first().find('[data-testid$="-action-button"]').click();
-      cy.contains('Edit Config').click();
-      cy.contains('This is a generic masthead component example').should('be.visible');
+      const repos = goToRepos();
+      const table = repos.sortableTable();
+
+      table.row(0).actionBtn().click();
+      table.rowActionMenu().getMenuItem('Edit Config').click();
+      cy.contains('This is a generic masthead component example', MEDIUM_TIMEOUT_OPT).should('be.visible');
       cy.contains('This is another component example for masthead details - edit view').should('be.visible');
     });
 
@@ -207,7 +324,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
 
   describe('Test Group 5: CLUSTER_DASHBOARD_CARD', () => {
     it('5.1 Dashboard Card', () => {
-      cy.visit('/c/local/explorer');
+      cy.visit(`/c/${ CLUSTER_ID }/explorer`);
       cy.contains('Demo card title 1', LONG_TIMEOUT_OPT).should('be.visible');
     });
   });
@@ -215,26 +332,65 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
   // ── Test Group 6: Table Hook & Table Columns ──
 
   describe('Test Group 6: Table Hook & Table Columns', () => {
-    (skipTableHook ? it.skip : it)('6.1 Table Hook', () => {
-      cy.visit('/c/local/explorer/core.v1.pod');
-
-      cy.window().then((win) => {
-        cy.spy(win.console, 'error').as('consoleError');
+    (skipTableHook ? it.skip : it)('6.1 Table Hook (load, filter, sort)', () => {
+      // Spy must be attached before the table renders so the initial hook call is captured.
+      cy.visit(`/c/${ CLUSTER_ID }/explorer/pod`, {
+        onBeforeLoad: (win) => {
+          cy.spy(win.console, 'log').as('consoleLog');
+        }
       });
 
-      cy.get('table tbody tr', LONG_TIMEOUT_OPT).should('have.length.greaterThan', 0);
-      cy.get('@consoleError').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
+      const pods = new WorkloadsPodsListPagePo(CLUSTER_ID);
+      const table = pods.list().resourceTable().sortableTable();
+
+      table.checkLoadingIndicatorNotVisible();
+      table.filter(podName);
+      table.rowWithName(podName).column(2).should('be.visible');
+
+      // on initial load
+      cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
+
+      // on filter
+      cy.get('@consoleLog').then((spy: any) => spy.resetHistory());
+      table.resetFilter();
+      table.filter(podName);
+      cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
+
+      // on sort
+      cy.get('@consoleLog').then((spy: any) => spy.resetHistory());
+      table.self().find('thead tr th').contains('Name').click();
+      cy.get('@consoleLog').should('be.calledWithMatch', /TABLE HOOK TRIGGERED/);
     });
 
     it('6.2 Add Table Column 1 - Custom Formatter', () => {
-      cy.visit('/c/local/explorer/core.v1.secret');
-      cy.contains('Extension Col - Example 1', LONG_TIMEOUT_OPT).should('be.visible');
+      const secrets = new SecretsListPagePo(CLUSTER_ID);
+
+      secrets.goTo();
+      secrets.waitForPage();
+
+      const table = secrets.list().resourceTable().sortableTable();
+
+      table.checkLoadingIndicatorNotVisible();
+      table.filter(secretName);
+      table.rowWithName(secretName).column(2).should('be.visible');
+
+      cy.contains('Extension Col - Example 1', MEDIUM_TIMEOUT_OPT).should('be.visible');
       cy.contains('Formatter: Custom Cell Value 1').should('be.visible');
     });
 
     it('6.3 Add Table Column 2 - Pagination', () => {
-      cy.visit('/c/local/explorer/core.v1.configmap');
-      cy.contains('Extension Col - Example 2', LONG_TIMEOUT_OPT).should('be.visible');
+      const configMaps = new ConfigMapListPagePo(CLUSTER_ID);
+
+      configMaps.goTo();
+      configMaps.waitForPage();
+
+      const table = configMaps.list().resourceTable().sortableTable();
+
+      table.checkLoadingIndicatorNotVisible();
+      table.filter(cmName);
+      table.rowWithName(cmName).column(2).should('be.visible');
+
+      cy.contains('Extension Col - Example 2', MEDIUM_TIMEOUT_OPT).should('be.visible');
     });
   });
 
@@ -244,32 +400,35 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     const conditionalIt = skipShellApi ? it.skip : it;
 
     conditionalIt('7.1 Slide-in API', () => {
-      cy.visit('/c/local/elemental/shell-api-demo');
-      cy.contains('Test Slide-in API', LONG_TIMEOUT_OPT).click();
+      navToElementalEntry('shell-api-demo');
+      cy.contains('Test Slide-in API', MEDIUM_TIMEOUT_OPT).click();
       cy.contains('Hello from SlideIn panel!').should('be.visible');
     });
 
     conditionalIt('7.2 Modal API', () => {
-      cy.visit('/c/local/elemental/shell-api-demo');
-      cy.contains('Test Modal API', LONG_TIMEOUT_OPT).click();
+      navToElementalEntry('shell-api-demo');
+      cy.contains('Test Modal API', MEDIUM_TIMEOUT_OPT).click();
       cy.contains('Sample general title').should('be.visible');
       cy.contains('Cancel').should('be.visible');
       cy.contains('Add').should('be.visible');
     });
 
     conditionalIt('7.3 Notification API', () => {
-      cy.visit('/c/local/elemental/shell-api-demo');
-      cy.contains('Test Notification API', LONG_TIMEOUT_OPT).click();
+      navToElementalEntry('shell-api-demo');
+      cy.contains('Test Notification API', MEDIUM_TIMEOUT_OPT).click();
       cy.contains('Some notification title').should('be.visible');
       cy.contains('Hello world! Success!').should('be.visible');
     });
 
     conditionalIt('7.4 System API', () => {
-      cy.visit('/c/local/elemental/shell-api-demo');
-      cy.contains('Test System API', LONG_TIMEOUT_OPT).click();
+      navToElementalEntry('shell-api-demo');
+      cy.contains('Test System API', MEDIUM_TIMEOUT_OPT).click();
       cy.contains('gitCommit').should('be.visible');
-      cy.contains('rancherVersion').should('be.visible');
+      cy.contains('isDevBuild').should('be.visible');
+      cy.contains('isPrereleaseVersion').should('be.visible');
+      cy.contains('isRancherPrime').should('be.visible');
       cy.contains('kubernetesVersion').should('be.visible');
+      cy.contains('rancherVersion').should('be.visible');
     });
   });
 
@@ -277,54 +436,45 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
 
   describe('Test Group 8: Elemental Extension Tests', () => {
     it('8.1 Elemental Extension Setup', () => {
-      cy.visit('/c/local/elemental');
-      cy.contains('Dashboard', LONG_TIMEOUT_OPT).click();
-      cy.contains('Install Elemental Operator').click();
-      cy.contains('Next').click();
-      cy.contains('Install').click();
+      navToElementalEntry('Dashboard');
+      cy.contains('Install Elemental Operator', MEDIUM_TIMEOUT_OPT).click();
+      cy.contains('button', 'Next').click();
+      cy.contains('button', 'Install').click();
 
-      // Wait for helm install to complete
-      cy.contains('SUCCESS: helm upgrade', { timeout: 120000 }).should('exist');
+      // Wait for the helm install to complete (operator install pulls a chart - allow plenty of time)
+      cy.contains('SUCCESS: helm upgrade', { timeout: 240000 }).should('exist');
 
-      // Close the terminal and verify dashboard
+      // Close the terminal and verify the dashboard renders
       cy.get('.closer').click();
-      cy.visit('/c/local/elemental');
-      cy.contains('Dashboard').click();
+      navToElementalEntry('Dashboard');
       cy.contains('OS Management Dashboard', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('8.2 Elemental EDIT/CREATE Interface', () => {
-      cy.visit('/c/local/elemental');
-      cy.contains('Registration Endpoint', LONG_TIMEOUT_OPT).click();
-      cy.contains('Create').click();
+      navToElementalEntry('Registration Endpoint');
+      cy.contains('Create', MEDIUM_TIMEOUT_OPT).click();
 
-      cy.get('input[placeholder*="name"]', LONG_TIMEOUT_OPT)
-        .first()
+      cy.get('input[placeholder*="name" i]', MEDIUM_TIMEOUT_OPT).first()
         .clear()
         .type('demo-reg-endpoint-1');
-
       cy.contains('button', 'Create').click();
 
-      // Verify on details page
+      // details page
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');
 
-      // Verify in list
-      cy.visit('/c/local/elemental');
-      cy.contains('Registration Endpoint').click();
+      // appears in the list
+      navToElementalEntry('Registration Endpoint');
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
     it('8.3 Elemental EDIT/CREATE YAML Interface', () => {
-      cy.visit('/c/local/elemental');
-      cy.contains('Inventory of Machines', LONG_TIMEOUT_OPT).click();
-      cy.contains('Create from YAML').click();
+      navToElementalEntry('Inventory of Machines');
+      cy.contains('Create from YAML', MEDIUM_TIMEOUT_OPT).click();
 
-      // Replace the name placeholder in the YAML editor
       cy.get('.CodeMirror', LONG_TIMEOUT_OPT).then(($cm) => {
         const cm = ($cm[0] as any).CodeMirror;
-        const content = cm.getValue();
 
-        cm.setValue(content.replace('#string', 'demo-mach-inv-1'));
+        cm.setValue(cm.getValue().replace('#string', 'demo-mach-inv-1'));
       });
 
       cy.contains('button', 'Create').click();
@@ -334,9 +484,15 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
 
   after(() => {
     cy.login();
-    cy.setUserPreference({ 'plugin-developer': false });
 
-    // Clean up developer-loaded extension via API
+    // Clean up test data
+    cy.deleteRancherResource('v1', 'services', `${ NS }/${ svcName }`, false);
+    cy.deleteRancherResource('v1', 'pods', `${ NS }/${ podName }`, false);
+    cy.deleteRancherResource('v1', 'secrets', `${ NS }/${ secretName }`, false);
+    cy.deleteRancherResource('v1', 'configmaps', `${ NS }/${ cmName }`, false);
+
+    // Disable developer features and remove the developer-loaded extension
+    cy.setUserPreference({ 'plugin-developer': false });
     cy.request({
       method:           'DELETE',
       url:              `/v1/catalog.cattle.io.uiplugins/cattle-ui-plugin-system/${ moduleName }`,

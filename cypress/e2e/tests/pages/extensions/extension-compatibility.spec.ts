@@ -30,13 +30,20 @@ const REPO_LIST = '[data-testid="app-cluster-repo-list"]';
 
 const EXTENSION_SERVER_URL = Cypress.env('extension_server_url') || 'http://127.0.0.1:80';
 
-const skipShellApi = Cypress.env('skip_shell_api_tests') === 'true';
-const skipTabDetailPage = Cypress.env('skip_tab_resource_detail_page') === 'true';
-const skipTableHook = Cypress.env('skip_table_hook') === 'true';
-const skipAboutTop = Cypress.env('skip_about_top') === 'true';
-const skipClusterRke2 = Cypress.env('skip_cluster_create_rke2') === 'true';
+// Cypress coerces CYPRESS_* values of "true"/"false" into real booleans, so compare against both.
+const isSkip = (key: string): boolean => {
+  const v = Cypress.env(key);
+
+  return v === true || v === 'true';
+};
+
+const skipShellApi = isSkip('skip_shell_api_tests');
+const skipTabDetailPage = isSkip('skip_tab_resource_detail_page');
+const skipTableHook = isSkip('skip_table_hook');
+const skipAboutTop = isSkip('skip_about_top');
+const skipClusterRke2 = isSkip('skip_cluster_create_rke2');
 // The legacy RESOURCE_DETAIL extension point only exists up until Rancher v2.14.0 (per the PDF).
-const skipResourceDetailLegacy = Cypress.env('skip_resource_detail_legacy') === 'true';
+const skipResourceDetailLegacy = isSkip('skip_resource_detail_legacy');
 
 // On Linux/Windows CI the header-action shortcut combos use 'ctrl', on macOS they use 'meta'
 // (see shell/core/plugin-helpers.ts -> shortcutKey { windows: ['ctrl', x], mac: ['meta', x] }).
@@ -132,7 +139,8 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     cy.get(`[data-testid="btn-${ tabName }"], [data-testid="tab-${ tabName }"]`, LONG_TIMEOUT_OPT)
       .should('be.visible')
       .click();
-    cy.get(`#${ tabName }`, MEDIUM_TIMEOUT_OPT).should('be.visible').and('contain', 'THIS IS A DEMO TAB');
+    // Content lives in `section#<name>` (the tab nav `<li>` shares the same id, so scope to section).
+    cy.get(`section#${ tabName }`, MEDIUM_TIMEOUT_OPT).should('be.visible').and('contain', 'THIS IS A DEMO TAB');
   };
 
   /** Navigate to the Services list, filter to the test service and return its (string-backed) table */

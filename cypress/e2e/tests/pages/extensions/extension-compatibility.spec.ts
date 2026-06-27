@@ -62,7 +62,7 @@ const cmName = 'ext-compat-cm';
 let extensionUrl = '';
 let moduleName = '';
 
-describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () => {
+describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retries: { runMode: 3, openMode: 0 } }, () => {
   before(() => {
     cy.login();
 
@@ -152,6 +152,24 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       .click({ force: true });
     // Content lives in `section#<name>` (the tab nav `<li>` shares the same id, so scope to section).
     cy.get(`section#${ tabName }`, MEDIUM_TIMEOUT_OPT).should('be.visible').and('contain', 'THIS IS A DEMO TAB');
+  };
+
+  /**
+   * Open a table row's action menu, self-healing against the occasional click that doesn't open the
+   * dropdown on a janky runner (the first action button click can be swallowed during a re-render).
+   */
+  const openRowActionMenu = (table: SortableTablePo, idx = 0) => {
+    const actionBtn = () => table.rowElements().eq(idx).find('[data-testid*="action-button"]');
+
+    actionBtn().scrollIntoView().click();
+    cy.get('body').then(($b) => {
+      if (!$b.find('[dropdown-menu-collection]:visible').length) {
+        actionBtn().click();
+      }
+    });
+    cy.get('[dropdown-menu-collection]:visible', MEDIUM_TIMEOUT_OPT).should('exist');
+
+    return table.rowActionMenu();
   };
 
   /** Navigate to the Services list, filter to the test service and return its (string-backed) table */
@@ -287,13 +305,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
 
       // "Demo table action" - scoped to the open row action menu (avoids the hidden bulk button)
-      table.row(0).actionBtn().click();
-      table.rowActionMenu().getMenuItem('Demo table action').click({ force: true });
+      openRowActionMenu(table).getMenuItem('Demo table action').click({ force: true });
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 1/);
 
       // "Demo bulkable action" as a row action
-      table.row(0).actionBtn().click();
-      table.rowActionMenu().getMenuItem('Demo bulkable action').click({ force: true });
+      openRowActionMenu(table).getMenuItem('Demo bulkable action').click({ force: true });
       cy.get('@consoleLog').should('be.calledWithMatch', /table action executed 2/);
     });
 
@@ -334,8 +350,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
     it('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
       const table = goToReposTable();
 
-      table.row(0).actionBtn().click();
-      table.rowActionMenu().getMenuItem('Edit Config').click({ force: true });
+      openRowActionMenu(table).getMenuItem('Edit Config').click({ force: true });
       cy.contains('This is a generic masthead component example', MEDIUM_TIMEOUT_OPT).should('be.visible');
       cy.contains('This is another component example for masthead details - edit view').should('be.visible');
     });

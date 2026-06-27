@@ -142,9 +142,12 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
    * "THIS IS A DEMO TAB" text in other (hidden) demo-tab panels.
    */
   const clickDemoTabAndAssert = (tabName: string) => {
+    // force-click: some tab bars (e.g. RKE2 cluster create) clip overflowing tabs, so the tab can
+    // exist but report as not visible. The section assertion below confirms it actually activated.
     cy.get(`[data-testid="btn-${ tabName }"], [data-testid="tab-${ tabName }"]`, LONG_TIMEOUT_OPT)
-      .should('be.visible')
-      .click();
+      .should('exist')
+      .scrollIntoView()
+      .click({ force: true });
     // Content lives in `section#<name>` (the tab nav `<li>` shares the same id, so scope to section).
     cy.get(`section#${ tabName }`, MEDIUM_TIMEOUT_OPT).should('be.visible').and('contain', 'THIS IS A DEMO TAB');
   };

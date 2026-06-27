@@ -479,11 +479,14 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       // Exact match so we don't accidentally hit "Create from YAML"
       cy.contains(/^Create$/, MEDIUM_TIMEOUT_OPT).click();
 
-      cy.get('[data-testid="name-ns-description-name"] input, input#name, input[placeholder*="name" i]', MEDIUM_TIMEOUT_OPT)
+      // Stable testids work across versions: NameNsDescription's name input and CruResource's
+      // save button ('form' is the default componentTestid). A text-based "Create" button match
+      // can hit the wrong button (e.g. on 2.14), leaving the resource uncreated.
+      cy.get('[data-testid="NameNsDescriptionNameInput"], [data-testid="name-ns-description-name"] input', MEDIUM_TIMEOUT_OPT)
         .first()
         .clear()
         .type('demo-reg-endpoint-1');
-      cy.contains('button', /^Create$/).click();
+      cy.getId('form-save').click();
 
       // details page
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');

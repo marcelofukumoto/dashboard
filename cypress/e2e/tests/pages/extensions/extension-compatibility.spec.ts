@@ -79,15 +79,17 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
 
     // Warm up the local cluster first - on a freshly booted Rancher the explorer/uiplugins
     // pages can race the cluster becoming ready, which would flake this (non-retryable) hook.
+    // Wait on the product side-nav (renders as soon as the cluster route loads) rather than the
+    // dashboard glance card, which is metrics-driven and itself slow/flaky on a fresh cluster.
     cy.visit(`/c/${ CLUSTER_ID }/explorer`);
-    cy.get('.cluster-dashboard-glance', LONG_TIMEOUT_OPT).should('exist');
+    cy.get('.side-nav', { timeout: 120000 }).should('be.visible');
 
     // Developer-load the extension
     const extensionsPo = new ExtensionsPagePo();
 
     extensionsPo.goTo();
     // Long timeout - the uiplugins page can take a while to render right after boot.
-    cy.get('[data-testid="extensions-page-title"]', LONG_TIMEOUT_OPT).should('contain', 'Extensions');
+    cy.get('[data-testid="extensions-page-title"]', { timeout: 120000 }).should('contain', 'Extensions');
     extensionsPo.extensionMenuToggle();
     new ActionMenuPo(extensionsPo.self()).getMenuItem('Developer Load').click();
 

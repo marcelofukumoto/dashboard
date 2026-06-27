@@ -488,10 +488,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
         .type('demo-reg-endpoint-1');
       cy.getId('form-save').click();
 
-      // details page
-      cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');
+      // Created resource detail page. The extension's custom detail view doesn't render the name
+      // as text on all versions (2.14 shows the registration URL only), so confirm via the URL.
+      cy.url(LONG_TIMEOUT_OPT).should('include', 'demo-reg-endpoint-1');
 
-      // appears in the list
+      // Name is reliably visible as a row in the list view
       navToElementalEntry('Registration Endpoint');
       cy.contains('demo-reg-endpoint-1', LONG_TIMEOUT_OPT).should('be.visible');
     });

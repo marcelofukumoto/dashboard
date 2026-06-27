@@ -37,8 +37,12 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          # NOTE: For this phase we only test `latest` (Rancher head = 2.15). The older versions
-          # below are intentionally commented out and kept for easy restoration in a later phase.
+          # NOTE: For this phase we test 2.14 and `latest` (Rancher head = 2.15). The older
+          # versions below are kept commented out for easy restoration in a later phase.
+          #
+          # The only behavioural difference between 2.14 and 2.15 for this suite is the legacy
+          # RESOURCE_DETAIL tab (`skip_resource_detail_legacy`). All extension points exercised
+          # here are available from v2.14.0 onwards, so every other flag is the same for both.
           # - rancher_version: "v2.11-head"
           #   rancher_registry: "stgregistry.suse.com"
           #   version_label: "2.11"
@@ -66,15 +70,16 @@ jobs:
           #   skip_about_top: "false"
           #   skip_cluster_create_rke2: "false"
           #   skip_resource_detail_legacy: "false"
-          # - rancher_version: "v2.14-head"
-          #   rancher_registry: ""
-          #   version_label: "2.14"
-          #   skip_shell_api_tests: "false"
-          #   skip_tab_resource_detail_page: "false"
-          #   skip_table_hook: "false"
-          #   skip_about_top: "false"
-          #   skip_cluster_create_rke2: "false"
-          #   skip_resource_detail_legacy: "false"
+          - rancher_version: "v2.14-head"
+            rancher_registry: ""
+            version_label: "2.14"
+            skip_shell_api_tests: "false"
+            skip_tab_resource_detail_page: "false"
+            skip_table_hook: "false"
+            skip_about_top: "false"
+            skip_cluster_create_rke2: "false"
+            # Legacy RESOURCE_DETAIL tab is native to 2.14 - exercise it here
+            skip_resource_detail_legacy: "false"
           - rancher_version: "head"
             rancher_registry: ""
             version_label: "latest"
@@ -83,7 +88,7 @@ jobs:
             skip_table_hook: "false"
             skip_about_top: "false"
             skip_cluster_create_rke2: "false"
-            # Legacy RESOURCE_DETAIL extension point is gone from v2.15 onwards
+            # Legacy RESOURCE_DETAIL tab is "up until v2.14" per the test spec - skip on 2.15
             skip_resource_detail_legacy: "true"
 
     name: "Rancher ${{ matrix.version_label }}"

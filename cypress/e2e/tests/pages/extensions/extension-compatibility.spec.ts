@@ -257,6 +257,10 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'] }, () 
       clickDemoTabAndAssert('cluster-create-rke2-id');
     });
 
+    // Version conditional: the legacy RESOURCE_DETAIL TabLocation is the one extension point that
+    // differs between the tested versions. It is native to 2.14 (skip_resource_detail_legacy=false)
+    // and skipped on 2.15/latest (skip_resource_detail_legacy=true) per the test spec's
+    // "legacy - up until rancher v2.14.0" note. All other tests run identically on both versions.
     (skipResourceDetailLegacy ? it.skip : it)('2.6 Tab RESOURCE_DETAIL (legacy, up to v2.14)', () => {
       const pods = new WorkloadsPodsListPagePo(CLUSTER_ID);
 

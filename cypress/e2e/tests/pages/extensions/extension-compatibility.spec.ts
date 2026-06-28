@@ -12,7 +12,8 @@ import { LoginPagePo } from '@/cypress/e2e/po/pages/login-page.po';
 import { createPodBlueprint } from '@/cypress/e2e/blueprints/explorer/workload-pods';
 import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
 
-const RANCHER_VERSION = Cypress.env('rancher_version') || '';
+// Cypress coerces numeric-looking CYPRESS_* values (e.g. "2.13") to numbers, so stringify it.
+const RANCHER_VERSION = String(Cypress.env('rancher_version') ?? '');
 
 /**
  * Log in, tolerating Rancher version differences in the login flow.

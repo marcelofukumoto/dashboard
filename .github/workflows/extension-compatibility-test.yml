@@ -358,6 +358,7 @@ jobs:
           CYPRESS_skip_about_top: ${{ matrix.skip_about_top }}
           CYPRESS_skip_cluster_create_rke2: ${{ matrix.skip_cluster_create_rke2 }}
           CYPRESS_skip_resource_detail_legacy: ${{ matrix.skip_resource_detail_legacy }}
+          CYPRESS_rancher_version: ${{ matrix.version_label }}
         run: |
           yarn cy:run --spec cypress/e2e/tests/pages/extensions/extension-compatibility.spec.ts
 

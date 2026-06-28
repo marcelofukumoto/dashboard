@@ -8,8 +8,45 @@ import { SecretsListPagePo } from '@/cypress/e2e/po/pages/explorer/secrets.po';
 import { ConfigMapListPagePo } from '@/cypress/e2e/po/pages/explorer/config-map.po';
 import ChartRepositoriesPagePo from '@/cypress/e2e/po/pages/chart-repositories.po';
 import SortableTablePo from '@/cypress/e2e/po/components/sortable-table.po';
+import { LoginPagePo } from '@/cypress/e2e/po/pages/login-page.po';
 import { createPodBlueprint } from '@/cypress/e2e/blueprints/explorer/workload-pods';
 import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
+
+const RANCHER_VERSION = Cypress.env('rancher_version') || '';
+
+/**
+ * Log in, tolerating Rancher version differences in the login flow.
+ *
+ * On 2.13 the dashboard (in this curl-bootstrapped setup) lands the browser on an authenticated
+ * page without driving the POST /v1-public/login that the shared cy.login() waits on, so cy.login()
+ * times out even though auth succeeds. For 2.13 we validate login by reaching an authenticated page
+ * instead. All other versions use the standard cy.login() unchanged.
+ */
+const loginCompat = () => {
+  if (RANCHER_VERSION !== '2.13') {
+    cy.login();
+
+    return;
+  }
+
+  const username = Cypress.env('username');
+  const password = Cypress.env('password');
+
+  cy.session(['compat', username, password], () => {
+    cy.visit('/home');
+    cy.location('pathname', { timeout: 120000 }).then((path) => {
+      if (path.includes('/auth/login')) {
+        const loginPage = new LoginPagePo();
+
+        loginPage.switchToLocal();
+        loginPage.username().set(username);
+        loginPage.password().set(password);
+        loginPage.submit();
+      }
+    });
+    cy.location('pathname', { timeout: 120000 }).should('not.contain', '/auth/login');
+  });
+};
 
 // Build the sortable table from a string selector so its `self()` re-queries the DOM on every
 // call. Constructing a SortableTablePo from a chainable (e.g. list().resourceTable()...) reuses a
@@ -71,7 +108,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
   let setupComplete = false;
 
   const runSetup = () => {
-    cy.login();
+    loginCompat();
 
     // Discover extension details from the locally-served catalog (serve-pkgs output)
     cy.request(`${ EXTENSION_SERVER_URL }/`).then((resp) => {
@@ -136,7 +173,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
 
   beforeEach(() => {
     if (setupComplete) {
-      cy.login();
+      loginCompat();
     } else {
       runSetup();
     }
@@ -552,7 +589,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       return;
     }
 
-    cy.login();
+    loginCompat();
 
     // Clean up test data
     cy.deleteRancherResource('v1', 'services', `${ NS }/${ svcName }`, false);

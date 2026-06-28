@@ -37,12 +37,14 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          # NOTE: For this phase we test 2.14 and `latest` (Rancher head = 2.15). The older
+          # NOTE: For this phase we test 2.13, 2.14 and `latest` (Rancher head = 2.15). The older
           # versions below are kept commented out for easy restoration in a later phase.
           #
-          # The only behavioural difference between 2.14 and 2.15 for this suite is the legacy
-          # RESOURCE_DETAIL tab (`skip_resource_detail_legacy`). All extension points exercised
-          # here are available from v2.14.0 onwards, so every other flag is the same for both.
+          # Version differences are expressed entirely through the skip_* flags. All other tests run
+          # identically. Per the test spec's version notes:
+          #   - Shell API tests and the table hook are v2.14.0+ (skipped on 2.13)
+          #   - The new RESOURCE_* tabs are v2.13.2+, ABOUT_TOP and CLUSTER_CREATE_RKE2 are v2.13.0+
+          #   - The legacy RESOURCE_DETAIL tab is "up until v2.14.0" (run on 2.13/2.14, skip on 2.15)
           # - rancher_version: "v2.11-head"
           #   rancher_registry: "stgregistry.suse.com"
           #   version_label: "2.11"
@@ -61,15 +63,17 @@ jobs:
           #   skip_about_top: "true"
           #   skip_cluster_create_rke2: "true"
           #   skip_resource_detail_legacy: "false"
-          # - rancher_version: "v2.13-head"
-          #   rancher_registry: "stgregistry.suse.com"
-          #   version_label: "2.13"
-          #   skip_shell_api_tests: "true"
-          #   skip_tab_resource_detail_page: "false"
-          #   skip_table_hook: "true"
-          #   skip_about_top: "false"
-          #   skip_cluster_create_rke2: "false"
-          #   skip_resource_detail_legacy: "false"
+          - rancher_version: "v2.13-head"
+            rancher_registry: ""
+            version_label: "2.13"
+            # Shell API (group 7) and the table hook (6.1) are v2.14.0+ - not present on 2.13
+            skip_shell_api_tests: "true"
+            skip_tab_resource_detail_page: "false"
+            skip_table_hook: "true"
+            skip_about_top: "false"
+            skip_cluster_create_rke2: "false"
+            # Legacy RESOURCE_DETAIL tab still works on 2.13
+            skip_resource_detail_legacy: "false"
           - rancher_version: "v2.14-head"
             rancher_registry: ""
             version_label: "2.14"

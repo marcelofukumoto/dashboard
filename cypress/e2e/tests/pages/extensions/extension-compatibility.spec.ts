@@ -15,16 +15,21 @@ import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/ti
 // Cypress coerces numeric-looking CYPRESS_* values (e.g. "2.13") to numbers, so stringify it.
 const RANCHER_VERSION = String(Cypress.env('rancher_version') ?? '');
 
+// Older dashboard runtimes (2.12 / 2.13) differ from current in two spots that need a version `if`:
+//  - the login flow doesn't drive the POST /v1-public/login that cy.login() waits on
+//  - the elemental machineregistration create form renders with a different (tabbed) layout
+const LEGACY_DASHBOARD = ['2.12', '2.13'].includes(RANCHER_VERSION);
+
 /**
  * Log in, tolerating Rancher version differences in the login flow.
  *
- * On 2.13 the dashboard (in this curl-bootstrapped setup) lands the browser on an authenticated
- * page without driving the POST /v1-public/login that the shared cy.login() waits on, so cy.login()
- * times out even though auth succeeds. For 2.13 we validate login by reaching an authenticated page
+ * On the older dashboards (2.12 / 2.13, in this curl-bootstrapped setup) login doesn't drive the
+ * POST /v1-public/login that the shared cy.login() waits on, so cy.login() times out even though
+ * auth succeeds. There we submit the login form and validate by reaching an authenticated page
  * instead. All other versions use the standard cy.login() unchanged.
  */
 const loginCompat = () => {
-  if (RANCHER_VERSION !== '2.13') {
+  if (!LEGACY_DASHBOARD) {
     cy.login();
 
     return;
@@ -546,10 +551,10 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       cy.contains('OS Management Dashboard', LONG_TIMEOUT_OPT).should('be.visible');
     });
 
-    // Version conditional: on 2.13's older dashboard runtime the machineregistration create form
-    // renders with a different (tabbed) layout, so the standard name + save create flow doesn't
-    // navigate to the resource. The create-via-YAML path (8.3) still covers create on 2.13.
-    (RANCHER_VERSION === '2.13' ? it.skip : it)('8.2 Elemental EDIT/CREATE Interface', () => {
+    // Version conditional: on the older dashboard runtimes (2.12 / 2.13) the machineregistration
+    // create form renders with a different (tabbed) layout, so the standard name + save create flow
+    // doesn't navigate to the resource. The create-via-YAML path (8.3) still covers create there.
+    (LEGACY_DASHBOARD ? it.skip : it)('8.2 Elemental EDIT/CREATE Interface', () => {
       navToElementalEntry('Registration Endpoint');
       // Exact match so we don't accidentally hit "Create from YAML"
       cy.contains(/^Create$/, MEDIUM_TIMEOUT_OPT).click();

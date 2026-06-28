@@ -63,7 +63,14 @@ let extensionUrl = '';
 let moduleName = '';
 
 describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retries: { runMode: 3, openMode: 0 } }, () => {
-  before(() => {
+  // One-time suite setup (developer-load the extension + create test data). This runs from
+  // beforeEach guarded by `setupComplete` rather than a `before` hook: a `before all` hook is
+  // never retried, so a single fresh-cluster flake (slow login / side-nav) would fail the whole
+  // job. A guarded beforeEach is covered by Cypress test retries. The dev-load is persisted in the
+  // cluster and the resources are delete-then-create, so re-running on a retry is safe.
+  let setupComplete = false;
+
+  const runSetup = () => {
     cy.login();
 
     // Discover extension details from the locally-served catalog (serve-pkgs output)
@@ -78,9 +85,9 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     cy.setUserPreference({ 'plugin-developer': true });
 
     // Warm up the local cluster first - on a freshly booted Rancher the explorer/uiplugins
-    // pages can race the cluster becoming ready, which would flake this (non-retryable) hook.
-    // Wait on the product side-nav (renders as soon as the cluster route loads) rather than the
-    // dashboard glance card, which is metrics-driven and itself slow/flaky on a fresh cluster.
+    // pages can race the cluster becoming ready. Wait on the product side-nav (renders as soon as
+    // the cluster route loads) rather than the dashboard glance card, which is metrics-driven and
+    // itself slow/flaky on a fresh cluster.
     cy.visit(`/c/${ CLUSTER_ID }/explorer`);
     cy.get('.side-nav', { timeout: 120000 }).should('be.visible');
 
@@ -121,10 +128,18 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     podBlueprint.metadata.namespace = NS;
     cy.createRancherResource('v1', 'pods', JSON.stringify(podBlueprint));
     cy.waitForRancherResource('v1', 'pods', `${ NS }/${ podName }`, (resp: any) => resp.status === 200);
-  });
+
+    cy.then(() => {
+      setupComplete = true;
+    });
+  };
 
   beforeEach(() => {
-    cy.login();
+    if (setupComplete) {
+      cy.login();
+    } else {
+      runSetup();
+    }
   });
 
   /**

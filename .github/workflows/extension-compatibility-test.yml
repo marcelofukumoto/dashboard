@@ -59,9 +59,11 @@ jobs:
             rancher_registry: ""
             version_label: "2.12"
             # Shell API (group 7) and the table hook (6.1) are v2.14.0+; ABOUT_TOP (4.4) and
-            # CLUSTER_CREATE_RKE2 (2.5) are v2.13.0+ - none present on 2.12
+            # CLUSTER_CREATE_RKE2 (2.5) are v2.13.0+ - none present on 2.12.
+            # The new RESOURCE_* tabs (group 2) don't render on 2.12 either (the extension marks them
+            # as 2.14+ TabLocations; they work from 2.13 in practice) - skip group 2 here.
             skip_shell_api_tests: "true"
-            skip_tab_resource_detail_page: "false"
+            skip_tab_resource_detail_page: "true"
             skip_table_hook: "true"
             skip_about_top: "true"
             skip_cluster_create_rke2: "true"

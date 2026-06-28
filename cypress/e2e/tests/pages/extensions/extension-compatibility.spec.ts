@@ -545,6 +545,13 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
   });
 
   after(() => {
+    // Best-effort cleanup. If setup never completed (e.g. the cluster never became login-ready)
+    // there is nothing to clean up, and attempting to log in here would just fail the after-all
+    // hook on top of the real failure. The Docker container is torn down after the job regardless.
+    if (!moduleName) {
+      return;
+    }
+
     cy.login();
 
     // Clean up test data

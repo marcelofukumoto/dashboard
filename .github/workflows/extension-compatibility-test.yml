@@ -310,6 +310,39 @@ jobs:
           done
           echo "Warning: cluster API schemas may not be fully ready"
 
+      - name: Wait for UI login and active local cluster
+        if: >-
+          github.event.inputs.rancher_version == ''
+          || github.event.inputs.rancher_version == matrix.rancher_version
+        run: |
+          RANCHER_URL="https://127.0.0.1"
+          # The Cypress suite logs in through the UI (POST /v1-public/login) and immediately uses the
+          # local cluster (side-nav / explorer). After the API schemas are up there can still be a
+          # window where the UI login endpoint 401s or the local cluster isn't 'active' yet, which
+          # flakes the (already retried) test setup. Gate on both being ready before starting Cypress.
+          echo "Waiting for UI login endpoint + active local cluster (up to 5 minutes)..."
+          for i in $(seq 1 60); do
+            LOGIN_CODE=$(curl -sk -o /dev/null -w "%{http_code}" -X POST "${RANCHER_URL}/v1-public/login" \
+              -H "Content-Type: application/json" \
+              -d '{"username":"admin","password":"${{ env.CATTLE_BOOTSTRAP_PASSWORD }}","description":"UI session","type":"localProvider","responseType":"cookie"}' 2>/dev/null || echo "000")
+            TOKEN=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local?action=login" \
+              -H "Content-Type: application/json" \
+              -d '{"username":"admin","password":"${{ env.CATTLE_BOOTSTRAP_PASSWORD }}"}' \
+              | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || echo "")
+            STATE=""
+            if [ -n "$TOKEN" ]; then
+              STATE=$(curl -sk -H "Authorization: Bearer ${TOKEN}" "${RANCHER_URL}/v3/clusters/local" 2>/dev/null \
+                | python3 -c "import sys,json; print(json.load(sys.stdin).get('state',''))" 2>/dev/null || echo "")
+            fi
+            if [ "$LOGIN_CODE" = "200" ] && [ "$STATE" = "active" ]; then
+              echo "UI login works and local cluster is active!"
+              exit 0
+            fi
+            echo "  Waiting... ($i/60) login=${LOGIN_CODE} cluster=${STATE:-unknown}"
+            sleep 5
+          done
+          echo "Warning: UI login / local cluster may not be fully ready"
+
       - name: Run Cypress extension compatibility tests
         if: >-
           github.event.inputs.rancher_version == ''

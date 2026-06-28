@@ -34,17 +34,15 @@ const loginCompat = () => {
   const password = Cypress.env('password');
 
   cy.session(['compat', username, password], () => {
-    cy.visit('/home');
-    cy.location('pathname', { timeout: 120000 }).then((path) => {
-      if (path.includes('/auth/login')) {
-        const loginPage = new LoginPagePo();
+    const loginPage = new LoginPagePo();
 
-        loginPage.switchToLocal();
-        loginPage.username().set(username);
-        loginPage.password().set(password);
-        loginPage.submit();
-      }
-    });
+    LoginPagePo.goTo();
+    loginPage.switchToLocal();
+    loginPage.username().set(username);
+    loginPage.password().set(password);
+    loginPage.submit();
+    // Validate by leaving the login page. 2.13 posts to a different endpoint than the one
+    // cy.login() waits on, so a successful login is detected by navigating away from /auth/login.
     cy.location('pathname', { timeout: 120000 }).should('not.contain', '/auth/login');
   });
 

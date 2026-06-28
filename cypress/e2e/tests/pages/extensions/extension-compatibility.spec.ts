@@ -47,6 +47,10 @@ const loginCompat = () => {
     });
     cy.location('pathname', { timeout: 120000 }).should('not.contain', '/auth/login');
   });
+
+  // The api-request commands rely on a CSRF token that cy.login() normally caches; set it here
+  // since this path bypasses cy.login().
+  cy.refreshCsrfToken();
 };
 
 // Build the sortable table from a string selector so its `self()` re-queries the DOM on every

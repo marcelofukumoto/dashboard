@@ -157,7 +157,12 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     // Long timeout - the uiplugins page can take a while to render right after boot.
     cy.get('[data-testid="extensions-page-title"]', { timeout: 120000 }).should('contain', 'Extensions');
     extensionsPo.extensionMenuToggle();
-    new ActionMenuPo(extensionsPo.self()).getMenuItem('Developer Load').click();
+    if (RANCHER_VERSION === '2.10') {
+      // 2.10's older menu doesn't tag items with [dropdown-menu-item]; click the visible entry.
+      cy.contains('Developer Load').should('be.visible').click();
+    } else {
+      new ActionMenuPo(extensionsPo.self()).getMenuItem('Developer Load').click();
+    }
 
     const devLoadDialog = new DeveloperLoadDialogPo();
 

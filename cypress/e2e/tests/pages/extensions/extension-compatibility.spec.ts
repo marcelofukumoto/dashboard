@@ -25,6 +25,12 @@ const LEGACY_DASHBOARD = ['2.10', '2.11', '2.12', '2.13'].includes(RANCHER_VERSI
 // path there. 2.12+ show the banner and navigate normally.
 const OLD_DEV_LOAD = ['2.10', '2.11'].includes(RANCHER_VERSION);
 
+// 2.10's sortable-table row action menu is a structurally different (older) component: the trigger
+// button reports as covered and the menu doesn't use the [dropdown-menu-collection]/[dropdown-menu-item]
+// DOM the helpers rely on. The row-action-menu tests (3.1, 4.3) are skipped there; ActionLocation.TABLE
+// is still covered by the bulk action (3.2) and the masthead/detail-top panel by the details view (4.2).
+const OLD_ACTION_MENU = RANCHER_VERSION === '2.10';
+
 /**
  * Log in, tolerating Rancher version differences in the login flow.
  *
@@ -393,7 +399,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
   // ── Test Group 3: ActionLocation.TABLE ──
 
   describe('Test Group 3: ActionLocation.TABLE', () => {
-    it('3.1 Table Action (row actions, non-bulkable + bulkable)', () => {
+    (OLD_ACTION_MENU ? it.skip : it)('3.1 Table Action (row actions, non-bulkable + bulkable)', () => {
       const table = goToReposTable();
 
       cy.window().then((win) => cy.spy(win.console, 'log').as('consoleLog'));
@@ -441,7 +447,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       cy.contains('This is an example on DetailTop').should('be.visible');
     });
 
-    it('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
+    (OLD_ACTION_MENU ? it.skip : it)('4.3 PanelLocation.DETAILS_MASTHEAD & DETAILS_TOP (edit)', () => {
       const table = goToReposTable();
 
       openRowActionMenu(table).getMenuItem('Edit Config').click({ force: true });

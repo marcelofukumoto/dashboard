@@ -173,8 +173,13 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       extensionsPo.extensionReloadClick();
     }
 
-    extensionsPo.waitForPage(null, 'installed');
-    extensionsPo.extensionTabInstalledClick();
+    if (RANCHER_VERSION === '2.11') {
+      // No reload happened, so the URL stays on #available; just switch to the Installed tab.
+      extensionsPo.extensionTabInstalledClick();
+    } else {
+      extensionsPo.waitForPage(undefined, 'installed');
+      extensionsPo.extensionTabInstalledClick();
+    }
 
     // Deterministic test data - recreate from scratch each run
     cy.deleteRancherResource('v1', 'services', `${ NS }/${ svcName }`, false);

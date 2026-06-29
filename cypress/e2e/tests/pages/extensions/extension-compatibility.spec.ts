@@ -15,16 +15,16 @@ import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/ti
 // Cypress coerces numeric-looking CYPRESS_* values (e.g. "2.13") to numbers, so stringify it.
 const RANCHER_VERSION = String(Cypress.env('rancher_version') ?? '');
 
-// Older dashboard runtimes (2.12 / 2.13) differ from current in two spots that need a version `if`:
+// Older dashboard runtimes (2.11 / 2.12 / 2.13) differ from current in two spots that need an `if`:
 //  - the login flow doesn't drive the POST /v1-public/login that cy.login() waits on
 //  - the elemental machineregistration create form renders with a different (tabbed) layout
-const LEGACY_DASHBOARD = ['2.12', '2.13'].includes(RANCHER_VERSION);
+const LEGACY_DASHBOARD = ['2.11', '2.12', '2.13'].includes(RANCHER_VERSION);
 
 /**
  * Log in, tolerating Rancher version differences in the login flow.
  *
- * On the older dashboards (2.12 / 2.13, in this curl-bootstrapped setup) login doesn't drive the
- * POST /v1-public/login that the shared cy.login() waits on, so cy.login() times out even though
+ * On the older dashboards (2.11 / 2.12 / 2.13, in this curl-bootstrapped setup) login doesn't drive
+ * the POST /v1-public/login that the shared cy.login() waits on, so cy.login() times out even though
  * auth succeeds. There we submit the login form and validate by reaching an authenticated page
  * instead. All other versions use the standard cy.login() unchanged.
  */

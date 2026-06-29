@@ -129,6 +129,15 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     // Enable extension developer features
     cy.setUserPreference({ 'plugin-developer': true });
 
+    if (RANCHER_VERSION === '2.11') {
+      // 2.11's older dashboard doesn't surface the reload banner after a developer load, so setup can
+      // retry; ensure a clean dev-load by removing any plugin left from a previous attempt (the
+      // install POST 409s if it already exists).
+      cy.then(() => {
+        cy.deleteRancherResource('v1', 'catalog.cattle.io.uiplugins', `cattle-ui-plugin-system/${ moduleName }`, false);
+      });
+    }
+
     // Warm up the local cluster first - on a freshly booted Rancher the explorer/uiplugins
     // pages can race the cluster becoming ready. Wait on the product side-nav (renders as soon as
     // the cluster route loads) rather than the dashboard glance card, which is metrics-driven and
@@ -151,8 +160,18 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       devLoadDialog.fillAndLoad(extensionUrl, moduleName, true);
     });
 
-    extensionsPo.extensionReloadBanner(LONG_TIMEOUT_OPT).should('be.visible');
-    extensionsPo.extensionReloadClick();
+    if (RANCHER_VERSION === '2.11') {
+      // 2.11's older dashboard doesn't surface the reload banner after a developer load. Click it
+      // only if it appears; the installed extension is picked up by the subsequent cy.visit anyway.
+      cy.get('body', LONG_TIMEOUT_OPT).then(($body) => {
+        if ($body.find('[data-testid="extension-reload-banner-reload-btn"]').length) {
+          extensionsPo.extensionReloadClick();
+        }
+      });
+    } else {
+      extensionsPo.extensionReloadBanner(LONG_TIMEOUT_OPT).should('be.visible');
+      extensionsPo.extensionReloadClick();
+    }
 
     extensionsPo.waitForPage(null, 'installed');
     extensionsPo.extensionTabInstalledClick();

@@ -37,14 +37,25 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          # NOTE: For this phase we test 2.11, 2.12, 2.13, 2.14 and `latest` (Rancher head = 2.15).
+          # NOTE: For this phase we test 2.10, 2.11, 2.12, 2.13, 2.14 and `latest` (Rancher head=2.15).
           #
           # Version differences are expressed through skip_* flags (and a couple of version-gated
           # `if`s in the spec). Per the test spec's version notes and what works in practice:
-          #   - Shell API tests and the table hook are v2.14.0+ (skipped on 2.11/2.12/2.13)
-          #   - The new RESOURCE_* tabs render from 2.13 in practice (skipped on 2.11/2.12)
-          #   - ABOUT_TOP and CLUSTER_CREATE_RKE2 are v2.13.0+ (skipped on 2.11/2.12)
-          #   - The legacy RESOURCE_DETAIL tab is "up until v2.14.0" (run on 2.11-2.14, skip on 2.15)
+          #   - Shell API tests and the table hook are v2.14.0+ (skipped on 2.10-2.13)
+          #   - The new RESOURCE_* tabs render from 2.13 in practice (skipped on 2.10-2.12)
+          #   - ABOUT_TOP and CLUSTER_CREATE_RKE2 are v2.13.0+ (skipped on 2.10-2.12)
+          #   - The legacy RESOURCE_DETAIL tab is "up until v2.14.0" (run on 2.10-2.14, skip on 2.15)
+          - rancher_version: "v2.10-head"
+            rancher_registry: ""
+            version_label: "2.10"
+            # Same unsupported set as 2.11/2.12: only the v2.7.2+ extension points run on 2.10.
+            skip_shell_api_tests: "true"
+            skip_tab_resource_detail_page: "true"
+            skip_table_hook: "true"
+            skip_about_top: "true"
+            skip_cluster_create_rke2: "true"
+            # Legacy RESOURCE_DETAIL tab still works on 2.10
+            skip_resource_detail_legacy: "false"
           - rancher_version: "v2.11-head"
             rancher_registry: ""
             version_label: "2.11"

@@ -15,10 +15,15 @@ import { LONG_TIMEOUT_OPT, MEDIUM_TIMEOUT_OPT } from '@/cypress/support/utils/ti
 // Cypress coerces numeric-looking CYPRESS_* values (e.g. "2.13") to numbers, so stringify it.
 const RANCHER_VERSION = String(Cypress.env('rancher_version') ?? '');
 
-// Older dashboard runtimes (2.11 / 2.12 / 2.13) differ from current in two spots that need an `if`:
+// Older dashboard runtimes (2.10-2.13) differ from current in two spots that need an `if`:
 //  - the login flow doesn't drive the POST /v1-public/login that cy.login() waits on
 //  - the elemental machineregistration create form renders with a different (tabbed) layout
-const LEGACY_DASHBOARD = ['2.11', '2.12', '2.13'].includes(RANCHER_VERSION);
+const LEGACY_DASHBOARD = ['2.10', '2.11', '2.12', '2.13'].includes(RANCHER_VERSION);
+
+// The oldest dashboards (2.10 / 2.11) don't surface the reload banner after a developer load and
+// don't navigate to the #installed tab, so the dev-load setup needs an idempotent, banner-tolerant
+// path there. 2.12+ show the banner and navigate normally.
+const OLD_DEV_LOAD = ['2.10', '2.11'].includes(RANCHER_VERSION);
 
 /**
  * Log in, tolerating Rancher version differences in the login flow.
@@ -129,8 +134,8 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     // Enable extension developer features
     cy.setUserPreference({ 'plugin-developer': true });
 
-    if (RANCHER_VERSION === '2.11') {
-      // 2.11's older dashboard doesn't surface the reload banner after a developer load, so setup can
+    if (OLD_DEV_LOAD) {
+      // The oldest dashboards don't surface the reload banner after a developer load, so setup can
       // retry; ensure a clean dev-load by removing any plugin left from a previous attempt (the
       // install POST 409s if it already exists).
       cy.then(() => {
@@ -160,8 +165,8 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       devLoadDialog.fillAndLoad(extensionUrl, moduleName, true);
     });
 
-    if (RANCHER_VERSION === '2.11') {
-      // 2.11's older dashboard doesn't surface the reload banner after a developer load. Click it
+    if (OLD_DEV_LOAD) {
+      // The oldest dashboards don't surface the reload banner after a developer load. Click it
       // only if it appears; the installed extension is picked up by the subsequent cy.visit anyway.
       cy.get('body', LONG_TIMEOUT_OPT).then(($body) => {
         if ($body.find('[data-testid="extension-reload-banner-reload-btn"]').length) {
@@ -173,7 +178,7 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       extensionsPo.extensionReloadClick();
     }
 
-    if (RANCHER_VERSION === '2.11') {
+    if (OLD_DEV_LOAD) {
       // No reload happened, so the URL stays on #available; just switch to the Installed tab.
       extensionsPo.extensionTabInstalledClick();
     } else {

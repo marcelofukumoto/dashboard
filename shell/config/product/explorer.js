@@ -480,9 +480,21 @@ export function init(store) {
       STEVE_STATE_COL,
       STEVE_NAME_COL,
       {
+        // `roles` is a computed model getter that merges the kube node labels with the
+        // management.cattle.io.node spec, so it can't be sorted/searched server-side.
         ...ROLES,
         sort:   false,
         search: false
+      },
+      {
+        // Sortable companion to ROLES. Exposes the raw Kubernetes "Roles" cell that Steve
+        // surfaces via metadata.fields (Node columns: 0 Name, 1 Status, 2 Roles, 3 Age, 4 Version),
+        // which - unlike the merged `roles` value - is a real field the backend can ORDER BY.
+        name:     'k8s-roles',
+        labelKey: 'tableHeaders.k8sRoles',
+        value:    'metadata.fields.2',
+        sort:     ['metadata.fields.2'],
+        search:   'metadata.fields.2',
       },
       {
         ...VERSION,

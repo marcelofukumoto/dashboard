@@ -7176,6 +7176,7 @@ tableHeaders:
   restore: Restore
   role: Role
   roles: Roles
+  k8sRoles: K8s Roles
   routes: Routes
   routeConnectivity: Route Connectivity
   readyToUse: Ready To Use

@@ -18,8 +18,8 @@ on:
         required: false
         type: string
         default: "compatibility-tests-version"
-  # schedule:
-  #   - cron: "17 6 * * 1" # Weekly on Monday at 6:17am UTC
+  schedule:
+    - cron: "17 6 * * 1" # Weekly on Monday at 6:17am UTC
 
 env:
   CATTLE_BOOTSTRAP_PASSWORD: password

@@ -23,9 +23,12 @@ on:
 
 env:
   CATTLE_BOOTSTRAP_PASSWORD: password
-  RANCHER_HOST_HTTPS_PORT: "443"
-  RANCHER_HOST_HTTP_PORT: "9080"
-  RANCHER_CONTAINER_NAME: "rancher-ext-test"
+  # sslip.io magic domain - Rancher (via Helm) is served through the k3s Traefik
+  # ingress on 443, so we address it by hostname over TLS instead of raw 127.0.0.1.
+  RANCHER_URL: "https://127.0.0.1.sslip.io"
+  # The k3s Traefik ingress owns host ports 80/443, so the extension catalog server
+  # (developer load) is served on a non-conflicting port.
+  EXTENSION_SERVER_PORT: "8080"
 
 jobs:
   test-matrix:
@@ -45,8 +48,14 @@ jobs:
           #   - The new RESOURCE_* tabs render from 2.13 in practice (skipped on 2.10-2.12)
           #   - ABOUT_TOP and CLUSTER_CREATE_RKE2 are v2.13.0+ (skipped on 2.10-2.12)
           #   - The legacy RESOURCE_DETAIL tab is "up until v2.14.0" (run on 2.10-2.14, skip on 2.15)
+          # NOTE: kube_version below is the exact k3s version bundled in each Rancher
+          # version's all-in-one Docker image (what the Docker-based test ran against),
+          # read via `docker run --entrypoint k3s rancher/rancher:<tag> --version`.
+          # helm_repo / rancher_registry encode each version's chart channel and registry.
           - rancher_version: "v2.10-head"
             rancher_registry: ""
+            kube_version: "v1.31.1+k3s1"
+            helm_repo: "https://charts.optimus.rancher.io/server-charts/release-2.10"
             version_label: "2.10"
             # Same unsupported set as 2.11/2.12: only the v2.7.2+ extension points run on 2.10.
             skip_shell_api_tests: "true"
@@ -57,7 +66,9 @@ jobs:
             # Legacy RESOURCE_DETAIL tab still works on 2.10
             skip_resource_detail_legacy: "false"
           - rancher_version: "v2.11-head"
-            rancher_registry: ""
+            rancher_registry: "stgregistry.suse.com"
+            kube_version: "v1.32.13+k3s1"
+            helm_repo: "https://charts.optimus.rancher.io/server-charts/release-2.11"
             version_label: "2.11"
             # Same unsupported set as 2.12: new tabs (group 2), RKE2 (2.5), ABOUT_TOP (4.4),
             # table hook (6.1) and Shell API (group 7) are all absent on 2.11.
@@ -69,7 +80,9 @@ jobs:
             # Legacy RESOURCE_DETAIL tab still works on 2.11
             skip_resource_detail_legacy: "false"
           - rancher_version: "v2.12-head"
-            rancher_registry: ""
+            rancher_registry: "stgregistry.suse.com"
+            kube_version: "v1.33.12+k3s1"
+            helm_repo: "https://charts.optimus.rancher.io/server-charts/release-2.12"
             version_label: "2.12"
             # Shell API (group 7) and the table hook (6.1) are v2.14.0+; ABOUT_TOP (4.4) and
             # CLUSTER_CREATE_RKE2 (2.5) are v2.13.0+ - none present on 2.12.
@@ -83,7 +96,9 @@ jobs:
             # Legacy RESOURCE_DETAIL tab still works on 2.12
             skip_resource_detail_legacy: "false"
           - rancher_version: "v2.13-head"
-            rancher_registry: ""
+            rancher_registry: "stgregistry.suse.com"
+            kube_version: "v1.34.8+k3s1"
+            helm_repo: "https://charts.optimus.rancher.io/server-charts/release-2.13"
             version_label: "2.13"
             # Shell API (group 7) and the table hook (6.1) are v2.14.0+ - not present on 2.13
             skip_shell_api_tests: "true"
@@ -95,6 +110,8 @@ jobs:
             skip_resource_detail_legacy: "false"
           - rancher_version: "v2.14-head"
             rancher_registry: ""
+            kube_version: "v1.35.5+k3s1"
+            helm_repo: "https://charts.optimus.rancher.io/server-charts/release-2.14"
             version_label: "2.14"
             skip_shell_api_tests: "false"
             skip_tab_resource_detail_page: "false"
@@ -105,6 +122,8 @@ jobs:
             skip_resource_detail_legacy: "false"
           - rancher_version: "head"
             rancher_registry: ""
+            kube_version: "v1.36.1+k3s1"
+            helm_repo: "https://charts.optimus.rancher.io/server-charts/release-2.15"
             version_label: "latest"
             skip_shell_api_tests: "false"
             skip_tab_resource_detail_page: "false"
@@ -227,52 +246,33 @@ jobs:
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         run: |
-          sudo PORT=80 nohup node shell/scripts/serve-pkgs > serve-pkgs.log 2>&1 &
+          PORT=${{ env.EXTENSION_SERVER_PORT }} nohup node shell/scripts/serve-pkgs > serve-pkgs.log 2>&1 &
           sleep 3
           echo "Extension server catalog:"
-          curl -s http://127.0.0.1:80/ | head -20
+          curl -s http://127.0.0.1:${{ env.EXTENSION_SERVER_PORT }}/ | head -20
 
-      - name: Start Rancher Docker
+      - name: Start Rancher (Helm on k3s)
         if: >-
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         env:
-          RANCHER_HOST_HTTP_PORT: "9080"
-          RANCHER_HOST_HTTPS_PORT: "443"
-          RANCHER_CONTAINER_NAME: "rancher-ext-test"
+          # Per-matrix Rancher version. The stock UI shipped with each version is
+          # tested as-is (the script never overrides the dashboard UI).
+          RANCHER_IMG_REGISTRY: ${{ matrix.rancher_registry }}
+          RANCHER_IMG_TAG: ${{ matrix.rancher_version }}
+          RANCHER_AGENT_IMG_TAG: ${{ matrix.rancher_version }}
+          KUBE_VERSION: ${{ matrix.kube_version }}
+          RANCHER_HELM_REPO_URL: ${{ matrix.helm_repo }}
+          TEST_BASE_URL: ${{ env.RANCHER_URL }}
         run: |
-          REGISTRY="${{ matrix.rancher_registry }}"
-          VERSION="${{ matrix.rancher_version }}"
-          if [ -n "$REGISTRY" ]; then
-            docker pull "${REGISTRY}/rancher/rancher:${VERSION}"
-            docker tag "${REGISTRY}/rancher/rancher:${VERSION}" "rancher/rancher:${VERSION}"
-          fi
-          ./scripts/e2e-docker-start "${VERSION}" || true
-
-      - name: Wait for Rancher to be ready
-        if: >-
-          github.event.inputs.rancher_version == ''
-          || github.event.inputs.rancher_version == matrix.rancher_version
-        run: |
-          echo "Waiting for Rancher dashboard (up to 5 minutes)..."
-          for i in $(seq 1 60); do
-            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1/dashboard/ 2>/dev/null || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "Dashboard is ready!"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Dashboard did not become available"
-          docker logs rancher-ext-test --tail 50 || true
-          exit 1
+          ./scripts/e2e-extension-k3s-start.sh
 
       - name: Bootstrap Rancher
         if: >-
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         run: |
-          RANCHER_URL="https://127.0.0.1"
+          RANCHER_URL="${{ env.RANCHER_URL }}"
           # Retry login - the rancher-webhook can briefly be unavailable right after boot,
           # causing login to return no token (and KeyError under `bash -e`).
           TOKEN=""
@@ -310,7 +310,7 @@ jobs:
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         run: |
-          RANCHER_URL="https://127.0.0.1"
+          RANCHER_URL="${{ env.RANCHER_URL }}"
           echo "Waiting for local cluster API schemas (up to 5 minutes)..."
           for i in $(seq 1 60); do
             # Re-login each iteration - token endpoint and schemas both come up asynchronously.
@@ -334,7 +334,7 @@ jobs:
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         run: |
-          RANCHER_URL="https://127.0.0.1"
+          RANCHER_URL="${{ env.RANCHER_URL }}"
           # The Cypress suite logs in through the UI (POST /v1-public/login) and immediately uses the
           # local cluster (side-nav / explorer). After the API schemas are up there can still be a
           # window where the UI login endpoint 401s or the local cluster isn't 'active' yet, which
@@ -367,10 +367,10 @@ jobs:
           github.event.inputs.rancher_version == ''
           || github.event.inputs.rancher_version == matrix.rancher_version
         env:
-          TEST_BASE_URL: https://127.0.0.1/dashboard
+          TEST_BASE_URL: ${{ env.RANCHER_URL }}/dashboard
           TEST_USERNAME: admin
           TEST_PASSWORD: ${{ env.CATTLE_BOOTSTRAP_PASSWORD }}
-          CYPRESS_extension_server_url: http://127.0.0.1:80
+          CYPRESS_extension_server_url: http://127.0.0.1:${{ env.EXTENSION_SERVER_PORT }}
           CYPRESS_skip_shell_api_tests: ${{ matrix.skip_shell_api_tests }}
           CYPRESS_skip_tab_resource_detail_page: ${{ matrix.skip_tab_resource_detail_page }}
           CYPRESS_skip_table_hook: ${{ matrix.skip_table_hook }}
@@ -399,4 +399,6 @@ jobs:
 
       - name: Print Rancher logs on failure
         if: failure()
-        run: docker logs rancher-ext-test --tail 100 || true
+        run: |
+          kubectl -n cattle-system get pods || true
+          kubectl -n cattle-system logs -l app=rancher --tail 100 --all-containers || true

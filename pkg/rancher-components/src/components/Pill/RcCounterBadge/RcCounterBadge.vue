@@ -27,7 +27,7 @@ const displayCount = computed(() => props.count < 1000 ? props.count : '999+');
     border-radius: 30px;
     border: 1px solid var(--rc-active-border);
 
-    font-family: 'Rancher Lato', 'Lato';
+    font-family: 'Rancher Lato';
     font-size: 12px;
     font-style: normal;
     font-weight: 400;

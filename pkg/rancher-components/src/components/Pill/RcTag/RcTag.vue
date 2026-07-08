@@ -38,7 +38,7 @@ const emit = defineEmits(['close']);
 
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: Lato;
+    font-family: 'Rancher Lato', 'Lato';
     font-size: 13px;
     font-style: normal;
     font-weight: 400;

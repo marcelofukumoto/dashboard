@@ -31,7 +31,7 @@ const { backgroundColor, borderColor, textColor } = useStatusColors(status, 'out
     border: 1px solid transparent;
     border-radius: 30px;
 
-    font-family: Lato;
+    font-family: 'Rancher Lato', 'Lato';
     font-size: 12px;
     line-height: 17px;
 

@@ -34,7 +34,7 @@ jobs:
   test-matrix:
     timeout-minutes: 45
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'rancher' || github.event_name == 'workflow_dispatch'
+    if: github.repository_owner == 'rancher' || github.repository_owner == 'marcelofukumoto' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       max-parallel: 1

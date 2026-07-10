@@ -213,11 +213,6 @@ export default {
       return !!this.fleetAgentNamespace || (!this.currentCluster.isLocal && this.cattleAgentNamespace);
     },
 
-    showClusterTools() {
-      return this.$store.getters['cluster/canList'](CATALOG.CLUSTER_REPO) &&
-      this.$store.getters['cluster/canList'](CATALOG.APP);
-    },
-
     displayProvider() {
       return this.currentCluster?.provisionerDisplay;
     },
@@ -628,16 +623,6 @@ export default {
         </span>
       </div>
       <div :style="{'flex':1}" />
-      <div v-if="showClusterTools">
-        <router-link
-          :to="{name: 'c-cluster-explorer-tools'}"
-          class="cluster-tools-link"
-          role="link"
-          :aria-label="t('nav.clusterTools')"
-        >
-          <span>{{ t('nav.clusterTools') }}</span>
-        </router-link>
-      </div>
       <ConfigBadge
         v-if="currentCluster.canUpdate"
         :cluster="currentCluster"
@@ -884,16 +869,6 @@ export default {
 
 .cluster-tools-tip {
   margin-top: 0;
-}
-
-.cluster-tools-link {
-  display: flex;
-  margin-right: 10px;
-
-  > I {
-    line-height: inherit;
-    margin-right: 4px;
-  }
 }
 
 .cert-table-link {

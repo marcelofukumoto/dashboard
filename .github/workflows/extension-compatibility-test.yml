@@ -37,7 +37,10 @@ jobs:
     if: github.repository_owner == 'rancher' || github.repository_owner == 'marcelofukumoto' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
-      max-parallel: 1
+      # Each matrix row installs its own k3s on its own runner, so the rows are independent.
+      # Capped at 3 (rather than 6) to leave runner headroom for other workflows and to avoid
+      # 6 concurrent multi-GB Rancher image pulls against the registries.
+      max-parallel: 3
       matrix:
         include:
           # NOTE: For this phase we test 2.10, 2.11, 2.12, 2.13, 2.14 and `latest` (Rancher head=2.15).
@@ -311,23 +314,36 @@ jobs:
           || github.event.inputs.rancher_version == matrix.rancher_version
         run: |
           RANCHER_URL="${{ env.RANCHER_URL }}"
+          # Cluster (core) resources are served by the *cluster-scoped* Steve API, and core-group
+          # schema ids carry no group prefix - see shell/config/types.js (`SERVICE = 'service'`).
+          # The old probe used `/v1/schemas/core.v1.service`, which 404s on every Rancher version.
+          SCHEMA_URL="${RANCHER_URL}/k8s/clusters/local/v1/schemas/service"
           echo "Waiting for local cluster API schemas (up to 5 minutes)..."
+          echo "  probing ${SCHEMA_URL}"
+          CODE=""
+          RESP=""
           for i in $(seq 1 60); do
             # Re-login each iteration - token endpoint and schemas both come up asynchronously.
             TOKEN=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local?action=login" \
               -H "Content-Type: application/json" \
-              -d '{"username":"admin","password":"${{ env.CATTLE_BOOTSTRAP_PASSWORD }}"}' \
+              -d "{\"username\":\"admin\",\"password\":\"${CATTLE_BOOTSTRAP_PASSWORD}\"}" \
               | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || echo "")
-            if [ -n "$TOKEN" ] && curl -sk -H "Authorization: Bearer ${TOKEN}" \
-              "${RANCHER_URL}/v1/schemas/core.v1.service" 2>/dev/null | \
-              python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if d.get('id')=='core.v1.service' else 1)" 2>/dev/null; then
-              echo "Cluster API schemas are ready!"
-              exit 0
+            if [ -n "$TOKEN" ]; then
+              OUT=$(curl -sk -w $'\n%{http_code}' -H "Authorization: Bearer ${TOKEN}" "$SCHEMA_URL" 2>/dev/null || echo)
+              CODE=$(printf '%s' "$OUT" | tail -n1)
+              RESP=$(printf '%s' "$OUT" | sed '$d')
+              if [ "$CODE" = "200" ]; then
+                echo "Cluster API schemas are ready!"
+                exit 0
+              fi
             fi
-            echo "  Waiting... ($i/60)"
+            echo "  Waiting... ($i/60) token=${TOKEN:+yes} schema_http=${CODE:-none}"
             sleep 5
           done
-          echo "Warning: cluster API schemas may not be fully ready"
+          echo "::error::Cluster API schemas never became ready (last HTTP ${CODE:-none} from ${SCHEMA_URL})"
+          echo "Last response body:"
+          printf '%s\n' "$RESP" | head -20
+          exit 1
 
       - name: Wait for UI login and active local cluster
         if: >-
@@ -339,28 +355,37 @@ jobs:
           # local cluster (side-nav / explorer). After the API schemas are up there can still be a
           # window where the UI login endpoint 401s or the local cluster isn't 'active' yet, which
           # flakes the (already retried) test setup. Gate on both being ready before starting Cypress.
+          #
+          # /v1-public/login only exists from Rancher 2.13 (see extension-compatibility.spec.ts), so a
+          # 404 means "not applicable on this version" rather than "not ready". Any other non-200
+          # (401/500/000) is a genuine not-ready signal and keeps us waiting.
           echo "Waiting for UI login endpoint + active local cluster (up to 5 minutes)..."
           for i in $(seq 1 60); do
             LOGIN_CODE=$(curl -sk -o /dev/null -w "%{http_code}" -X POST "${RANCHER_URL}/v1-public/login" \
               -H "Content-Type: application/json" \
-              -d '{"username":"admin","password":"${{ env.CATTLE_BOOTSTRAP_PASSWORD }}","description":"UI session","type":"localProvider","responseType":"cookie"}' 2>/dev/null || echo "000")
+              -d "{\"username\":\"admin\",\"password\":\"${CATTLE_BOOTSTRAP_PASSWORD}\",\"description\":\"UI session\",\"type\":\"localProvider\",\"responseType\":\"cookie\"}" 2>/dev/null || echo "000")
             TOKEN=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local?action=login" \
               -H "Content-Type: application/json" \
-              -d '{"username":"admin","password":"${{ env.CATTLE_BOOTSTRAP_PASSWORD }}"}' \
+              -d "{\"username\":\"admin\",\"password\":\"${CATTLE_BOOTSTRAP_PASSWORD}\"}" \
               | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || echo "")
             STATE=""
             if [ -n "$TOKEN" ]; then
               STATE=$(curl -sk -H "Authorization: Bearer ${TOKEN}" "${RANCHER_URL}/v3/clusters/local" 2>/dev/null \
                 | python3 -c "import sys,json; print(json.load(sys.stdin).get('state',''))" 2>/dev/null || echo "")
             fi
-            if [ "$LOGIN_CODE" = "200" ] && [ "$STATE" = "active" ]; then
-              echo "UI login works and local cluster is active!"
+            if { [ "$LOGIN_CODE" = "200" ] || [ "$LOGIN_CODE" = "404" ]; } && [ "$STATE" = "active" ]; then
+              if [ "$LOGIN_CODE" = "404" ]; then
+                echo "Local cluster is active (/v1-public/login absent on this Rancher version)"
+              else
+                echo "UI login works and local cluster is active!"
+              fi
               exit 0
             fi
             echo "  Waiting... ($i/60) login=${LOGIN_CODE} cluster=${STATE:-unknown}"
             sleep 5
           done
-          echo "Warning: UI login / local cluster may not be fully ready"
+          echo "::error::UI login / local cluster never became ready (login=${LOGIN_CODE} cluster=${STATE:-unknown})"
+          exit 1
 
       - name: Run Cypress extension compatibility tests
         if: >-
@@ -390,7 +415,7 @@ jobs:
           retention-days: 7
 
       - name: Upload videos
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cypress-videos-${{ matrix.version_label }}

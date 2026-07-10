@@ -3,7 +3,6 @@ import DeveloperLoadDialogPo from '@/cypress/e2e/po/pages/extensions/developer-l
 import ActionMenuPo from '@/cypress/e2e/po/components/action-menu.po';
 import CheckboxInputPo from '@/cypress/e2e/po/components/checkbox-input.po';
 import { ServicesPagePo } from '@/cypress/e2e/po/pages/explorer/services.po';
-import { WorkloadsPodsListPagePo } from '@/cypress/e2e/po/pages/explorer/workloads-pods.po';
 import { SecretsListPagePo } from '@/cypress/e2e/po/pages/explorer/secrets.po';
 import { ConfigMapListPagePo } from '@/cypress/e2e/po/pages/explorer/config-map.po';
 import ChartRepositoriesPagePo from '@/cypress/e2e/po/pages/chart-repositories.po';
@@ -382,16 +381,11 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
     // and skipped on 2.15/latest (skip_resource_detail_legacy=true) per the test spec's
     // "legacy - up until rancher v2.14.0" note. All other tests run identically on both versions.
     (skipResourceDetailLegacy ? it.skip : it)('2.6 Tab RESOURCE_DETAIL (legacy, up to v2.14)', () => {
-      const pods = new WorkloadsPodsListPagePo(CLUSTER_ID);
-
-      pods.goTo();
-      pods.waitForPage();
-
-      const table = new SortableTablePo(STANDARD_LIST);
-
-      table.checkLoadingIndicatorNotVisible();
-      table.filter(podName);
-      table.detailsPageLinkWithName(podName).click();
+      // Visit the pod detail page directly (as 2.1 does for services). Navigating via the pods list
+      // raced the post-filter table re-render: the row-link click was intermittently swallowed, so we
+      // never left the list and the extension's detail tab never rendered ("btn-pod-detail-id" not
+      // found). Direct navigation removes that race - the tab is still what the test asserts.
+      cy.visit(`/c/${ CLUSTER_ID }/explorer/pod/${ NS }/${ podName }`);
       clickDemoTabAndAssert('pod-detail-id');
     });
   });

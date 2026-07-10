@@ -176,4 +176,23 @@ while [ $okay -lt 30 ] ; do
   fi
 done
 
+# Let the cluster settle before Cypress starts. Right after boot, Rancher spins up the fleet,
+# provisioning and CAPI controllers, which pull images and saturate the runner - that CPU/IO churn
+# is what races Cypress's browser launch ("Timed out waiting for the browser to connect") and makes
+# the UI re-render under the setup clicks (detached-from-DOM). Blocking until these Deployments are
+# Available costs seconds when healthy and only waits as long as genuinely needed.
+echo "Waiting for cattle workloads to settle (so the runner is quiet when Cypress starts)..."
+kubectl wait --for=condition=Available --timeout=600s deployment --all -n $RANCHER_NAMESPACE || \
+  echo "Warning: not all ${RANCHER_NAMESPACE} deployments reported Available; continuing"
+for ns in cattle-fleet-system cattle-fleet-local-system cattle-provisioning-capi-system cattle-capi-system; do
+  if kubectl get ns "$ns" >/dev/null 2>&1; then
+    echo "  settling namespace ${ns}..."
+    kubectl wait --for=condition=Available --timeout=300s deployment --all -n "$ns" || \
+      echo "  Warning: not all ${ns} deployments reported Available; continuing"
+  fi
+done
+
+echo "Cluster workloads settled:"
+kubectl get deploy -A | grep -E 'cattle|fleet|capi' || true
+
 echo "Rancher is ready"

@@ -274,7 +274,7 @@ nav:
     orphan: Not in a Project
     project: "Project: {name}"
     system: Only System Namespaces
-    user: Only User Namespaces
+    user: User Namespaces only
   apps: Apps
   categories:
     explore: Explore Cluster

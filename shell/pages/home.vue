@@ -5,7 +5,6 @@ import BannerGraphic from '@shell/components/BannerGraphic.vue';
 import IndentedPanel from '@shell/components/IndentedPanel.vue';
 import PaginatedResourceTable from '@shell/components/PaginatedResourceTable.vue';
 import { BadgeState } from '@components/BadgeState';
-import CommunityLinks from '@shell/components/CommunityLinks.vue';
 import SingleClusterInfo from '@shell/components/SingleClusterInfo.vue';
 import DynamicContentBanner from '@shell/components/DynamicContent/DynamicContentBanner.vue';
 import DynamicContentPanel from '@shell/components/DynamicContent/DynamicContentPanel.vue';
@@ -45,7 +44,6 @@ export default defineComponent({
     IndentedPanel,
     PaginatedResourceTable,
     BadgeState,
-    CommunityLinks,
     SingleClusterInfo,
     TabTitle,
     ResourceTable,
@@ -737,7 +735,6 @@ export default defineComponent({
           </div>
         </div>
         <div class="col span-3 side-panel">
-          <CommunityLinks />
           <DynamicContentPanel location="rhs" />
         </div>
       </div>

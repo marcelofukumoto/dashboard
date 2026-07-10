@@ -507,6 +507,14 @@ export default defineComponent({
                 >
                   <div class="table-heading">
                     <rc-button
+                      v-if="canCreateCluster"
+                      :to="createLocation"
+                      data-testid="cluster-create-button"
+                      :aria-label="t('generic.create')"
+                    >
+                      {{ t('generic.create') }}
+                    </rc-button>
+                    <rc-button
                       v-if="!!provClusterSchema"
                       variant="secondary"
                       :to="manageLocation"
@@ -522,14 +530,6 @@ export default defineComponent({
                       :aria-label="t('cluster.importAction')"
                     >
                       {{ t('cluster.importAction') }}
-                    </rc-button>
-                    <rc-button
-                      v-if="canCreateCluster"
-                      :to="createLocation"
-                      data-testid="cluster-create-button"
-                      :aria-label="t('generic.create')"
-                    >
-                      {{ t('generic.create') }}
                     </rc-button>
                   </div>
                 </template>
@@ -652,6 +652,14 @@ export default defineComponent({
                 >
                   <div class="table-heading">
                     <rc-button
+                      v-if="canCreateCluster"
+                      :to="createLocation"
+                      data-testid="cluster-create-button"
+                      :aria-label="t('generic.create')"
+                    >
+                      {{ t('generic.create') }}
+                    </rc-button>
+                    <rc-button
                       v-if="!!provClusterSchema"
                       variant="secondary"
                       :to="manageLocation"
@@ -667,14 +675,6 @@ export default defineComponent({
                       :aria-label="t('cluster.importAction')"
                     >
                       {{ t('cluster.importAction') }}
-                    </rc-button>
-                    <rc-button
-                      v-if="canCreateCluster"
-                      :to="createLocation"
-                      data-testid="cluster-create-button"
-                      :aria-label="t('generic.create')"
-                    >
-                      {{ t('generic.create') }}
                     </rc-button>
                   </div>
                 </template>

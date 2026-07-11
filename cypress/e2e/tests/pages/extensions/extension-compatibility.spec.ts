@@ -175,26 +175,21 @@ describe('Extension Compatibility', { tags: ['@extensions', '@adminUser'], retri
       devLoadDialog.fillAndLoad(extensionUrl, moduleName, true);
     });
 
-    if (OLD_DEV_LOAD) {
-      // The oldest dashboards don't surface the reload banner after a developer load. Click it
-      // only if it appears; the installed extension is picked up by the subsequent cy.visit anyway.
-      cy.get('body', LONG_TIMEOUT_OPT).then(($body) => {
-        if ($body.find('[data-testid="extension-reload-banner-reload-btn"]').length) {
-          extensionsPo.extensionReloadClick();
-        }
-      });
-    } else {
-      extensionsPo.extensionReloadBanner(LONG_TIMEOUT_OPT).should('be.visible');
-      extensionsPo.extensionReloadClick();
-    }
+    // After a developer load, Rancher surfaces a reload banner to apply the extension. On a freshly
+    // booted cluster that banner can be slow or transient, so hard-requiring it (as the 2.12+ path
+    // used to, via `extensionReloadBanner().should('be.visible')`) flaked the whole suite - it was the
+    // top failure in a 4-run flake gate (2.12/2.13). Click it only if present; the extension is picked
+    // up by the subsequent full-page cy.visit() navigations regardless. This is exactly the tolerant
+    // path the 2.10/2.11 branch has always used without flaking - now applied to every version.
+    cy.get('body', LONG_TIMEOUT_OPT).then(($body) => {
+      if ($body.find('[data-testid="extension-reload-banner-reload-btn"]').length) {
+        extensionsPo.extensionReloadClick();
+      }
+    });
 
-    if (OLD_DEV_LOAD) {
-      // No reload happened, so the URL stays on #available; just switch to the Installed tab.
-      extensionsPo.extensionTabInstalledClick();
-    } else {
-      extensionsPo.waitForPage(undefined, 'installed');
-      extensionsPo.extensionTabInstalledClick();
-    }
+    // A reload (if it happened) can leave the URL on #available, so switch to the Installed tab
+    // explicitly rather than waiting for a reload-driven navigation.
+    extensionsPo.extensionTabInstalledClick();
 
     // Deterministic test data - recreate from scratch each run
     cy.deleteRancherResource('v1', 'services', `${ NS }/${ svcName }`, false);

@@ -422,8 +422,41 @@ jobs:
           path: cypress/videos/
           retention-days: 7
 
-      - name: Print Rancher logs on failure
+      - name: Cluster diagnostics on failure
         if: failure()
         run: |
+          echo "===================== ALL PODS ====================="
+          kubectl get pods -A -o wide || true
+
+          echo "===================== NOT-READY PODS (describe) ====================="
+          # Anything not fully-ready and not Completed - e.g. ImagePullBackOff / CrashLoopBackOff for
+          # the elemental-operator install (test 8.1) surfaces here. Columns: NAMESPACE NAME READY
+          # STATUS ...; keep a pod only if it's a genuine problem (Running but n/m ready, or any
+          # non-Running/Completed phase).
+          NOTREADY=$(kubectl get pods -A --no-headers 2>/dev/null | awk '
+            { split($3, r, "/"); status=$4 }
+            status=="Completed" || status=="Succeeded" { next }
+            status=="Running" && r[1]==r[2] { next }
+            { print }')
+          echo "$NOTREADY"
+          echo "$NOTREADY" | awk '{print $1" "$2}' | while read -r ns pod; do
+            [ -n "$pod" ] || continue
+            echo "----- describe $ns/$pod -----"
+            kubectl -n "$ns" describe pod "$pod" | sed -n '/Events:/,$p' || true
+          done
+
+          echo "===================== ELEMENTAL / OPERATOR NAMESPACES ====================="
+          for ns in cattle-elemental-system cattle-fleet-system cattle-provisioning-capi-system; do
+            echo "----- $ns -----"
+            kubectl -n "$ns" get pods,deploy,jobs -o wide 2>/dev/null || echo "  (namespace absent)"
+          done
+
+          echo "===================== HELM RELEASES ====================="
+          helm list -A 2>/dev/null || true
+
+          echo "===================== RECENT WARNING EVENTS ====================="
+          kubectl get events -A --field-selector type=Warning --sort-by=.lastTimestamp 2>/dev/null | tail -60 || true
+
+          echo "===================== RANCHER LOGS ====================="
           kubectl -n cattle-system get pods || true
           kubectl -n cattle-system logs -l app=rancher --tail 100 --all-containers || true

@@ -121,6 +121,7 @@ const defaultGkeConfig = {
 };
 
 const defaultCluster = {
+  importedConfig:          {},
   dockerRootDir:           '/var/lib/docker',
   enableClusterAlerting:   false,
   enableClusterMonitoring: false,

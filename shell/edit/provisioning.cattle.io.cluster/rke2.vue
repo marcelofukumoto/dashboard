@@ -903,6 +903,10 @@ export default {
       return this.needCredential && !this.credentialId;
     },
 
+    canEditAsYaml() {
+      return !(this.isUpstreamCAPIProvider);
+    },
+
     overallFormValidationPassed() {
       return this.validationPassed &&
             this.fvFormIsValid &&
@@ -2401,6 +2405,7 @@ export default {
     :done-route="doneRoute"
     :apply-hooks="applyHooks"
     :generate-yaml="generateYaml"
+    :can-yaml="canEditAsYaml"
     class="rke2"
     component-testid="rke2-custom-create"
     @done="done"

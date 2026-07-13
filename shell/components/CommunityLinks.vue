@@ -158,4 +158,20 @@ export default {
   .support-link:not(:last-child) {
     margin-bottom: 15px;
   }
+
+  // Give the Links panel a primary color background
+  :deep(.simple-box) {
+    background: var(--primary);
+    color: var(--primary-text);
+
+    .top {
+      border-bottom-color: var(--primary-text);
+    }
+
+    h2,
+    a,
+    .support-link a {
+      color: var(--primary-text);
+    }
+  }
 </style>

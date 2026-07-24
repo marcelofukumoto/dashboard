@@ -232,6 +232,7 @@
     "mocha/js-yaml": "4.3.0",
     "@cypress/code-coverage/js-yaml": "4.3.0",
     "webpack-dev-server": "5.2.6",
-    "postcss": "8.5.12"
+    "postcss": "8.5.12",
+    "@tootallnate/once": "^2.0.1"
   }
 }

@@ -39,22 +39,27 @@
       "@cypress/grep",
       "cypress-axe"
     ],
-    // Relative to this file, now that the deprecated `baseUrl` is gone.
+    // `baseUrl` is deprecated in TypeScript 6, and TypeScript itself resolves `paths`
+    // without it. Cypress does not: it resolves these aliases for the spec bundle with
+    // `TsconfigPathsPlugin`, and `tsconfig-paths` still requires `baseUrl` - without it, it
+    // logs "Missing baseUrl in compilerOptions. tsconfig-paths will be skipped" and every
+    // `@/...` import fails to resolve. Keep it, and keep the paths relative to it.
+    "baseUrl": "..",
     "paths": {
       "~/*": [
-        "../*"
+        "*"
       ],
       "@/*": [
-        "../*"
+        "*"
       ],
       "@shell/*": [
-        "../shell/*"
+        "shell/*"
       ],
       "@pkg/*": [
-        "../shell/pkg/*"
+        "shell/pkg/*"
       ],
       "@components/*": [
-        "../pkg/rancher-components/src/components/*"
+        "pkg/rancher-components/src/components/*"
       ]
     },
   },

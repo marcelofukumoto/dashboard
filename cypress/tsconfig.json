@@ -12,6 +12,7 @@
   "strict": true,
   "noEmit": false,
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "baseUrl": "..",
     "types": [

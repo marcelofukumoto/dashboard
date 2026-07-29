@@ -17,9 +17,12 @@
     // defaults to a target new enough to emit `?.` untouched, and the spec bundle then dies
     // with `Module parse failed: Unexpected token`. Pin the target so it is downlevelled.
     "target": "ES2018",
+    // `ES2020.AsyncIterable` used to be listed here too. It is not a real lib - the async
+    // iterable lib is `ES2018.AsyncIterable`, and `ES2020` already includes it - and it only
+    // went unnoticed because these options sat outside `compilerOptions` and never applied.
+    // Nested, it fails the spec build with TS6046.
     "lib": [
       "ES2020",
-      "ES2020.AsyncIterable",
       "DOM"
     ],
     // `node16` drops the `node10` resolution deprecated in TypeScript 6 and removed in 7,

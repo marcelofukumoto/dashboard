@@ -6,6 +6,13 @@
   // program through the path aliases and breaks the package build (TS5055/TS6059), and the
   // specs do not compile under `strict`. Adopting them is separate work.
   "compilerOptions": {
+    // Cypress compiles specs with its own bundled `webpack-batteries-included-preprocessor`,
+    // which hardcodes `downlevelIteration: true` into `ts-loader` and merges it over this
+    // file. TypeScript 6 deprecated that option, so every spec fails to compile with
+    // `TS5101` before a single test runs. The preprocessor is inside the Cypress binary and
+    // takes no option to change this, so silence the deprecation for spec compilation.
+    // Nothing in this repo sets `downlevelIteration` itself.
+    "ignoreDeprecations": "6.0",
     // `node16` drops the `node10` resolution deprecated in TypeScript 6 and removed in 7,
     // while keeping the CommonJS emit this published package relies on: cypress/package.json
     // declares no `"type": "module"`.

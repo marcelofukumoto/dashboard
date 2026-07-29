@@ -1,25 +1,19 @@
 {
   // `target`, `module`, `moduleResolution`, `lib`, `allowJs`, `sourceMap`, `strict` and
-  // `noEmit` used to sit at the top level of this file, where TypeScript ignores them, so
-  // the project silently compiled on defaults. They are nested correctly now.
+  // `noEmit` used to sit here, outside `compilerOptions`, where TypeScript ignores them.
+  // They never applied, so they are removed rather than nested: switching them on changes
+  // what this project compiles. `allowJs` in particular pulls `shell/**/*.js` into the
+  // program through the path aliases and breaks the package build (TS5055/TS6059), and the
+  // specs do not compile under `strict`. Adopting them is separate work.
   "compilerOptions": {
-    "target": "ES2018",
-    // `node16` keeps the CommonJS emit this published package relies on (cypress has no
-    // `"type": "module"`), without the `node10` resolution TypeScript 7 removes.
+    // `node16` drops the `node10` resolution deprecated in TypeScript 6 and removed in 7,
+    // while keeping the CommonJS emit this published package relies on: cypress/package.json
+    // declares no `"type": "module"`.
     "module": "node16",
     "moduleResolution": "node16",
-    "lib": [
-      "ES2020",
-      "ES2020.AsyncIterable",
-      "DOM"
-    ],
-    "allowJs": true,
-    "sourceMap": true,
-    // TypeScript 6 enables `strict` by default. The `strict: true` above never applied, and
-    // the specs do not compile under it yet, so keep the behaviour this code was written
-    // against. Turning it on is a separate piece of work.
+    // TypeScript 6 enables `strict` by default. It was never in effect here and the specs
+    // do not compile under it, so keep the behaviour this code was written against.
     "strict": false,
-    "noEmit": false,
     "esModuleInterop": true,
     "types": [
       "cypress",

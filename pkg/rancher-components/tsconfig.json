@@ -1,17 +1,15 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "target": "esnext",
     "module": "esnext",
     "strict": true,
     "jsx": "preserve",
     "importHelpers": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
-    "baseUrl": ".",
     "allowJs": true,
     "checkJs": false,
     "types": [
@@ -19,6 +17,9 @@
       "jest"
     ],
     "paths": {
+      "vuex": [
+        "../../node_modules/vuex/types/index.d.ts"
+      ],
       "@/*": [
         "../../shell/*"
       ],
@@ -26,10 +27,10 @@
         "../../shell/*"
       ],
       "@components/*": [
-        "src/components/*"
+        "./src/components/*"
       ],
       "~/*": [
-        "src/*"
+        "./src/*"
       ]
     },
     "lib": [

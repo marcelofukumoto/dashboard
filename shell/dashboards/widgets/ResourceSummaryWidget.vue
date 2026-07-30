@@ -117,7 +117,7 @@ const location = computed(() => {
   }
 
   .breakdown {
-    padding-top: 0;
+    padding: 4px 16px 8px;
   }
 }
 

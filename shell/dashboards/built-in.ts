@@ -19,8 +19,8 @@ registerDashboardWidget({
   icon: 'icon-dashboard',
   component: ResourceSummaryWidget,
   title: (config, { store, context }) => (config.resource ? labelForType(store, context, config.resource) : undefined),
-  defaultSize: { w: 3, h: 3 },
-  minSize: { w: 2, h: 2 },
+  defaultSize: { w: 3, h: 4 },
+  minSize: { w: 2, h: 3 },
   configFields: [
     {
       name: 'resource',

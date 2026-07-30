@@ -26,10 +26,10 @@ export const PRESETS: DashboardPreset[] = [
         type: WIDGET_CLUSTERS, x: 0, y: 0, w: 8, h: 5, config: { limit: 10 }
       },
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 8, y: 0, w: 4, h: 3, config: { resource: MANAGEMENT.CLUSTER }
+        type: WIDGET_RESOURCE_SUMMARY, x: 8, y: 0, w: 4, h: 4, config: { resource: MANAGEMENT.CLUSTER }
       },
       {
-        type: WIDGET_NOTES, x: 8, y: 3, w: 4, h: 2, config: { body: 'Drop widgets from the palette to build your own view of Rancher.' }
+        type: WIDGET_NOTES, x: 8, y: 4, w: 4, h: 2, config: { body: 'Drop widgets from the palette to build your own view of Rancher.' }
       },
     ],
   },
@@ -54,19 +54,19 @@ export const PRESETS: DashboardPreset[] = [
     role: 'admin',
     widgets: [
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 0, y: 0, w: 3, h: 3, config: { resource: NODE }
+        type: WIDGET_RESOURCE_SUMMARY, x: 0, y: 0, w: 3, h: 4, config: { resource: NODE }
       },
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 3, y: 0, w: 3, h: 3, config: { resource: NAMESPACE }
+        type: WIDGET_RESOURCE_SUMMARY, x: 3, y: 0, w: 3, h: 4, config: { resource: NAMESPACE }
       },
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 6, y: 0, w: 3, h: 3, config: { resource: WORKLOAD_TYPES.DEPLOYMENT }
+        type: WIDGET_RESOURCE_SUMMARY, x: 6, y: 0, w: 3, h: 4, config: { resource: WORKLOAD_TYPES.DEPLOYMENT }
       },
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 9, y: 0, w: 3, h: 3, config: { resource: POD }
+        type: WIDGET_RESOURCE_SUMMARY, x: 9, y: 0, w: 3, h: 4, config: { resource: POD }
       },
       {
-        type: WIDGET_EVENTS, x: 0, y: 3, w: 12, h: 6, config: {}
+        type: WIDGET_EVENTS, x: 0, y: 4, w: 12, h: 6, config: {}
       },
     ],
   },
@@ -77,18 +77,18 @@ export const PRESETS: DashboardPreset[] = [
     role: 'user',
     widgets: [
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 0, y: 0, w: 4, h: 3, config: { resource: WORKLOAD_TYPES.DEPLOYMENT }
+        type: WIDGET_RESOURCE_SUMMARY, x: 0, y: 0, w: 4, h: 4, config: { resource: WORKLOAD_TYPES.DEPLOYMENT }
       },
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 4, y: 0, w: 4, h: 3, config: { resource: POD }
+        type: WIDGET_RESOURCE_SUMMARY, x: 4, y: 0, w: 4, h: 4, config: { resource: POD }
       },
       {
-        type: WIDGET_RESOURCE_SUMMARY, x: 8, y: 0, w: 4, h: 3, config: { resource: SERVICE }
+        type: WIDGET_RESOURCE_SUMMARY, x: 8, y: 0, w: 4, h: 4, config: { resource: SERVICE }
       },
       {
         type: WIDGET_RESOURCE_TABLE,
         x: 0,
-        y: 3,
+        y: 4,
         w: 12,
         h: 7,
         config: {

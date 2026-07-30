@@ -2864,6 +2864,79 @@ codeMirror:
     tooltip: Key mapping preference.
     indicatorToolip: "Key mapping: {name}"
 
+customDashboard:
+  title: Dashboards
+  isDefault: Your default dashboard
+  copyOf: 'Copy of {name}'
+  emptyEditing: Drag a widget from the palette, or use the + next to it
+  unknownWidget: 'Unknown widget "{type}" - it may come from an extension that is not installed'
+  addDashboard: Add a dashboard
+  actions:
+    customise: Customise
+    done: Done
+    rename: Rename
+    duplicate: Duplicate
+    delete: Delete
+    reset: Reset
+    share: Share
+    import: Import
+    setDefault: Set as default
+    unsetDefault: Unset default
+  prompt:
+    add: New dashboard
+    rename: Rename dashboard
+    import: Import a dashboard
+    export: Share this dashboard
+    nameLabel: Name
+    jsonPlaceholder: Dashboard definition (JSON)
+  palette:
+    title: Widgets
+    hint: Drag onto the dashboard to place a widget
+    add: 'Add {name}'
+  widget:
+    configure: Configure widget
+    configureTitle: Configure widget
+    remove: Remove widget
+    resize: Drag to resize
+    titleField: Title
+    noConfig: This widget has nothing to configure.
+  presets:
+    clusterAdmin: Cluster admin
+    appDeveloper: App developer
+
+dashboardWidgets:
+  unconfigured: Configure this widget to choose what it shows
+  fields:
+    resource: Resource
+    rowsPerPage: Rows per page
+    columns: Number of columns (0 for all)
+    search: Show search
+    limit: Maximum rows
+    unhealthyOnly: Only show clusters that need attention
+    body: Content
+  resourceSummary:
+    label: Resource summary
+    description: Counts and health for one resource type
+    healthy: Healthy
+    warning: Warning
+    notHealthy: Not healthy
+    noCounts: 'No counts available for {type}'
+  resourceTable:
+    label: Resource table
+    description: A table of any resource type
+    noSchema: 'You do not have access to {type} here'
+  events:
+    label: Events
+    description: Recent events in this cluster
+  clusters:
+    label: Clusters
+    description: The clusters you can reach
+    none: No clusters to show
+  notes:
+    label: Notes
+    description: Free text for you or your team
+    empty: Configure this widget to add some notes
+
 cruResource:
   backToForm: Back to Form
   backBody: You will lose any changes made to the YAML.

@@ -13,6 +13,7 @@ import {
   LocationConfig,
   ExtensionPoint,
   TabLocation,
+  DashboardWidgetLocation,
   ModelExtensionConstructor,
   PluginRouteRecordRaw, RegisterStore, UnregisterStore, CoreStoreSpecifics, CoreStoreConfig,
   NavHooks, OnNavToPackage, OnNavAwayFromPackage, OnLogIn, OnLogOut,
@@ -22,6 +23,7 @@ import {
   TableAction,
 } from './types';
 import { RouteRecordRawWithParams } from './plugin-types';
+import { DashboardWidgetDefinition } from '@shell/types/dashboards';
 import coreStore, { coreStoreModule, coreStoreState } from '@shell/plugins/dashboard-store';
 import { defineAsyncComponent, markRaw, Component } from 'vue';
 import { getVersionData, CURRENT_RANCHER_VERSION } from '@shell/config/version';
@@ -261,6 +263,19 @@ export class Plugin implements IPlugin {
    */
   addCard( where: string, when: LocationConfig | string, card: Card): void {
     this._addUIConfig(ExtensionPoint.CARD, where, when, this._createAsyncComponent(card));
+  }
+
+  /**
+   * Adds a widget that users can drop onto a configurable dashboard.
+   *
+   * The dashboard renders the editor for whatever `configFields` the widget declares,
+   * so an extension doesn't need to supply any configuration UI of its own.
+   */
+  addDashboardWidget(widget: DashboardWidgetDefinition): void {
+    this._addUIConfig(ExtensionPoint.DASHBOARD_WIDGET, DashboardWidgetLocation.DASHBOARD, {}, {
+      source: this.name,
+      ...widget,
+    });
   }
 
   /**

@@ -45,6 +45,7 @@ import { getApplicableExtensionEnhancements } from '@shell/core/plugin-helpers';
 import Certificates from '@shell/components/Certificates';
 import { NAME as EXPLORER } from '@shell/config/product/explorer';
 import TabTitle from '@shell/components/TabTitle';
+import ConfigurableDashboard from '@shell/components/Dashboard/ConfigurableDashboard.vue';
 import { STATES_ENUM } from '@shell/plugins/dashboard-store/resource-class';
 
 export const RESOURCES = [NAMESPACE, INGRESS, PV, WORKLOAD_TYPES.DEPLOYMENT, WORKLOAD_TYPES.STATEFUL_SET, WORKLOAD_TYPES.JOB, WORKLOAD_TYPES.DAEMON_SET, SERVICE];
@@ -91,7 +92,8 @@ export default {
     EventsTable,
     SimpleBox,
     Certificates,
-    TabTitle
+    TabTitle,
+    ConfigurableDashboard
   },
 
   mixins: [metricPoller],
@@ -154,6 +156,12 @@ export default {
       extensionCards:          getApplicableExtensionEnhancements(this, ExtensionPoint.CARD, CardLocation.CLUSTER_DASHBOARD_CARD, this.$route),
       canViewEvents:           !!this.$store.getters['cluster/schemaFor'](EVENT),
       clusterServiceIcons,
+
+      /**
+       * The user has selected the original dashboard tab rather than one of their
+       * own configurable dashboards
+       */
+      showClassicCluster: false,
     };
   },
 
@@ -644,7 +652,16 @@ export default {
       />
     </div>
 
-    <div class="resource-gauges">
+    <ConfigurableDashboard
+      context="cluster"
+      :classic-label="t('clusterIndexPage.header')"
+      @update:classic="showClassicCluster = $event"
+    />
+
+    <div
+      v-if="showClassicCluster"
+      class="resource-gauges"
+    >
       <ResourceSummary :spoofed-counts="totalCountGaugeInput" />
       <ResourceSummary
         v-if="canAccessNodes"
@@ -658,7 +675,7 @@ export default {
 
     <!-- extension cards -->
     <div
-      v-if="extensionCards.length"
+      v-if="showClassicCluster && extensionCards.length"
       class="extension-card-container mt-20"
     >
       <SimpleBox
@@ -678,13 +695,13 @@ export default {
     </div>
 
     <h3
-      v-if="hasStats"
+      v-if="showClassicCluster && hasStats"
       class="mt-40"
     >
       {{ t('clusterIndexPage.sections.capacity.label') }}
     </h3>
     <div
-      v-if="hasStats"
+      v-if="showClassicCluster && hasStats"
       class="hardware-resource-gauges"
     >
       <HardwareResourceGauge
@@ -705,7 +722,7 @@ export default {
       />
     </div>
 
-    <div v-if="clusterServices">
+    <div v-if="showClassicCluster && clusterServices">
       <div
         v-for="(service, i) in clusterServices"
         :key="i"
@@ -725,7 +742,10 @@ export default {
       </div>
     </div>
 
-    <div class="mt-30">
+    <div
+      v-if="showClassicCluster"
+      class="mt-30"
+    >
       <Tabbed @changed="tabChange">
         <Tab
           v-if="canViewEvents"
@@ -758,7 +778,7 @@ export default {
       </Tabbed>
     </div>
     <Tabbed
-      v-if="hasMetricsTabs"
+      v-if="showClassicCluster && hasMetricsTabs"
       default-tab="cluster-metrics"
       :use-hash="false"
       class="mt-30"

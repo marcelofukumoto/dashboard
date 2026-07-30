@@ -4,6 +4,7 @@ import { PaginationSettingsStores } from '@shell/types/resources/settings';
 import { IExtensionProducts } from '@shell/core/plugin-products-external';
 import { RouteRecordRawWithParams } from '@shell/core/plugin-types';
 import { TypeMapProduct } from '@shell/types/store/type-map';
+import { DashboardWidgetDefinition } from '@shell/types/dashboards';
 
 // Cluster Provisioning types
 export * from './types-provisioning';
@@ -63,6 +64,7 @@ export enum ExtensionPoint {
   CARD = 'Card', // eslint-disable-line no-unused-vars
   TABLE_COL = 'TableColumn', // eslint-disable-line no-unused-vars
   TABLE = 'Table', // eslint-disable-line no-unused-vars
+  DASHBOARD_WIDGET = 'DashboardWidget', // eslint-disable-line no-unused-vars
 }
 
 /** Enum regarding action locations that are extensible in the UI */
@@ -93,6 +95,11 @@ export enum TabLocation {
 /** Enum regarding card locations that are extensible in the UI */
 export enum CardLocation {
   CLUSTER_DASHBOARD_CARD = 'cluster-dashboard-card', // eslint-disable-line no-unused-vars
+}
+
+/** Enum regarding the configurable dashboards that widgets can be contributed to */
+export enum DashboardWidgetLocation {
+  DASHBOARD = 'dashboard-widget', // eslint-disable-line no-unused-vars
 }
 
 /** Enum regarding table col locations that are extensible in the UI */
@@ -599,6 +606,11 @@ export interface IExtension extends IExtensionProducts {
    * Adds a card to the UI
    */
   addCard(where: CardLocation | string, when: LocationConfig | string, action: Card): void;
+
+  /**
+   * Adds a widget that users can drop onto a configurable dashboard
+   */
+  addDashboardWidget(widget: DashboardWidgetDefinition): void;
 
   /**
    * Adds a new column to a ResourceTable

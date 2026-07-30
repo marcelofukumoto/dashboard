@@ -36,6 +36,7 @@ import { PaginationFeatureHomePageClusterConfig } from '@shell/types/resources/s
 import MgmtCluster from '@shell/models/management.cattle.io.cluster';
 import ManagementClusterUtils from '@shell/list/utils/management.cattle.io.cluster.utils';
 import { RcButton } from '@components/RcButton';
+import ConfigurableDashboard from '@shell/components/Dashboard/ConfigurableDashboard.vue';
 
 export default defineComponent({
   name:       'Home',
@@ -51,7 +52,8 @@ export default defineComponent({
     ResourceTable,
     DynamicContentBanner,
     DynamicContentPanel,
-    RcButton
+    RcButton,
+    ConfigurableDashboard
   },
 
   mixins: [PageHeaderActions, Preset],
@@ -201,6 +203,12 @@ export default defineComponent({
       altClusterListFeature:  paginationUtils.getFeature<PaginationFeatureHomePageClusterConfig>({ rootGetters: this.$store.getters }, 'homePageCluster'),
 
       presetVersion: getVersionData()?.Version,
+
+      /**
+       * The user has selected the 'Clusters' tab, so show the original cluster list
+       * rather than one of their configurable dashboards
+       */
+      showClassicHome: false,
     };
   },
 
@@ -460,8 +468,13 @@ export default defineComponent({
     <IndentedPanel class="mt-20 mb-20">
       <div class="row home-panels">
         <div class="col main-panel">
+          <ConfigurableDashboard
+            context="home"
+            :classic-label="t('landing.clusters.title')"
+            @update:classic="showClassicHome = $event"
+          />
           <div
-            v-if="altClusterList !== undefined"
+            v-if="showClassicHome && altClusterList !== undefined"
             class="row panel"
           >
             <div

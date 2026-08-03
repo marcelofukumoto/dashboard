@@ -7206,6 +7206,8 @@ tableViews:
   view:
     label: View
     display: Display
+    allColumns: All
+    someColumns: "{count} shown"
   tab:
     menu: View options
     rename: Rename view

@@ -6708,6 +6708,22 @@ sortableTable:
     noFilter: This column cannot be filtered by
     groupBy: Group by
     show: Show
+  savedViews:
+    allItems: All
+    save: Save view
+    saveTooltip: Save the current filters, columns and sort as a reusable view
+    namePlaceholder: View name
+    saveConfirm: Save
+    cancel: Cancel
+    share: Copy shareable link
+    delete: Delete view
+    linkCopied: Link copied
+    unsaved: Unsaved view
+    export:
+      label: Export
+      csvAll: Export CSV (all filtered)
+      csvPage: Export CSV (current page)
+      jsonAll: Export JSON (all filtered)
 
 storageClass:
   actions:

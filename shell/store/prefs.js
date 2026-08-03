@@ -106,6 +106,8 @@ export const READ_WHATS_NEW = create('read-whatsnew', '', { parseJSON });
 export const AFTER_LOGIN_ROUTE = create('after-login-route', 'home', { parseJSON } );
 export const HIDE_HOME_PAGE_CARDS = create('home-page-cards', {}, { parseJSON } );
 export const PLUGIN_DEVELOPER = create('plugin-developer', false, { parseJSON, inheritFrom: DEV }); // Is the user a plugin developer?
+// Saved resource-table views (GitHub Projects-style), keyed by resource type. Shape: { [resourceType]: [{ id, name, state }] }
+export const RESOURCE_TABLE_VIEWS = create('resource-table-views', {}, { parseJSON });
 
 export const _RKE1 = 'rke1';
 export const _RKE2 = 'rke2';

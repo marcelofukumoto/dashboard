@@ -19,6 +19,8 @@ import paging from './paging';
 import grouping from './grouping';
 import actions from './actions';
 import AdvancedFiltering from './advanced-filtering';
+import SavedViewsMixin from './saved-views';
+import SavedViews from './SavedViews.vue';
 import LabeledSelect from '@shell/components/form/LabeledSelect';
 import { getParent } from '@shell/utils/dom';
 import { FORMATTERS } from '@shell/components/SortableTable/sortable-config';
@@ -59,6 +61,7 @@ export default {
 
   components: {
     THead,
+    SavedViews,
     Checkbox,
     AsyncButton,
     ActionDropdown,
@@ -77,6 +80,7 @@ export default {
     selection,
     actions,
     AdvancedFiltering,
+    SavedViewsMixin,
     // For table performance debugging - uncomment and uncomment the corresponding import
     // tableDebug,
   ],
@@ -1107,6 +1111,16 @@ export default {
       class="sortable-table-header"
     >
       <slot name="title" />
+      <SavedViews
+        v-if="hasSavedViews && showHeaderRow"
+        :views="savedViews"
+        :active-view-id="activeViewId"
+        @apply="onApplyView"
+        @save="onSaveView"
+        @delete="onDeleteView"
+        @share="onShareView"
+        @export="onExport"
+      />
       <div
         v-if="showHeaderRow"
         class="fixed-header-actions"

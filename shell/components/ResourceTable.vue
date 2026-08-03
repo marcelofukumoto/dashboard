@@ -177,8 +177,16 @@ export default {
       default: false
     },
     hasAdvancedFiltering: {
+      type: Boolean,
+      // Prototype: enable GitHub Projects-style advanced filtering & column config by default
+      default: true
+    },
+    /**
+     * Prototype: show the saved-views bar (+ export) above resource tables
+     */
+    hasSavedViews: {
       type:    Boolean,
-      default: false
+      default: true
     },
     advFilterHideLabelsAsCols: {
       type:    Boolean,
@@ -722,6 +730,8 @@ export default {
     :overflow-y="overflowY"
     :get-custom-detail-link="getCustomDetailLink"
     :has-advanced-filtering="hasAdvancedFiltering"
+    :has-saved-views="hasSavedViews"
+    :view-storage-key="schema ? schema.id : ''"
     :adv-filter-hide-labels-as-cols="advFilterHideLabelsAsCols"
     :adv-filter-prevent-filtering-labels="advFilterPreventFilteringLabels"
     :key-field="keyField"

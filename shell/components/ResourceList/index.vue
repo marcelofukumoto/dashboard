@@ -40,8 +40,9 @@ export default {
 
   props: {
     hasAdvancedFiltering: {
-      type:    Boolean,
-      default: false
+      type: Boolean,
+      // Prototype: enable GitHub Projects-style advanced filtering & column config by default
+      default: true
     },
     advFilterHideLabelsAsCols: {
       type:    Boolean,

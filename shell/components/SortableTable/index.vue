@@ -148,6 +148,16 @@ export default {
       default: true
     },
 
+    /**
+     * Make the masthead's search/right cell fill the width so injected content (the table-views
+     * filter + View button) shares one toolbar row with the bulk actions. Off by default so every
+     * other table keeps its default masthead grid exactly as-is.
+     */
+    headerRightFill: {
+      type:    Boolean,
+      default: false
+    },
+
     rowActions: {
       // Show action dropdown on the end of each row
       type:    Boolean,
@@ -1108,7 +1118,7 @@ export default {
       <div
         v-if="showHeaderRow"
         class="fixed-header-actions"
-        :class="{button: !!$slots['header-button'], 'with-sub-header': !!$slots['sub-header-row'], 'advanced-filtering': hasAdvancedFiltering}"
+        :class="{button: !!$slots['header-button'], 'with-sub-header': !!$slots['sub-header-row'], 'advanced-filtering': hasAdvancedFiltering, 'header-right-fill': headerRightFill}"
       >
         <div
           :class="bulkActionsClass"
@@ -2074,6 +2084,19 @@ export default {
 
     &.advanced-filtering {
       grid-template-columns: [bulk] auto [middle] minmax(min-content, auto) [search] minmax(min-content, auto);
+    }
+
+    // table-views mode only: let the [search] cell FILL so the injected filter + View button share
+    // this one row with .bulk, vertically centered. Gated on .header-right-fill — every other
+    // table keeps the default grid above untouched.
+    &.header-right-fill {
+      grid-template-columns: [bulk] auto [middle] min-content [search] 1fr;
+      align-items: center;
+
+      .search {
+        max-width: none;
+        width: 100%;
+      }
     }
 
     .bulk {

@@ -1,16 +1,17 @@
 <script>
 import { getPageRef } from '@shell/config/templating/template-engine';
 import TemplateResourceList from './TemplateResourceList.vue';
+import TemplateOverview from './TemplateOverview.vue';
 
 // The single generic "engine mount" page.
 //
 // One static route (c-cluster-explorer-template) points here. The :pageId route param
 // selects which page to render; the page + its parent template are looked up from the
-// runtime registry populated by loadCustomViews() during cluster load. Every widget is
-// resolved through a tiny registry and rendered by branching on widget.type.
+// runtime registry populated by loadCustomViews() during cluster load. Each widget is
+// resolved to a component through componentForWidget() and rendered with <component :is>.
 export default {
   name:       'TemplatePage',
-  components: { TemplateResourceList },
+  components: { TemplateResourceList, TemplateOverview },
 
   computed: {
     pageRef() {
@@ -29,6 +30,22 @@ export default {
       return this.page?.widgets || [];
     },
   },
+
+  methods: {
+    // Widget registry: map a widget spec to the component that renders it.
+    // `overview` renders the Workloads-dashboard by-state bento (By State / By Type /
+    // By Namespace) for its resource list.
+    componentForWidget(widget) {
+      switch (widget.type) {
+      case 'resourceList':
+        return 'TemplateResourceList';
+      case 'overview':
+        return 'TemplateOverview';
+      default:
+        return null;
+      }
+    },
+  },
 };
 </script>
 
@@ -44,8 +61,9 @@ export default {
         v-for="(widget, i) in widgets"
         :key="`${ page.id }:${ i }`"
       >
-        <TemplateResourceList
-          v-if="widget.type === 'resourceList'"
+        <component
+          :is="componentForWidget(widget)"
+          v-if="componentForWidget(widget)"
           :widget="widget"
         />
         <div

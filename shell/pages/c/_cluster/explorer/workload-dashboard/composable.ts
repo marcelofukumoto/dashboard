@@ -35,7 +35,18 @@ const WORKLOAD_DASHBOARD_ROUTE = 'c-cluster-explorer-workload-dashboard';
  */
 const invalidDataClusters = new Set<string>();
 
-export function useWorkloadDashboard() {
+/**
+ * @param types            Resource types to summarise. Defaults to the standard
+ *                         workload types, so the Workloads dashboard is unchanged.
+ *                         Config-driven overviews pass their own list.
+ * @param redirectOnInvalid When true (the Workloads dashboard), a malformed summary
+ *                         response flags the cluster and redirects to the deployments
+ *                         list. Config-driven overviews pass false to stay isolated.
+ */
+export function useWorkloadDashboard(
+  types: string[] = WORKLOAD_RESOURCE_TYPES,
+  { redirectOnInvalid = true }: { redirectOnInvalid?: boolean } = {}
+) {
   const store = useStore();
   const router = useRouter();
   const { t } = useI18n(store);
@@ -66,7 +77,7 @@ export function useWorkloadDashboard() {
     });
 
     // Getting the first schema is sufficient since the namespace filter param structure is the same across all resource types
-    const schema = WORKLOAD_RESOURCE_TYPES
+    const schema = types
       .map((type) => store.getters['cluster/schemaFor'](type))
       .find((s) => !!s);
 
@@ -272,7 +283,8 @@ export function useWorkloadDashboard() {
         for (const [state, detail] of Object.entries(s.counts)) {
           const color = toStateColor(state, entry.type);
 
-          for (const [ns, count] of Object.entries(detail.namespace)) {
+          // Cluster-scoped types have no namespace breakdown; skip them in By Namespace.
+          for (const [ns, count] of Object.entries(detail.namespace || {})) {
             if (!nsMap[ns]) {
               nsMap[ns] = {};
             }
@@ -292,7 +304,7 @@ export function useWorkloadDashboard() {
     return Object.entries(nsMap)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([ns, typeMap]) => {
-        const rows = WORKLOAD_RESOURCE_TYPES
+        const rows = types
           .filter((type) => typeMap[type])
           .map((type) => {
             const label = t(`typeLabel."${ type }"`, { count: 2 })?.trim() || type;
@@ -390,14 +402,14 @@ export function useWorkloadDashboard() {
   async function fetchSummaries(): Promise<void> {
     // If this cluster's data was already found to be malformed, skip the requests
     // and redirect straight away (cleared on reload via the in-memory singleton).
-    if (invalidDataClusters.has(clusterId.value)) {
+    if (redirectOnInvalid && invalidDataClusters.has(clusterId.value)) {
       redirectToDeployment();
 
       return;
     }
 
     try {
-      const accessibleTypes = WORKLOAD_RESOURCE_TYPES.filter(
+      const accessibleTypes = types.filter(
         (type) => store.getters['cluster/canList'](type)
       );
 
@@ -406,12 +418,22 @@ export function useWorkloadDashboard() {
 
       const workloadPromises = accessibleTypes.map(async(type): Promise<WorkloadDashboardSummaryEntry> => {
         try {
+          // Cluster-scoped types (e.g. PersistentVolume, StorageClass) return an empty
+          // summary if queried with the namespace filter or `summarynamespaced` — those
+          // only apply to namespaced resources. Standard workload types are all
+          // namespaced, so this is a no-op for the Workloads dashboard.
+          const schema = store.getters['cluster/schemaFor'](type);
+          const namespaced = schema?.attributes?.namespaced !== false;
+
           let url = `${ store.getters['cluster/urlFor'](type) }`;
 
-          if (namespaceFilterParam.value) {
+          if (namespaced && namespaceFilterParam.value) {
             url += `&${ namespaceFilterParam.value }`;
           }
-          url += `&summary=metadata.state.name&summaryonly&summarynamespaced`;
+          url += '&summary=metadata.state.name&summaryonly';
+          if (namespaced) {
+            url += '&summarynamespaced';
+          }
 
           const res = await store.dispatch('cluster/request', { url });
 
@@ -437,8 +459,12 @@ export function useWorkloadDashboard() {
       // had an unexpected shape, remember it so we skip future requests, then
       // stop polling and redirect to the deployment list page.
       if (hasInvalidResponse) {
-        invalidDataClusters.add(clusterId.value);
-        redirectToDeployment();
+        // Config-driven overviews stay isolated: skip this cycle's data without
+        // flagging the cluster or redirecting (that's a Workloads-dashboard behavior).
+        if (redirectOnInvalid) {
+          invalidDataClusters.add(clusterId.value);
+          redirectToDeployment();
+        }
 
         return;
       }

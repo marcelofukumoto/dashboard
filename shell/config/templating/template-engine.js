@@ -14,7 +14,7 @@
 
 import { CONFIG_MAP } from '@shell/config/types';
 import { NAME as EXPLORER } from '@shell/config/product/explorer';
-import { DSL } from '@shell/store/type-map';
+import { DSL, ROOT } from '@shell/store/type-map';
 
 // Label that marks a ConfigMap as a custom-view template document.
 export const TEMPLATE_LABEL = 'templates.rancher.io/custom-view';
@@ -24,6 +24,10 @@ export const TEMPLATE_DATA_KEY = 'template';
 
 // Nav-entry name for the "Custom View Sources" management list.
 const SOURCES_TYPE = 'custom-view-sources';
+
+// Default nav group for templates that don't declare their own placement.
+const DEFAULT_GROUP = 'customViews';
+const DEFAULT_GROUP_WEIGHT = 50;
 
 // Registry of templates loaded for the CURRENT cluster. Populated by
 // loadCustomViews() during loadCluster; read by the generic page component.
@@ -81,29 +85,63 @@ function extractTemplates(configMaps) {
 }
 
 /**
+ * Resolve the nav group a template's pages should land in.
+ *  - undefined/empty -> the default "Custom Views" group
+ *  - "root" (any case) -> top-level nav items (no group header), like Longhorn
+ *  - anything else -> that group key (a new or existing group)
+ */
+function navGroup(group) {
+  if (!group) {
+    return DEFAULT_GROUP;
+  }
+
+  return `${ group }`.toLowerCase() === ROOT ? ROOT : group;
+}
+
+/**
  * Register a side-nav entry per page of every loaded template.
  *
- * virtualType() defines the entry; basicType() is what actually places it in the
- * Explorer BASIC nav tree. Both are idempotent upserts keyed by name, so re-running
- * on each cluster entry produces no duplicates.
+ * virtualType() defines the entry; basicType(names, group) is what actually PLACES it
+ * in the Explorer BASIC nav tree — so the group comes from each template's `nav` block,
+ * not from the virtualType `group` field (which only matters in ALL mode). Both are
+ * idempotent upserts keyed by name, so re-running on each cluster entry is safe.
  *
  * `commit` is the root Vuex commit (from the loadCluster action). The DSL only needs
  * `store.commit`, so a { commit } shim is sufficient.
  */
 function registerNav(commit) {
-  const { virtualType, basicType, weightGroup } = DSL({ commit }, EXPLORER);
+  const {
+    virtualType, basicType, weightGroup, labelGroup
+  } = DSL({ commit }, EXPLORER);
 
-  const typeNames = [];
+  // Collect page type-names per nav group so basicType() can place each set correctly.
+  const namesByGroup = {};
+  const pushName = (group, name) => {
+    namesByGroup[group] = namesByGroup[group] || [];
+    namesByGroup[group].push(name);
+  };
 
   loadedTemplates.forEach((template) => {
+    const nav = template.nav || {};
+    const group = navGroup(nav.group);
+    const groupWeight = typeof nav.weight === 'number' ? nav.weight : DEFAULT_GROUP_WEIGHT;
+
+    // A template may name/weight its own group. (Ignored for the root/top-level group.)
+    if (group !== ROOT) {
+      if (nav.groupLabel) {
+        labelGroup(group, nav.groupLabel);
+      }
+      weightGroup(group, groupWeight, true);
+    }
+
     (template.pages || []).forEach((page) => {
       const name = `custom-view-${ page.id }`;
 
-      typeNames.push(name);
+      pushName(group, name);
 
       virtualType({
         label:      page.name,
-        group:      'customViews',
+        group,
         namespaced: false,
         name,
         icon:       template.metadata?.icon || 'compass',
@@ -114,13 +152,15 @@ function registerNav(commit) {
     });
   });
 
-  // Management entry: a filtered list of the ConfigMaps that back these views, pinned
-  // to the bottom of the group (lowest weight). ALWAYS registered — even with no view
-  // ConfigMaps yet — so the group stays reachable (e.g. to add the first view).
-  typeNames.push(SOURCES_TYPE);
+  // Management entry always lives in the default "Custom Views" group — a stable home
+  // regardless of where individual templates place their pages. ALWAYS registered, even
+  // with no view ConfigMaps yet, so the feature stays reachable.
+  labelGroup(DEFAULT_GROUP, 'Custom Views');
+  weightGroup(DEFAULT_GROUP, DEFAULT_GROUP_WEIGHT, true);
+  pushName(DEFAULT_GROUP, SOURCES_TYPE);
   virtualType({
     label:      'Custom View Sources',
-    group:      'customViews',
+    group:      DEFAULT_GROUP,
     namespaced: false,
     name:       SOURCES_TYPE,
     icon:       'file',
@@ -129,8 +169,7 @@ function registerNav(commit) {
     exact:      true,
   });
 
-  basicType(typeNames, 'customViews');
-  weightGroup('customViews', 50, true);
+  Object.entries(namesByGroup).forEach(([group, names]) => basicType(names, group));
 }
 
 /**

@@ -11,8 +11,14 @@
 #
 # The label templates.rancher.io/custom-view: "true" is what the engine looks for.
 # The template itself is JSON in data.template (a JSON string, since ConfigMap data
-# values are strings). Its pages here differ from the bundled fallback so you can tell
-# the engine is really reading THIS resource.
+# values are strings).
+#
+# nav controls WHERE the pages appear in the Explorer side-nav:
+#   nav.group      - group key. Omit for the default "Custom Views" group; use "root"
+#                    to make the pages top-level nav items (no group header).
+#   nav.groupLabel - human label shown for a custom group.
+#   nav.weight     - group ordering (higher = higher up).
+# Here the pages nest under a "Lists" parent group:  Lists > Compute, Networking.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -26,7 +32,50 @@ data:
       "apiVersion": "templates.rancher.io/v1",
       "kind": "CustomView",
       "metadata": { "id": "ops", "name": "Ops", "icon": "compass" },
+      "nav": { "group": "lists", "groupLabel": "Lists", "weight": 60 },
       "pages": [
+        {
+          "id": "overview",
+          "name": "Overview",
+          "layout": "list",
+          "widgets": [
+            {
+              "type": "overview",
+              "title": "Workloads",
+              "resources": [
+                "pod",
+                "apps.deployment",
+                "apps.daemonset",
+                "apps.statefulset",
+                "batch.job",
+                "batch.cronjob"
+              ]
+            },
+            {
+              "type": "overview",
+              "title": "Networking",
+              "resources": ["service", "networking.k8s.io.ingress"]
+            }
+          ]
+        },
+        {
+          "id": "storage-overview",
+          "name": "Storage",
+          "layout": "list",
+          "widgets": [
+            {
+              "type": "overview",
+              "title": "Storage",
+              "resources": [
+                "persistentvolume",
+                "persistentvolumeclaim",
+                "storage.k8s.io.storageclass",
+                "configmap",
+                "secret"
+              ]
+            }
+          ]
+        },
         {
           "id": "compute",
           "name": "Compute",

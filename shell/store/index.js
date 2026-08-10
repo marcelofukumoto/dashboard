@@ -1,6 +1,7 @@
 import { BACK_TO } from '@shell/config/local-storage';
 import { setBrand, setVendor } from '@shell/config/private-label';
 import { NAME as EXPLORER } from '@shell/config/product/explorer';
+import { loadCustomViews } from '@shell/config/templating/template-engine';
 import {
   LOGGED_OUT, IS_SSO, IS_SLO, TIMED_OUT, UPGRADED, _FLAGGED, IS_SESSION_IDLE
 } from '@shell/config/query-params';
@@ -1125,6 +1126,12 @@ export const actions = {
     if (getters['currentCluster'] && getters['currentCluster'].isHarvester) {
       await dispatch('cluster/findAll', { type: HCI.SETTING });
     }
+
+    // Runtime JSON-templated pages: load custom-view templates from ConfigMaps and
+    // register their nav entries BEFORE clusterReady flips, so SideNav picks them up.
+    await loadCustomViews({
+      dispatch, commit, getters
+    });
 
     commit('clusterReady', true);
 

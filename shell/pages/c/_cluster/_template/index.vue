@@ -1,0 +1,75 @@
+<script>
+import { getPageRef } from '@shell/config/templating/template-engine';
+import TemplateResourceList from './TemplateResourceList.vue';
+
+// The single generic "engine mount" page.
+//
+// One static route (c-cluster-explorer-template) points here. The :pageId route param
+// selects which page to render; the page + its parent template are looked up from the
+// runtime registry populated by loadCustomViews() during cluster load. Every widget is
+// resolved through a tiny registry and rendered by branching on widget.type.
+export default {
+  name:       'TemplatePage',
+  components: { TemplateResourceList },
+
+  computed: {
+    pageRef() {
+      return getPageRef(this.$route.params.pageId);
+    },
+
+    template() {
+      return this.pageRef?.template;
+    },
+
+    page() {
+      return this.pageRef?.page;
+    },
+
+    widgets() {
+      return this.page?.widgets || [];
+    },
+  },
+};
+</script>
+
+<template>
+  <div class="template-page">
+    <template v-if="page">
+      <h1 class="mb-20">
+        {{ page.name }}
+        <span class="text-muted template-page__source">— {{ template.metadata.name }}</span>
+      </h1>
+
+      <template
+        v-for="(widget, i) in widgets"
+        :key="`${ page.id }:${ i }`"
+      >
+        <TemplateResourceList
+          v-if="widget.type === 'resourceList'"
+          :widget="widget"
+        />
+        <div
+          v-else
+          class="text-muted"
+        >
+          Unsupported widget type: {{ widget.type }}
+        </div>
+      </template>
+    </template>
+
+    <div
+      v-else
+      class="text-muted"
+    >
+      No custom view found for "{{ $route.params.pageId }}".
+    </div>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.template-page {
+  &__source {
+    font-size: 0.7em;
+  }
+}
+</style>

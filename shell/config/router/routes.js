@@ -207,6 +207,19 @@ export default [
         component: () => interopDefault(import('@shell/pages/c/_cluster/explorer/index.vue')),
         name:      'c-cluster-explorer'
       }, {
+        // PHASE 0 SPIKE — single generic "engine mount" route for runtime JSON-templated
+        // pages. :pageId selects which page of the template to render. Named
+        // c-cluster-explorer-* so it resolves to the explorer product (see
+        // getProductFromRoute) and inherits the cluster nav/chrome.
+        path:      '/c/:cluster/explorer/_template/:pageId?',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/_template/index.vue')),
+        name:      'c-cluster-explorer-template'
+      }, {
+        // Management list of the ConfigMaps that back custom views (label-filtered).
+        path:      '/c/:cluster/explorer/_custom-views',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/_template/sources.vue')),
+        name:      'c-cluster-explorer-custom-views'
+      }, {
         path: '/c/:cluster/backup',
         name: 'c-cluster-backup',
         meta: { ...installRedirectRouteMeta(BACKUP_NAME, BACKUP_CHART_NAME, BACKUP_RESTORE.BACKUP) }

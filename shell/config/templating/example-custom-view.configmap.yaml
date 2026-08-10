@@ -1,0 +1,67 @@
+# Example custom-view template, delivered as a ConfigMap.
+#
+# Apply it to a cluster and the Explorer side-nav gains a "Custom Views" group with
+# these pages — no rebuild, no reload of the app bundle. This is the resource an
+# operator (or our Claude client) would create.
+#
+#   kubectl apply -f example-custom-view.configmap.yaml
+#
+# ...or paste it into the Dashboard's "Import YAML". Then re-enter the cluster (the
+# engine loads templates during cluster load) to see the pages.
+#
+# The label templates.rancher.io/custom-view: "true" is what the engine looks for.
+# The template itself is JSON in data.template (a JSON string, since ConfigMap data
+# values are strings). Its pages here differ from the bundled fallback so you can tell
+# the engine is really reading THIS resource.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-view-ops
+  namespace: default
+  labels:
+    templates.rancher.io/custom-view: "true"
+data:
+  template: |
+    {
+      "apiVersion": "templates.rancher.io/v1",
+      "kind": "CustomView",
+      "metadata": { "id": "ops", "name": "Ops", "icon": "compass" },
+      "pages": [
+        {
+          "id": "compute",
+          "name": "Compute",
+          "layout": "list",
+          "widgets": [
+            {
+              "type": "resourceList",
+              "resource": "pod",
+              "title": "Running Pods",
+              "columns": [
+                "state",
+                "name",
+                "namespace",
+                { "name": "node", "value": "spec.nodeName", "label": "Node", "sort": "spec.nodeName" },
+                "age"
+              ],
+              "filters": { "fieldMatch": { "status.phase": "Running" } }
+            },
+            { "type": "resourceList", "resource": "apps.deployment", "title": "Deployments" },
+            {
+              "type": "resourceList",
+              "resource": "pod",
+              "title": "kube-system Pods",
+              "filters": { "namespaces": ["kube-system"] }
+            }
+          ]
+        },
+        {
+          "id": "networking",
+          "name": "Networking",
+          "layout": "list",
+          "widgets": [
+            { "type": "resourceList", "resource": "service", "title": "Services" },
+            { "type": "resourceList", "resource": "networking.k8s.io.ingress", "title": "Ingresses" }
+          ]
+        }
+      ]
+    }

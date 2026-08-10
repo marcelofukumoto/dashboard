@@ -241,6 +241,7 @@ nav:
   keyComboTooltip: Switch clusters and keep location
   group:
     cluster: Cluster
+    customViews: Custom Views
     inUse: More Resources
     Policy: Policy
     rbac: RBAC

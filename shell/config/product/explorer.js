@@ -689,6 +689,11 @@ export function init(store) {
     }],
   });
 
+  // Custom-view nav entries (Runtime JSON-templated pages) are NOT registered here.
+  // explorer.init() runs once at boot, before any cluster/ConfigMap data exists, so
+  // registration happens at runtime in loadCustomViews() (shell/config/templating/
+  // template-engine.js), invoked from loadCluster once cluster schemas are available.
+
   // Ignore these types as they are managed through the settings product
   ignoreType(MANAGEMENT.FEATURE);
   ignoreType(MANAGEMENT.SETTING);

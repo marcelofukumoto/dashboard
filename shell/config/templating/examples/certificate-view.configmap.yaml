@@ -1,0 +1,145 @@
+# Reference custom-view (code kind): Certificate VIEW (read-only detail).
+# - Reached via the list's get-custom-detail-link with ?id=<row.id>.
+# - Wraps ResourceTabs so the standard Conditions/Related/Recent-Events tabs
+#   are provided by the platform; adds a custom "Status" summary tab.
+# - hidden:true keeps it out of the nav.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: certificate-view
+  namespace: default
+  labels:
+    templates.rancher.io/custom-view: "true"
+  annotations:
+    templates.rancher.io/kind: code
+data:
+  meta: '{"id":"certificate-view","name":"Certificate","icon":"file","hidden":true,"nav":{"group":"customViews","groupLabel":"Custom Views","weight":62}}'
+  view.vue: |
+    <script>
+    import ResourceTabs from 'ResourceTabs';
+    import Tab from 'Tab';
+
+    export default {
+      components: { ResourceTabs, Tab },
+
+      async fetch() {
+        this.value = await this.$store.dispatch('cluster/find', {
+          type: 'cert-manager.io.certificate',
+          id:   this.$route.query.id,
+        });
+      },
+
+      data() {
+        return { value: null };
+      },
+
+      computed: {
+        schema() {
+          return this.$store.getters['cluster/schemaFor']('cert-manager.io.certificate');
+        },
+        spec() {
+          return this.value?.spec || {};
+        },
+        status() {
+          return this.value?.status || {};
+        },
+        dnsNames() {
+          return this.spec.dnsNames || [];
+        },
+        ipAddresses() {
+          return this.spec.ipAddresses || [];
+        },
+        readyMessage() {
+          return (this.status.conditions || []).find((c) => c.type === 'Ready')?.message || '';
+        }
+      }
+    };
+    </script>
+
+    <template>
+      <ResourceTabs
+        v-if="value"
+        :value="value"
+        :schema="schema"
+        mode="view"
+      >
+        <Tab name="cert-summary" label="Status" :weight="100">
+          <div class="cert-summary">
+            <div class="row mb-20">
+              <div class="col span-4">
+                <label class="text-label">Issuer</label>
+                <div>{{ spec.issuerRef && spec.issuerRef.name || '—' }}</div>
+              </div>
+              <div class="col span-4">
+                <label class="text-label">Secret</label>
+                <div>{{ spec.secretName || '—' }}</div>
+              </div>
+              <div class="col span-4">
+                <label class="text-label">Common Name</label>
+                <div>{{ spec.commonName || '—' }}</div>
+              </div>
+            </div>
+
+            <div class="row mb-20">
+              <div class="col span-4">
+                <label class="text-label">Not Before</label>
+                <div>{{ status.notBefore || '—' }}</div>
+              </div>
+              <div class="col span-4">
+                <label class="text-label">Not After</label>
+                <div>{{ status.notAfter || '—' }}</div>
+              </div>
+              <div class="col span-4">
+                <label class="text-label">Renewal Time</label>
+                <div>{{ status.renewalTime || '—' }}</div>
+              </div>
+            </div>
+
+            <div v-if="dnsNames.length" class="row mb-20">
+              <div class="col span-12">
+                <label class="text-label">DNS Names</label>
+                <div class="tags">
+                  <span v-for="dns in dnsNames" :key="dns" class="tag">{{ dns }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="ipAddresses.length" class="row mb-20">
+              <div class="col span-12">
+                <label class="text-label">IP Addresses</label>
+                <div class="tags">
+                  <span v-for="ip in ipAddresses" :key="ip" class="tag">{{ ip }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="readyMessage" class="row">
+              <div class="col span-12">
+                <label class="text-label">Message</label>
+                <div>{{ readyMessage }}</div>
+              </div>
+            </div>
+          </div>
+        </Tab>
+      </ResourceTabs>
+    </template>
+
+    <style scoped>
+    .cert-summary .text-label {
+      color: var(--input-label);
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .cert-summary .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .cert-summary .tag {
+      background: var(--nav-active);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+    }
+    </style>

@@ -2,6 +2,7 @@
 import { getPageRef } from '@shell/config/templating/template-engine';
 import TemplateResourceList from './TemplateResourceList.vue';
 import TemplateOverview from './TemplateOverview.vue';
+import TemplateCode from './TemplateCode.vue';
 
 // The single generic "engine mount" page.
 //
@@ -11,7 +12,9 @@ import TemplateOverview from './TemplateOverview.vue';
 // resolved to a component through componentForWidget() and rendered with <component :is>.
 export default {
   name:       'TemplatePage',
-  components: { TemplateResourceList, TemplateOverview },
+  components: {
+    TemplateResourceList, TemplateOverview, TemplateCode
+  },
 
   computed: {
     pageRef() {
@@ -57,8 +60,17 @@ export default {
         <span class="text-muted template-page__source">— {{ template.metadata.name }}</span>
       </h1>
 
+      <!-- Code view: a runtime-compiled .vue owns the whole page. -->
+      <TemplateCode
+        v-if="page.source"
+        :key="page.id"
+        :source="page.source"
+      />
+
+      <!-- Data view: render each JSON widget. -->
       <template
         v-for="(widget, i) in widgets"
+        v-else
         :key="`${ page.id }:${ i }`"
       >
         <component

@@ -22,6 +22,13 @@ export const TEMPLATE_LABEL = 'templates.rancher.io/custom-view';
 // Key within the ConfigMap's `data` that holds the template JSON string.
 export const TEMPLATE_DATA_KEY = 'template';
 
+// Annotation that selects the view kind: 'template' (JSON widgets, default) or 'code'
+// (a runtime-compiled .vue). Code views hold JSON metadata in `data.meta` and the SFC
+// source in `data['view.vue']`.
+export const TEMPLATE_KIND_ANNOTATION = 'templates.rancher.io/kind';
+export const CODE_META_KEY = 'meta';
+export const CODE_SOURCE_KEY = 'view.vue';
+
 // Nav-entry name for the "Custom View Sources" management list.
 const SOURCES_TYPE = 'custom-view-sources';
 
@@ -81,10 +88,56 @@ function parseTemplate(raw) {
   }
 }
 
+/**
+ * Parse a code-kind ConfigMap into the same internal template shape used everywhere
+ * else, but with a single page carrying the .vue `source` instead of JSON widgets.
+ */
+function parseCodeTemplate(cm) {
+  const metaRaw = cm.data?.[CODE_META_KEY];
+  const source = cm.data?.[CODE_SOURCE_KEY];
+
+  if (!metaRaw || !source) {
+    console.warn('[template-engine] code view missing meta or view.vue', cm.id); // eslint-disable-line no-console
+
+    return null;
+  }
+
+  try {
+    const meta = JSON.parse(metaRaw);
+
+    if (!meta?.id) {
+      console.warn('[template-engine] code view meta missing id', meta); // eslint-disable-line no-console
+
+      return null;
+    }
+
+    const name = meta.name || meta.id;
+
+    return {
+      kind:     'code',
+      metadata: {
+        id: meta.id, name, icon: meta.icon
+      },
+      nav:   meta.nav,
+      pages: [{
+        id: meta.id, name, source, hidden: !!(meta.hidden || meta.nav?.hidden)
+      }],
+    };
+  } catch (e) {
+    console.warn('[template-engine] Failed to parse code view meta JSON', e); // eslint-disable-line no-console
+
+    return null;
+  }
+}
+
 function extractTemplates(configMaps) {
   return (configMaps || [])
     .filter((cm) => cm.metadata?.labels?.[TEMPLATE_LABEL] === 'true')
-    .map((cm) => parseTemplate(cm.data?.[TEMPLATE_DATA_KEY]))
+    .map((cm) => {
+      const kind = cm.metadata?.annotations?.[TEMPLATE_KIND_ANNOTATION];
+
+      return kind === 'code' ? parseCodeTemplate(cm) : parseTemplate(cm.data?.[TEMPLATE_DATA_KEY]);
+    })
     .filter(Boolean);
 }
 
@@ -139,6 +192,12 @@ function registerNav(commit) {
     }
 
     (template.pages || []).forEach((page) => {
+      // Hidden pages still render via their route (getPageRef finds them) but get no nav
+      // entry — e.g. a detail/view reached only from a list link.
+      if (page.hidden) {
+        return;
+      }
+
       const name = `custom-view-${ page.id }`;
 
       pushName(group, name);

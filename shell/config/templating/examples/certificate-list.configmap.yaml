@@ -1,0 +1,75 @@
+# Reference custom-view (code kind): Certificate LIST.
+# Rebuilds the cert-manager Certificate list as a runtime-compiled SFC.
+# - Uses ResourceTable with the resource's real schema.
+# - get-custom-detail-link routes the name link + row navigation to OUR
+#   certificate-view page instead of the cert-manager extension route.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: certificates
+  namespace: default
+  labels:
+    templates.rancher.io/custom-view: "true"
+  annotations:
+    templates.rancher.io/kind: code
+data:
+  meta: '{"id":"certificates","name":"Certificates","icon":"file","nav":{"group":"customViews","groupLabel":"Custom Views","weight":60}}'
+  view.vue: |
+    <script>
+    import ResourceTable from 'ResourceTable';
+    import RcButton from 'RcButton';
+
+    export default {
+      components: { ResourceTable, RcButton },
+
+      async fetch() {
+        this.rows = await this.$store.dispatch('cluster/findAll', { type: 'cert-manager.io.certificate' });
+      },
+
+      data() {
+        return { rows: [] };
+      },
+
+      computed: {
+        schema() {
+          return this.$store.getters['cluster/schemaFor']('cert-manager.io.certificate');
+        },
+        createLocation() {
+          return {
+            name:   'c-cluster-explorer-template',
+            params: { cluster: this.$route.params.cluster, pageId: 'certificate-create' }
+          };
+        }
+      },
+
+      methods: {
+        // Send the name link + row navigation to OUR view instead of the extension route.
+        getCustomDetailLink(row) {
+          return {
+            name:   'c-cluster-explorer-template',
+            params: { cluster: this.$route.params.cluster, pageId: 'certificate-view' },
+            query:  { id: row.id }
+          };
+        }
+      }
+    };
+    </script>
+
+    <template>
+      <div>
+        <div class="header mb-20">
+          <h1 class="mb-0">Certificates</h1>
+          <RcButton variant="primary" size="large" :to="createLocation">Create</RcButton>
+        </div>
+        <ResourceTable
+          v-if="schema"
+          :schema="schema"
+          :rows="rows"
+          :get-custom-detail-link="getCustomDetailLink"
+        />
+      </div>
+    </template>
+
+    <style scoped>
+    .header { display: flex; justify-content: space-between; align-items: center; }
+    </style>

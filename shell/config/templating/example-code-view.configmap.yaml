@@ -1,0 +1,56 @@
+# Example CODE-kind custom view: the page body is a runtime-compiled .vue component.
+#
+#   kubectl apply -f example-code-view.configmap.yaml
+#
+# The engine reads `data.meta` (JSON) to register the nav entry, and compiles
+# `data["view.vue"]` with vue3-sfc-loader when the page is opened. The component runs in
+# the app tree, so it can use this.$store / this.$route and ANY @shell component (import
+# by bare name or full @shell/components path).
+#
+# SECURITY: this executes arbitrary code in the viewer's session. Dev/experimental only.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pods-code-view
+  namespace: default
+  labels:
+    templates.rancher.io/custom-view: "true"
+  annotations:
+    templates.rancher.io/kind: "code"
+data:
+  meta: |
+    {
+      "id": "pods-code",
+      "name": "Pods (code)",
+      "icon": "compass",
+      "nav": { "group": "customViews", "groupLabel": "Custom Views", "weight": 60 }
+    }
+  view.vue: |
+    <script>
+    import ResourceTable from 'ResourceTable';
+
+    export default {
+      components: { ResourceTable },
+      async fetch() {
+        this.rows = await this.$store.dispatch('cluster/findAll', { type: 'pod' });
+      },
+      data() {
+        return { rows: [] };
+      },
+      computed: {
+        schema() {
+          return this.$store.getters['cluster/schemaFor']('pod');
+        },
+      },
+    };
+    </script>
+    <template>
+      <div>
+        <h1 class="mb-20">{{ rows.length }} Pods (rendered by AI-generated code)</h1>
+        <ResourceTable
+          v-if="schema"
+          :schema="schema"
+          :rows="rows"
+        />
+      </div>
+    </template>

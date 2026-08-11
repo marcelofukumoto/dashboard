@@ -1,0 +1,295 @@
+# Reference custom-view (code kind): Certificate CREATE / EDIT.
+# Standalone CruResource form (5 tabs) — does NOT delegate to ResourceDetail,
+# so it fully controls the resource lifecycle:
+# - fetch() branches on ?id query: create (cluster/create) vs edit (cluster/find).
+# - Self-managed save(buttonCb): runs registered before-hooks, prunes empty
+#   fields, value.save(), then routes back to the list.
+# - hidden:true keeps it out of the nav; reached via the list's Create button.
+# - Import Labels by FULL path ('@shell/components/form/Labels') to avoid the
+#   collision with the other Labels.vue in the component registry.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: certificate-create
+  namespace: default
+  labels:
+    templates.rancher.io/custom-view: "true"
+  annotations:
+    templates.rancher.io/kind: code
+data:
+  meta: '{"id":"certificate-create","name":"Create Certificate","icon":"plus","hidden":true,"nav":{"group":"customViews","groupLabel":"Custom Views","weight":61}}'
+  view.vue: |
+    <script>
+    import CruResource from 'CruResource';
+    import NameNsDescription from 'NameNsDescription';
+    import LabeledInput from 'LabeledInput';
+    import LabeledSelect from 'LabeledSelect';
+    import ArrayList from 'ArrayList';
+    import Checkbox from 'Checkbox';
+    import Banner from 'Banner';
+    import Labels from '@shell/components/form/Labels';
+    import Tabbed from 'Tabbed';
+    import Tab from 'Tab';
+
+    const PRIVATE_KEY_ALGORITHMS = ['RSA', 'ECDSA', 'Ed25519'];
+    const PRIVATE_KEY_ENCODINGS = ['PKCS1', 'PKCS8'];
+    const PRIVATE_KEY_ROTATION = ['Never', 'Always'];
+    const CERTIFICATE_USAGES = [
+      'digital signature', 'key encipherment', 'data encipherment', 'key agreement',
+      'content commitment', 'cert sign', 'crl sign', 'server auth', 'client auth',
+      'code signing', 'email protection', 'timestamping', 'ocsp signing',
+    ];
+
+    export default {
+      components: {
+        CruResource, NameNsDescription, LabeledInput, LabeledSelect, ArrayList,
+        Checkbox, Banner, Labels, Tabbed, Tab,
+      },
+
+      async fetch() {
+        const id = this.$route.query.id;
+
+        if (id) {
+          this.mode = 'edit';
+          this.value = await this.$store.dispatch('cluster/find', { type: 'cert-manager.io.certificate', id });
+        } else {
+          this.mode = 'create';
+          this.value = await this.$store.dispatch('cluster/create', {
+            type: 'cert-manager.io.certificate', metadata: { namespace: 'default' }, spec: {},
+          });
+        }
+
+        const spec = this.value.spec = this.value.spec || {};
+
+        spec.issuerRef = spec.issuerRef || { name: '', kind: 'Issuer', group: 'cert-manager.io' };
+        spec.dnsNames = spec.dnsNames || [];
+        spec.ipAddresses = spec.ipAddresses || [];
+        spec.uris = spec.uris || [];
+        spec.emailAddresses = spec.emailAddresses || [];
+        spec.usages = spec.usages || [];
+        spec.subject = spec.subject || {};
+        spec.privateKey = spec.privateKey || {};
+
+        const [iss, cIss] = await Promise.all([
+          this.$store.dispatch('cluster/findAll', { type: 'cert-manager.io.issuer' }).catch(() => []),
+          this.$store.dispatch('cluster/findAll', { type: 'cert-manager.io.clusterissuer' }).catch(() => []),
+        ]);
+
+        this.issuers = iss || [];
+        this.clusterIssuers = cIss || [];
+      },
+
+      data() {
+        return {
+          value:            null,
+          mode:             'create',
+          errors:           [],
+          beforeHooks:      [],
+          issuers:          [],
+          clusterIssuers:   [],
+          algorithmOptions: [...PRIVATE_KEY_ALGORITHMS],
+          encodingOptions:  [...PRIVATE_KEY_ENCODINGS],
+          rotationOptions:  [...PRIVATE_KEY_ROTATION],
+          usageOptions:     [...CERTIFICATE_USAGES],
+        };
+      },
+
+      computed: {
+        issuerOptions() {
+          const ns = this.value?.metadata?.namespace;
+          const nsIssuers = (this.issuers || [])
+            .filter((r) => !ns || r.metadata?.namespace === ns)
+            .map((r) => ({ label: `${ r.metadata?.name } (Issuer)`, value: `Issuer/${ r.metadata?.name }`, kind: 'Issuer', name: r.metadata?.name }));
+          const cIssuers = (this.clusterIssuers || [])
+            .map((r) => ({ label: `${ r.metadata?.name } (ClusterIssuer)`, value: `ClusterIssuer/${ r.metadata?.name }`, kind: 'ClusterIssuer', name: r.metadata?.name }));
+
+          return [...cIssuers, ...nsIssuers];
+        },
+        selectedIssuer() {
+          const ref = this.value?.spec?.issuerRef;
+
+          return ref?.name ? `${ ref.kind || 'Issuer' }/${ ref.name }` : '';
+        },
+        hasIdentifier() {
+          const s = this.value?.spec || {};
+
+          return !!(s.commonName || s.dnsNames?.length || s.ipAddresses?.length || s.uris?.length || s.emailAddresses?.length);
+        },
+        validationPassed() {
+          const s = this.value?.spec || {};
+
+          return !!s.secretName && !!s.issuerRef?.name && this.hasIdentifier;
+        },
+        doneLocation() {
+          return { name: 'c-cluster-explorer-template', params: { cluster: this.$route.params.cluster, pageId: 'certificates' } };
+        },
+        subjectOrganizations:       { get() { return this.value.spec.subject.organizations || []; }, set(v) { this.value.spec.subject.organizations = v; } },
+        subjectOrganizationalUnits: { get() { return this.value.spec.subject.organizationalUnits || []; }, set(v) { this.value.spec.subject.organizationalUnits = v; } },
+        subjectCountries:           { get() { return this.value.spec.subject.countries || []; }, set(v) { this.value.spec.subject.countries = v; } },
+        subjectLocalities:          { get() { return this.value.spec.subject.localities || []; }, set(v) { this.value.spec.subject.localities = v; } },
+        subjectProvinces:           { get() { return this.value.spec.subject.provinces || []; }, set(v) { this.value.spec.subject.provinces = v; } },
+      },
+
+      methods: {
+        registerBeforeHook(fn) {
+          this.beforeHooks.push(fn);
+        },
+        onSelectIssuer(id) {
+          const opt = this.issuerOptions.find((o) => o.value === id);
+          const ref = this.value.spec.issuerRef;
+
+          if (opt) {
+            ref.name = opt.name;
+            ref.kind = opt.kind;
+            ref.group = 'cert-manager.io';
+          }
+        },
+        pruneEmpty() {
+          const s = this.value.spec;
+
+          ['dnsNames', 'ipAddresses', 'uris', 'emailAddresses', 'usages'].forEach((k) => {
+            if (Array.isArray(s[k]) && s[k].length === 0) {
+              delete s[k];
+            }
+          });
+          if (s.subject && Object.keys(s.subject).every((k) => !s.subject[k] || (Array.isArray(s.subject[k]) && !s.subject[k].length))) {
+            delete s.subject;
+          }
+          if (s.privateKey && Object.keys(s.privateKey).length === 0) {
+            delete s.privateKey;
+          }
+        },
+        async save(buttonCb) {
+          this.errors = [];
+          try {
+            for (const hook of this.beforeHooks) {
+              await hook();
+            }
+            this.pruneEmpty();
+            await this.value.save();
+            buttonCb(true);
+            this.$router.replace(this.doneLocation);
+          } catch (e) {
+            this.errors = [e?.message || String(e)];
+            buttonCb(false);
+          }
+        },
+        done() {
+          this.$router.replace(this.doneLocation);
+        },
+      },
+    };
+    </script>
+
+    <template>
+      <CruResource
+        v-if="value"
+        :mode="mode"
+        :resource="value"
+        :validation-passed="validationPassed"
+        :errors="errors"
+        :cancel-event="true"
+        @error="e => errors = e"
+        @finish="save"
+        @cancel="done"
+      >
+        <NameNsDescription :value="value" :mode="mode" :register-before-hook="registerBeforeHook" />
+
+        <Tabbed :side-tabs="true">
+          <Tab name="general" label="General" :weight="40">
+            <div class="row mb-20">
+              <div class="col span-6">
+                <LabeledSelect
+                  :value="selectedIssuer"
+                  :options="issuerOptions"
+                  :mode="mode"
+                  :required="true"
+                  label="Issuer"
+                  @update:value="onSelectIssuer"
+                />
+              </div>
+              <div class="col span-6">
+                <LabeledInput v-model:value="value.spec.secretName" :mode="mode" :required="true" label="Secret Name" />
+              </div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6">
+                <LabeledInput v-model:value="value.spec.commonName" :mode="mode" label="Common Name" />
+              </div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6">
+                <ArrayList v-model:value="value.spec.dnsNames" :mode="mode" title="DNS Names" add-label="Add DNS Name" />
+              </div>
+              <div class="col span-6">
+                <ArrayList v-model:value="value.spec.ipAddresses" :mode="mode" title="IP Addresses" add-label="Add IP Address" />
+              </div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6">
+                <LabeledInput v-model:value="value.spec.duration" :mode="mode" label="Duration" placeholder="e.g. 2160h" />
+              </div>
+              <div class="col span-6">
+                <LabeledInput v-model:value="value.spec.renewBefore" :mode="mode" label="Renew Before" placeholder="e.g. 360h" />
+              </div>
+            </div>
+            <Banner v-if="!hasIdentifier" color="info" label="Provide at least one of Common Name, DNS Names, IP Addresses, URIs or Email Addresses." />
+          </Tab>
+
+          <Tab name="subject" label="Subject" :weight="30">
+            <div class="row mb-20">
+              <div class="col span-6"><ArrayList v-model:value="subjectOrganizations" :mode="mode" title="Organizations" /></div>
+              <div class="col span-6"><ArrayList v-model:value="subjectOrganizationalUnits" :mode="mode" title="Organizational Units" /></div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6"><ArrayList v-model:value="subjectCountries" :mode="mode" title="Countries" /></div>
+              <div class="col span-6"><ArrayList v-model:value="subjectLocalities" :mode="mode" title="Localities" /></div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6"><ArrayList v-model:value="subjectProvinces" :mode="mode" title="Provinces" /></div>
+              <div class="col span-6"><LabeledInput v-model:value="value.spec.subject.serialNumber" :mode="mode" label="Serial Number" /></div>
+            </div>
+          </Tab>
+
+          <Tab name="privateKey" label="Private Key" :weight="20">
+            <div class="row mb-20">
+              <div class="col span-6">
+                <LabeledSelect v-model:value="value.spec.privateKey.algorithm" :mode="mode" :options="algorithmOptions" :clearable="true" label="Algorithm" />
+              </div>
+              <div class="col span-6">
+                <LabeledInput v-model:value.number="value.spec.privateKey.size" type="number" :mode="mode" label="Size" />
+              </div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6">
+                <LabeledSelect v-model:value="value.spec.privateKey.encoding" :mode="mode" :options="encodingOptions" :clearable="true" label="Encoding" />
+              </div>
+              <div class="col span-6">
+                <LabeledSelect v-model:value="value.spec.privateKey.rotationPolicy" :mode="mode" :options="rotationOptions" :clearable="true" label="Rotation Policy" />
+              </div>
+            </div>
+          </Tab>
+
+          <Tab name="advanced" label="Advanced" :weight="10">
+            <div class="row mb-20">
+              <div class="col span-12">
+                <Checkbox v-model:value="value.spec.isCA" :mode="mode" label="Is CA Certificate" />
+              </div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6">
+                <LabeledSelect v-model:value="value.spec.usages" :mode="mode" :options="usageOptions" :multiple="true" label="Usages" />
+              </div>
+            </div>
+            <div class="row mb-20">
+              <div class="col span-6"><ArrayList v-model:value="value.spec.uris" :mode="mode" title="URIs" add-label="Add URI" /></div>
+              <div class="col span-6"><ArrayList v-model:value="value.spec.emailAddresses" :mode="mode" title="Email Addresses" add-label="Add Email" /></div>
+            </div>
+          </Tab>
+
+          <Tab name="labels" label="Labels" :weight="-1">
+            <Labels :value="value" :mode="mode" />
+          </Tab>
+        </Tabbed>
+      </CruResource>
+    </template>

@@ -219,55 +219,61 @@ export default {
       }
       this.gettingGroups = true;
 
-      if ( !this.clusterReady ) {
-        clear(this.groups);
-        this.gettingGroups = false;
+      // Wrapped so a failure building any single entry (e.g. a malformed custom view)
+      // can never leave gettingGroups stuck true, which would permanently blank the nav.
+      try {
+        if ( !this.clusterReady ) {
+          clear(this.groups);
 
-        return;
-      }
+          return;
+        }
 
-      const currentProduct = this.$store.getters['productId'];
+        const currentProduct = this.$store.getters['productId'];
 
-      // Always show cluster-level types, regardless of the namespace filter
-      const namespaceMode = 'both';
-      const out = [];
-      const loadProducts = this.isExplorer ? [EXPLORER] : [];
+        // Always show cluster-level types, regardless of the namespace filter
+        const namespaceMode = 'both';
+        const out = [];
+        const loadProducts = this.isExplorer ? [EXPLORER] : [];
 
-      const productMap = this.activeProducts.reduce((acc, p) => {
-        return { ...acc, [p.name]: p };
-      }, {});
+        const productMap = this.activeProducts.reduce((acc, p) => {
+          return { ...acc, [p.name]: p };
+        }, {});
 
-      if ( this.isExplorer ) {
-        for ( const product of this.activeProducts ) {
-          if ( product.inStore === 'cluster' ) {
-            addObject(loadProducts, product.name);
+        if ( this.isExplorer ) {
+          for ( const product of this.activeProducts ) {
+            if ( product.inStore === 'cluster' ) {
+              addObject(loadProducts, product.name);
+            }
           }
         }
+
+        // This should already have come into the list from above, but in case it hasn't...
+        addObject(loadProducts, currentProduct);
+
+        this.getProductsGroups(out, loadProducts, namespaceMode, productMap);
+
+        this.getExplorerGroups(out);
+
+        // If there's a root group, pull its children up to the top level
+        // so that we can order them alongside group items in the nav
+        const rootGroupIndex = out.findIndex((g) => g.name.toLowerCase() === 'root');
+        const rootGroup = out[rootGroupIndex];
+
+        if (rootGroup && rootGroup.children?.length) {
+          out.splice(rootGroupIndex, 1);
+
+          rootGroup.children.forEach((child) => {
+            addObject(out, { ...child, children: [] });
+          });
+        }
+
+        replaceWith(this.groups, ...sortBy(out, ['weight:desc', 'label']));
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('SideNav.getGroups failed to build the navigation', e);
+      } finally {
+        this.gettingGroups = false;
       }
-
-      // This should already have come into the list from above, but in case it hasn't...
-      addObject(loadProducts, currentProduct);
-
-      this.getProductsGroups(out, loadProducts, namespaceMode, productMap);
-
-      this.getExplorerGroups(out);
-
-      // If there's a root group, pull its children up to the top level
-      // so that we can order them alongside group items in the nav
-      const rootGroupIndex = out.findIndex((g) => g.name.toLowerCase() === 'root');
-      const rootGroup = out[rootGroupIndex];
-
-      if (rootGroup && rootGroup.children?.length) {
-        out.splice(rootGroupIndex, 1);
-
-        rootGroup.children.forEach((child) => {
-          addObject(out, { ...child, children: [] });
-        });
-      }
-
-      replaceWith(this.groups, ...sortBy(out, ['weight:desc', 'label']));
-
-      this.gettingGroups = false;
     },
 
     getProductsGroups(out, loadProducts, namespaceMode, productMap) {

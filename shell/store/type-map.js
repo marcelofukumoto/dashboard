@@ -1715,6 +1715,29 @@ export const mutations = {
     }
   },
 
+  /**
+   * Remove specific type names from a product's virtualTypes and basicTypes. Used by
+   * runtime-managed nav entries (e.g. custom views backed by ConfigMaps) to drop entries
+   * whose backing resource was deleted, without tearing down the whole product.
+   */
+  removeTypes(state, { product = EXPLORER, names = [] }) {
+    if ( !names.length ) {
+      return;
+    }
+
+    const remove = new Set(names);
+
+    if ( state.virtualTypes[product] ) {
+      state.virtualTypes[product] = state.virtualTypes[product].filter((t) => !remove.has(t.name));
+    }
+
+    if ( state.basicTypes[product] ) {
+      for ( const name of names ) {
+        delete state.basicTypes[product][name];
+      }
+    }
+  },
+
   ignoreGroup(state, { regexOrString: match, cb }) {
     match = ensureRegex(match);
     // State shouldn't contain actual RegExp objects, because they don't serialize

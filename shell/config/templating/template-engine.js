@@ -33,6 +33,10 @@ const DEFAULT_GROUP_WEIGHT = 50;
 // loadCustomViews() during loadCluster; read by the generic page component.
 let loadedTemplates = [];
 
+// Nav-entry names the engine registered on the last pass. Used to drop entries whose
+// backing ConfigMap was deleted (type-map registration is upsert-only).
+let registeredNames = [];
+
 export function getLoadedTemplates() {
   return loadedTemplates;
 }
@@ -170,6 +174,18 @@ function registerNav(commit) {
   });
 
   Object.entries(namesByGroup).forEach(([group, names]) => basicType(names, group));
+
+  // Drop entries registered on a previous pass whose page/template no longer exists
+  // (e.g. its ConfigMap was deleted), so deletions are reflected live.
+  const currentNames = Object.values(namesByGroup).flat();
+  const currentSet = new Set(currentNames);
+  const staleNames = registeredNames.filter((name) => !currentSet.has(name));
+
+  if (staleNames.length) {
+    commit('type-map/removeTypes', { product: EXPLORER, names: staleNames });
+  }
+
+  registeredNames = currentNames;
 }
 
 /**
@@ -190,6 +206,7 @@ export async function loadCustomViews({ dispatch, commit, getters }) {
     // Only fetch if the user can list ConfigMaps in this cluster.
     if (getters['cluster/schemaFor'](CONFIG_MAP)) {
       // TODO(phase-next): use a server-side labelSelector instead of fetching all ConfigMaps.
+      // findAll also starts a live socket watch, which is what powers reloadCustomViews().
       const configMaps = await dispatch('cluster/findAll', { type: CONFIG_MAP });
 
       loadedTemplates = extractTemplates(configMaps);
@@ -198,5 +215,26 @@ export async function loadCustomViews({ dispatch, commit, getters }) {
     registerNav(commit);
   } catch (e) {
     console.warn('[template-engine] loadCustomViews failed', e); // eslint-disable-line no-console
+  }
+}
+
+/**
+ * Live re-registration from the store cache (no fetch). Called by SideNav when the set
+ * of custom-view ConfigMaps changes (create/edit), so new/updated views appear without
+ * a reload. Because registration is an idempotent upsert, this safely adds/updates
+ * entries; deleted views' entries linger until the next full cluster load (type-map has
+ * no per-entry removal).
+ */
+export function reloadCustomViews(store) {
+  try {
+    loadedTemplates = [];
+
+    if (store.getters['cluster/schemaFor'](CONFIG_MAP)) {
+      loadedTemplates = extractTemplates(store.getters['cluster/all'](CONFIG_MAP));
+    }
+
+    registerNav(store.commit);
+  } catch (e) {
+    console.warn('[template-engine] reloadCustomViews failed', e); // eslint-disable-line no-console
   }
 }

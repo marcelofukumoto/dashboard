@@ -13,7 +13,8 @@ import {
 import { sortBy } from '@shell/utils/sort';
 import { ucFirst } from '@shell/utils/string';
 
-import { HCI, UI, SCHEMA } from '@shell/config/types';
+import { HCI, UI, SCHEMA, CONFIG_MAP } from '@shell/config/types';
+import { TEMPLATE_LABEL, reloadCustomViews } from '@shell/config/templating/template-engine';
 import { HARVESTER_NAME as HARVESTER } from '@shell/config/features';
 import { NAME as EXPLORER } from '@shell/config/product/explorer';
 import { TYPE_MODES } from '@shell/store/type-map';
@@ -56,6 +57,15 @@ export default {
 
     allNavLinksIds(a, b) {
       if ( !sameContents(a, b) ) {
+        this.queueUpdate();
+      }
+    },
+
+    // Custom-view templates (ConfigMap-backed) — re-register and refresh the nav live
+    // when a template ConfigMap is created or edited, so views appear without a reload.
+    customViewIds(a, b) {
+      if ( !sameContents(a, b) ) {
+        reloadCustomViews(this.$store);
         this.queueUpdate();
       }
     },
@@ -183,6 +193,19 @@ export default {
 
     allNavLinksIds() {
       return this.allNavLinks.map((a) => a.id);
+    },
+
+    // Signature (id + resourceVersion) of the ConfigMaps that back custom views. Reading
+    // cluster/all keeps the live socket watch active; changes drive the watcher above.
+    customViewIds() {
+      if ( !this.clusterId || !this.$store.getters['cluster/schemaFor'](CONFIG_MAP) ) {
+        return [];
+      }
+
+      return this.$store.getters['cluster/all'](CONFIG_MAP)
+        .filter((cm) => cm.metadata?.labels?.[TEMPLATE_LABEL] === 'true')
+        .map((cm) => `${ cm.id }:${ cm.metadata?.resourceVersion }`)
+        .sort();
     },
   },
 

@@ -18,22 +18,18 @@ export default {
     this.loading = true;
 
     try {
-      if (!this.schema) {
-        this.rows = [];
-
-        return;
+      // Load + start the live socket watch. Rows are read reactively via the computed
+      // below, so create/edit/delete reflect immediately without a re-fetch.
+      if (this.schema) {
+        await this.$store.dispatch('cluster/findAll', { type: CONFIG_MAP });
       }
-
-      const all = await this.$store.dispatch('cluster/findAll', { type: CONFIG_MAP });
-
-      this.rows = (all || []).filter((cm) => cm.metadata?.labels?.[TEMPLATE_LABEL] === 'true');
     } finally {
       this.loading = false;
     }
   },
 
   data() {
-    return { rows: [], loading: true };
+    return { loading: true };
   },
 
   computed: {
@@ -43,6 +39,17 @@ export default {
 
     schema() {
       return this.$store.getters['cluster/schemaFor'](CONFIG_MAP);
+    },
+
+    rows() {
+      if (!this.schema) {
+        return [];
+      }
+
+      // Filter the LIVE store list (not a snapshot) so the table stays in sync as
+      // ConfigMaps are added, edited, or deleted.
+      return this.$store.getters['cluster/all'](CONFIG_MAP)
+        .filter((cm) => cm.metadata?.labels?.[TEMPLATE_LABEL] === 'true');
     },
 
     headers() {
@@ -59,7 +66,7 @@ export default {
     </h1>
     <p class="text-muted mb-20">
       ConfigMaps labelled <code>{{ label }}=true</code> that define custom views. Use a
-      row's actions to edit its YAML — the pages update on the next cluster load.
+      row's actions to edit its YAML — views update live as you create, edit, or delete them.
     </p>
 
     <ResourceTable

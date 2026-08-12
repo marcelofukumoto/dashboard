@@ -220,6 +220,13 @@ export default [
         component: () => interopDefault(import('@shell/pages/c/_cluster/_template/sources.vue')),
         name:      'c-cluster-explorer-custom-views'
       }, {
+        // White Canvas — a single special page bound to ONE hardcoded ConfigMap
+        // (default/white-canvas), for a fast real-time authoring loop. It live-recompiles
+        // whenever that ConfigMap changes (socket-driven, no polling).
+        path:      '/c/:cluster/explorer/_canvas',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/_template/WhiteCanvas.vue')),
+        name:      'c-cluster-explorer-canvas'
+      }, {
         path: '/c/:cluster/backup',
         name: 'c-cluster-backup',
         meta: { ...installRedirectRouteMeta(BACKUP_NAME, BACKUP_CHART_NAME, BACKUP_RESTORE.BACKUP) }

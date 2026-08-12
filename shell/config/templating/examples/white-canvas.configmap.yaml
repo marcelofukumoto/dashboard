@@ -1,0 +1,43 @@
+# The single hardcoded ConfigMap behind the White Canvas page
+# (/c/:cluster/explorer/_canvas). Unlike custom-view ConfigMaps, this one carries NO
+# `templates.rancher.io/custom-view` label — the White Canvas page reads it directly by id
+# (default/white-canvas), and it must NOT also appear as a generic nav custom view.
+#
+# The White Canvas page watches this ConfigMap over the live socket and recompiles
+# data["view.vue"] on every change. The white-canvas-builder agent keeps rewriting this
+# ConfigMap in place for a real-time authoring loop.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: white-canvas
+  namespace: default
+data:
+  meta: '{"id":"white-canvas","name":"White Canvas"}'
+  view.vue: |
+    <script>
+    export default {
+      data() {
+        return { count: 0 };
+      },
+    };
+    </script>
+
+    <template>
+      <div class="canvas">
+        <h1 class="mb-20">White Canvas</h1>
+        <p>This page hot-reloads whenever the <code>default/white-canvas</code> ConfigMap changes.</p>
+        <p class="mb-20">Clicked {{ count }} times.</p>
+        <button class="btn role-primary" @click="count++">Click me</button>
+      </div>
+    </template>
+
+    <style scoped>
+    .canvas {
+      padding: 20px;
+    }
+    .canvas code {
+      background: var(--nav-active);
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+    </style>

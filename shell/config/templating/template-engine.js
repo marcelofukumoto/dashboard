@@ -32,6 +32,9 @@ export const CODE_SOURCE_KEY = 'view.vue';
 // Nav-entry name for the "Custom View Sources" management list.
 const SOURCES_TYPE = 'custom-view-sources';
 
+// Nav-entry name for the "White Canvas" single-ConfigMap live page.
+const CANVAS_TYPE = 'white-canvas';
+
 // Default nav group for templates that don't declare their own placement.
 const DEFAULT_GROUP = 'customViews';
 const DEFAULT_GROUP_WEIGHT = 50;
@@ -229,6 +232,20 @@ function registerNav(commit) {
     icon:       'file',
     weight:     -100,
     route:      { name: 'c-cluster-explorer-custom-views' },
+    exact:      true,
+  });
+
+  // White Canvas — always present. A single live page bound to one hardcoded ConfigMap
+  // (default/white-canvas), used for the fast real-time authoring loop.
+  pushName(DEFAULT_GROUP, CANVAS_TYPE);
+  virtualType({
+    label:      'White Canvas',
+    group:      DEFAULT_GROUP,
+    namespaced: false,
+    name:       CANVAS_TYPE,
+    icon:       'compass',
+    weight:     -90,
+    route:      { name: 'c-cluster-explorer-canvas' },
     exact:      true,
   });
 

@@ -1386,8 +1386,18 @@ export default {
         Only save the values that differ from the chart's standard values.yaml.
         chartValues is created by applying the user's customized onto
         the default chart values.
+
+        Exception: in YAML mode the editor content is the complete set of values
+        the user wants to apply, exactly like `helm install --values`. Send it
+        verbatim rather than diffing it against the chart defaults. Diffing emits
+        `null` for every default key the user removed from the YAML, and Helm
+        applies those nulls as deletions - blanking the chart's own defaults and
+        producing invalid resources such as `service.port: 0` or an empty PVC
+        accessMode (SURE-8554).
       */
-      const values = diff(fromChart, this.chartValues);
+      const values = ( this.showingYaml || this.showingYamlDiff )
+        ? (clone(this.chartValues) || {})
+        : diff(fromChart, this.chartValues);
 
       /*
         Refer to the developer docs at docs/developer/helm-chart-apps.md

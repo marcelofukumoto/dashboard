@@ -66,6 +66,20 @@ export default {
       return jsyaml.dump(combined);
     },
 
+    /*
+      The user's saved overrides (the release values that were actually sent),
+      as opposed to the effective values which also include the chart defaults.
+    */
+    yourValuesYaml() {
+      if (!this.value?.valuesLoaded) {
+        return '';
+      }
+
+      const userValues = this.value?.values || {};
+
+      return Object.keys(userValues).length ? jsyaml.dump(userValues) : '';
+    },
+
     isBusy() {
       if (this.value?.metadata?.state?.transitioning && this.value?.metadata?.state?.name === 'pending-install') {
         return true;
@@ -159,13 +173,31 @@ export default {
         :label="t('catalog.app.section.values')"
         :weight="3"
       >
-        <YamlEditor
-          ref="yaml"
-          :scrolling="false"
-          :value="valuesYaml"
-          editor-mode="VIEW_CODE"
-          mode="view"
-        />
+        <div class="values-panes">
+          <div class="values-pane">
+            <div class="values-pane__label">
+              Your values <span class="values-pane__hint">(the overrides that were saved)</span>
+            </div>
+            <YamlEditor
+              :scrolling="false"
+              :value="yourValuesYaml || '# (no overrides - all chart defaults)'"
+              editor-mode="VIEW_CODE"
+              mode="view"
+            />
+          </div>
+          <div class="values-pane">
+            <div class="values-pane__label">
+              Effective values <span class="values-pane__hint">(chart defaults + your values)</span>
+            </div>
+            <YamlEditor
+              ref="yaml"
+              :scrolling="false"
+              :value="valuesYaml"
+              editor-mode="VIEW_CODE"
+              mode="view"
+            />
+          </div>
+        </div>
       </Tab>
       <Tab
         v-if="hasReadme"
@@ -190,5 +222,27 @@ export default {
 <style lang="scss" scoped>
 .latest-operation a {
   cursor: pointer;
+}
+
+.values-panes {
+  display: flex;
+  gap: 12px;
+
+  .values-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 50%;
+    min-width: 0;
+
+    &__label {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    &__hint {
+      font-weight: normal;
+      color: var(--input-label);
+    }
+  }
 }
 </style>

@@ -353,8 +353,14 @@ export default {
         }
       }
 
-      /* Serializes an object as a YAML document */
-      this.valuesYaml = saferDump(this.chartValues);
+      /*
+        The editable pane shows ONLY the user's overrides (what actually gets
+        saved as the release values). On create this is empty; on edit it is the
+        previously-saved overrides. The chart defaults are shown live, read-only,
+        in the Effective values pane. This keeps "what you edit" == "what is
+        saved" and matches `helm install --values` semantics.
+      */
+      this.valuesYaml = ( this.userValues && Object.keys(this.userValues).length ) ? saferDump(this.userValues) : '';
 
       /* For YAML diff */
       if ( !this.loadedVersion ) {
@@ -651,6 +657,29 @@ export default {
       return EDITOR_MODES.EDIT_CODE;
     },
 
+    /*
+      The read-only "Effective values" pane: the chart's default values.yaml
+      merged with the user's overrides from the editable pane. This is what Helm
+      actually renders with (equivalent to `helm get values --all`). It updates
+      live as the user edits their overrides.
+    */
+    effectiveYaml() {
+      let overrides = {};
+
+      try {
+        overrides = jsyaml.load(this.valuesYaml) || {};
+      } catch (e) {
+        overrides = {};
+      }
+
+      const combined = mergeWithReplace(
+        merge({}, this.versionInfo?.values || {}),
+        overrides,
+      );
+
+      return saferDump(combined);
+    },
+
     showingYaml() {
       return this.formYamlOption === VALUES_STATE.YAML || ( !this.valuesComponent && !this.hasQuestions );
     },
@@ -865,7 +894,7 @@ export default {
       case VALUES_STATE.YAML:
         // Show the YAML preview
         if (old === VALUES_STATE.FORM) {
-          this.valuesYaml = jsyaml.dump(this.chartValues || {});
+          this.valuesYaml = saferDump(diff(this.versionInfo?.values || {}, this.chartValues || {}));
           this.previousYamlValues = this.valuesYaml;
         }
 
@@ -877,7 +906,7 @@ export default {
       case VALUES_STATE.DIFF:
         // Show the YAML diff
         if (old === VALUES_STATE.FORM) {
-          this.valuesYaml = jsyaml.dump(this.chartValues || {});
+          this.valuesYaml = saferDump(diff(this.versionInfo?.values || {}, this.chartValues || {}));
           this.previousYamlValues = this.valuesYaml;
         }
 
@@ -1987,17 +2016,36 @@ export default {
                 :target-namespace="targetNamespace"
               />
             </Tabbed>
-            <!-- Values (as YAML) -->
+            <!-- Values (as YAML): two panes - editable overrides + read-only effective -->
             <template v-else>
-              <YamlEditor
-                ref="yaml"
-                v-model:value="valuesYaml"
-                class="step__values__content"
-                :scrolling="true"
-                :initial-yaml-values="originalYamlValues"
-                :editor-mode="editorMode"
-                :hide-preview-buttons="true"
-              />
+              <div class="values-panes step__values__content">
+                <div class="values-pane">
+                  <div class="values-pane__label">
+                    Your values <span class="values-pane__hint">(only these are saved)</span>
+                  </div>
+                  <YamlEditor
+                    ref="yaml"
+                    v-model:value="valuesYaml"
+                    class="values-pane__editor"
+                    :scrolling="true"
+                    :initial-yaml-values="originalYamlValues"
+                    :editor-mode="editorMode"
+                    :hide-preview-buttons="true"
+                  />
+                </div>
+                <div class="values-pane">
+                  <div class="values-pane__label">
+                    Effective values <span class="values-pane__hint">(chart defaults + your values, read-only)</span>
+                  </div>
+                  <YamlEditor
+                    :value="effectiveYaml"
+                    class="values-pane__editor"
+                    :scrolling="true"
+                    editor-mode="VIEW_CODE"
+                    :hide-preview-buttons="true"
+                  />
+                </div>
+              </div>
             </template>
           </div>
         </div>
@@ -2137,6 +2185,35 @@ export default {
   .chart-version-footnote {
     margin-top: 8px;
     color: var(--input-label);
+  }
+
+  .values-panes {
+    display: flex;
+    gap: 12px;
+    min-height: 0;
+
+    .values-pane {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 50%;
+      min-width: 0;
+      min-height: 0;
+
+      &__label {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      &__hint {
+        font-weight: normal;
+        color: var(--input-label);
+      }
+
+      &__editor {
+        flex: 1;
+        min-height: 0;
+      }
+    }
   }
 
   $title-height: 50px;

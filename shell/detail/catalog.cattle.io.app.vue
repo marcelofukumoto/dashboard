@@ -129,7 +129,23 @@ export default {
   watch: {
     'value.secretId'(neu, old) {
       this.value.fetchValues(true);
-    }
+    },
+
+    /*
+      YamlEditor does not react to its `value` prop, and the release values load
+      asynchronously, so push the computed YAML into each editor once it changes.
+    */
+    yourValuesYaml(neu) {
+      this.$nextTick(() => {
+        this.$refs.yourValuesEditor?.updateValue(neu || '# (no overrides - all chart defaults)');
+      });
+    },
+
+    valuesYaml(neu) {
+      this.$nextTick(() => {
+        this.$refs.yaml?.updateValue(neu);
+      });
+    },
   },
 };
 </script>
@@ -179,6 +195,7 @@ export default {
               Your values <span class="values-pane__hint">(the overrides that were saved)</span>
             </div>
             <YamlEditor
+              ref="yourValuesEditor"
               :scrolling="false"
               :value="yourValuesYaml || '# (no overrides - all chart defaults)'"
               editor-mode="VIEW_CODE"

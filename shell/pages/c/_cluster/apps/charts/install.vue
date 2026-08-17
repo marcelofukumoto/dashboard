@@ -2051,6 +2051,7 @@ export default {
                     :value="effectiveYaml"
                     class="values-pane__editor"
                     :scrolling="true"
+                    mode="view"
                     editor-mode="VIEW_CODE"
                     :hide-preview-buttons="true"
                   />

@@ -16,6 +16,7 @@ timeout-minutes: 30
 description: "AI-assisted daily grooming of new and in-triage issues"
 
 tools:
+  bash: true
   github:
     toolsets:
       - default

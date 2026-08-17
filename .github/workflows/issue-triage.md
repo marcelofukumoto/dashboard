@@ -38,6 +38,7 @@ safe-outputs:
   add-comment:
 
 tools:
+  bash: true
   web-fetch:
   github:
     toolsets: [issues]

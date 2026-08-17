@@ -20,6 +20,7 @@ permissions:
 network: defaults
 
 tools:
+  bash: true
   github:
     # If in a public repo, setting `lockdown: false` allows
     # reading issues, pull requests and comments from 3rd-parties

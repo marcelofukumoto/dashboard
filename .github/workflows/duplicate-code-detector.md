@@ -20,6 +20,7 @@ safe-outputs:
     group: true
     max: 3
 tools:
+  bash: true
   github:
     min-integrity: none
 timeout-minutes: 15

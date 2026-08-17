@@ -825,7 +825,10 @@ export default {
     // resolvable, so the Effective values pane populates in both the create
     // wizard (as the user picks a chart) and on edit.
     updateChartDefaults() {
-      if (!this.isSuseAppCollection) {
+      // Use the model getter (annotation OR repo-URL fallback) rather than the
+      // route-based check, so it also works for App Collection HelmOps that
+      // lack the UI annotation (e.g. created outside the wizard).
+      if (!this.value?.isSuseAppCollection) {
         this.chartDefaultValues = {};
 
         return;

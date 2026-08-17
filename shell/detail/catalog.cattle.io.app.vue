@@ -128,6 +128,9 @@ export default {
 
       if ( tab.name === 'values-yaml' ) {
         this.$nextTick(() => {
+          // Both editors are initialized inside an inactive tab, so CodeMirror
+          // renders blank until refreshed once the tab becomes visible.
+          this.$refs.yourValuesEditor?.refresh();
           if ( this.$refs.yaml ) {
             this.$refs.yaml.refresh();
             this.$refs.yaml.focus();
@@ -149,12 +152,14 @@ export default {
     yourValuesYaml(neu) {
       this.$nextTick(() => {
         this.$refs.yourValuesEditor?.updateValue(neu || '# (no overrides - all chart defaults)');
+        this.$refs.yourValuesEditor?.refresh();
       });
     },
 
     valuesYaml(neu) {
       this.$nextTick(() => {
         this.$refs.yaml?.updateValue(neu);
+        this.$refs.yaml?.refresh();
       });
     },
   },

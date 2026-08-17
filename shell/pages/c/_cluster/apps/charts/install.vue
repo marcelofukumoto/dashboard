@@ -888,6 +888,7 @@ export default {
     valuesYaml() {
       this.$nextTick(() => {
         this.$refs.effectiveEditor?.updateValue(this.effectiveYaml);
+        this.$refs.effectiveEditor?.refresh();
       });
     },
 

@@ -141,6 +141,9 @@ export default {
     this.value.applyDefaults();
     this.updateValidationRules(this.sourceType);
 
+    // Populate the Effective values pane on initial load (edit / prefilled create).
+    this.updateChartDefaults();
+
     if (this.isSuseAppCollection) {
       const repo = this.value.spec?.helm?.repo || '';
 
@@ -412,6 +415,18 @@ export default {
       if (this.isCreate) {
         set(this.value, 'metadata.namespace', neu);
       }
+    },
+
+    'value.spec.helm.chart'() {
+      this.updateChartDefaults();
+    },
+
+    'value.spec.helm.version'() {
+      this.updateChartDefaults();
+    },
+
+    'value.spec.helmSecretName'() {
+      this.updateChartDefaults();
     },
   },
 
@@ -791,6 +806,10 @@ export default {
       }
 
       try {
+        // Make sure the ClusterRepo index is loaded, then follow its info link
+        // to get the chart's default values.yaml.
+        await this.$store.dispatch('catalog/loadRepo', { repoName });
+
         const info = await this.$store.dispatch('catalog/getVersionInfo', {
           repoType: 'cluster', repoName, chartName, versionName
         });
@@ -798,6 +817,28 @@ export default {
         this.chartDefaultValues = info?.values || {};
       } catch (e) {
         // Chart defaults are best-effort; without them the Effective pane is hidden.
+        this.chartDefaultValues = {};
+      }
+    },
+
+    // Fetch chart defaults whenever the App Collection chart+version+secret are
+    // resolvable, so the Effective values pane populates in both the create
+    // wizard (as the user picks a chart) and on edit.
+    updateChartDefaults() {
+      if (!this.isSuseAppCollection) {
+        this.chartDefaultValues = {};
+
+        return;
+      }
+
+      const chart = this.value.spec?.helm?.chart;
+      const version = this.value.spec?.helm?.version;
+      const rawSecret = this.value.spec?.helmSecretName || '';
+      const secret = rawSecret.includes('/') ? rawSecret.split('/')[1] : rawSecret;
+
+      if (chart && version && secret) {
+        this.fetchChartDefaults(deriveRepoName(secret), chart, version);
+      } else {
         this.chartDefaultValues = {};
       }
     },

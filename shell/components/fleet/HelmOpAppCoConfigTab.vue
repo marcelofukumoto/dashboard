@@ -37,6 +37,7 @@ const props = withDefaults(defineProps<{
   appCoChartsLoading?: boolean;
   chartValues?: string;
   chartValuesInit?: string;
+  effectiveValues?: string;
   yamlForm?: string;
   yamlFormOptions?: any[];
   yamlDiffModeOptions?: any[];
@@ -59,6 +60,7 @@ const props = withDefaults(defineProps<{
   appCoChartsLoading:       false,
   chartValues:              '',
   chartValuesInit:          '',
+  effectiveValues:          '',
   yamlForm:                 '',
   yamlFormOptions:          () => [],
   yamlDiffModeOptions:      () => [],
@@ -513,6 +515,7 @@ defineExpose({ refreshYamlEditor });
             :real-mode="realMode"
             :chart-values="chartValues"
             :chart-values-init="chartValuesInit"
+            :effective-values="effectiveValues"
             :yaml-form="yamlForm"
             :yaml-form-options="yamlFormOptions"
             :yaml-diff-mode-options="yamlDiffModeOptions"

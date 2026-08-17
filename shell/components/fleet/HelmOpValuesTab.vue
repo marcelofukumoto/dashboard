@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, watch } from 'vue';
 import { useI18n } from '@shell/composables/useI18n';
 import { useStore } from 'vuex';
 import Banner from '@components/Banner/Banner.vue';
@@ -15,10 +15,12 @@ interface HelmOpResource {
 }
 
 const yaml = ref<{ refresh?:() => void } | null>(null);
+const effectiveEditor = ref<{ updateValue?: (v: string) => void; refresh?: () => void } | null>(null);
 
 const refreshYaml = () => {
   nextTick(() => {
     yaml.value?.refresh?.();
+    effectiveEditor.value?.refresh?.();
   });
 };
 
@@ -42,11 +44,22 @@ const props = withDefaults(defineProps<{
   bgBorder?: boolean;
   hideBanner?: boolean;
   compact?: boolean;
+  effectiveValues?: string;
 }>(), {
   hideTitle:           false,
   isSuseAppCollection: false,
   bgBorder:            false,
   hideBanner:          false,
+  effectiveValues:     '',
+});
+
+// The read-only Effective values pane does not react to its value prop, so push
+// updates into it when the parent recomputes the merged (defaults + your values) YAML.
+watch(() => props.effectiveValues, (neu) => {
+  nextTick(() => {
+    effectiveEditor.value?.updateValue?.(neu || '');
+    effectiveEditor.value?.refresh?.();
+  });
 });
 
 // eslint-disable-next-line func-call-spacing
@@ -121,18 +134,46 @@ const updateValuesFrom = (valuesFrom: unknown) => {
           />
         </div>
 
-        <YamlEditor
-          ref="yaml"
-          :class="{ 'bg-border': bgBorder }"
-          :value="chartValues"
-          :mode="mode"
-          :initial-yaml-values="chartValuesInit"
-          :scrolling="true"
-          :editor-mode="editorMode"
-          :hide-preview-buttons="true"
-          data-testid="helmop-values-yaml-editor"
-          @update:value="updateChartValues"
-        />
+        <div class="values-panes">
+          <div class="values-pane">
+            <div
+              v-if="effectiveValues"
+              class="values-pane__label"
+            >
+              Your values <span class="values-pane__hint">(only these are saved)</span>
+            </div>
+            <YamlEditor
+              ref="yaml"
+              :class="{ 'bg-border': bgBorder }"
+              :value="chartValues"
+              :mode="mode"
+              :initial-yaml-values="chartValuesInit"
+              :scrolling="true"
+              :editor-mode="editorMode"
+              :hide-preview-buttons="true"
+              data-testid="helmop-values-yaml-editor"
+              @update:value="updateChartValues"
+            />
+          </div>
+          <div
+            v-if="effectiveValues"
+            class="values-pane"
+          >
+            <div class="values-pane__label">
+              Effective values <span class="values-pane__hint">(chart defaults + your values, read-only)</span>
+            </div>
+            <YamlEditor
+              ref="effectiveEditor"
+              :class="{ 'bg-border': bgBorder }"
+              :value="effectiveValues"
+              mode="view"
+              editor-mode="VIEW_CODE"
+              :scrolling="true"
+              :hide-preview-buttons="true"
+              data-testid="helmop-effective-yaml-editor"
+            />
+          </div>
+        </div>
       </div>
 
       <div class="mb-20">
@@ -167,5 +208,27 @@ const updateValuesFrom = (valuesFrom: unknown) => {
   display: flex;
   flex-direction: column;
   gap: var(--gap-lg);
+}
+
+.values-panes {
+  display: flex;
+  gap: 12px;
+
+  .values-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 50%;
+    min-width: 0;
+
+    &__label {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    &__hint {
+      font-weight: normal;
+      color: var(--input-label);
+    }
+  }
 }
 </style>

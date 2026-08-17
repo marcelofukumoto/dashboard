@@ -1,5 +1,6 @@
 <script>
-import { clone, set } from '@shell/utils/object';
+import merge from 'lodash/merge';
+import { clone, mergeWithReplace, set } from '@shell/utils/object';
 import semver from 'semver';
 import jsyaml from 'js-yaml';
 import { saferDump } from '@shell/utils/create-yaml';
@@ -110,6 +111,7 @@ export default {
       yamlForm:         VALUES_STATE.YAML,
       chartValues,
       chartValuesInit:  chartValues,
+      chartDefaultValues: {},
       correctDriftEnabled,
       tempCachedValues: {},
       doneRouteList:    'c-cluster-fleet-application',
@@ -244,6 +246,29 @@ export default {
       return checkIsSuseAppCollection(this.$route, this.value);
     },
 
+    /*
+      The read-only Effective values pane: the chart's default values merged with
+      the user's overrides (chartValues). Empty when chart defaults could not be
+      fetched, which hides the Effective pane.
+    */
+    effectiveValues() {
+      if (!this.chartDefaultValues || !Object.keys(this.chartDefaultValues).length) {
+        return '';
+      }
+
+      let overrides = {};
+
+      try {
+        overrides = jsyaml.load(this.chartValues) || {};
+      } catch (e) {
+        overrides = {};
+      }
+
+      const combined = mergeWithReplace(merge({}, this.chartDefaultValues), overrides);
+
+      return saferDump(combined);
+    },
+
     sourceTypeOptions() {
       return Object.values(SOURCE_TYPE).map((value) => ({
         value,
@@ -324,6 +349,7 @@ export default {
         appCoChartsLoading:       this.appCoChartsLoading,
         chartValues:              this.chartValues,
         chartValuesInit:          this.chartValuesInit,
+        effectiveValues:          this.effectiveValues,
         yamlForm:                 this.yamlForm,
         yamlFormOptions:          this.yamlFormOptions,
         yamlDiffModeOptions:      this.yamlDiffModeOptions,
@@ -745,11 +771,34 @@ export default {
         if (catalogChart?.versions?.length) {
           this.appCoChartEntries = { [chartName]: catalogChart.versions };
           this.appCoChartDeprecated = !!catalogChart.deprecated;
+
+          // Fetch the chart's default values so we can show the read-only
+          // Effective values pane (chart defaults + user overrides).
+          await this.fetchChartDefaults(repoName, chartName, this.value.spec.helm.version);
         }
       } catch (e) {
         console.error('Failed to fetch AppCo chart list:', e); // eslint-disable-line no-console
       } finally {
         this.appCoChartsLoading = false;
+      }
+    },
+
+    async fetchChartDefaults(repoName, chartName, versionName) {
+      if (!repoName || !chartName || !versionName) {
+        this.chartDefaultValues = {};
+
+        return;
+      }
+
+      try {
+        const info = await this.$store.dispatch('catalog/getVersionInfo', {
+          repoType: 'cluster', repoName, chartName, versionName
+        });
+
+        this.chartDefaultValues = info?.values || {};
+      } catch (e) {
+        // Chart defaults are best-effort; without them the Effective pane is hidden.
+        this.chartDefaultValues = {};
       }
     },
 
@@ -855,6 +904,7 @@ export default {
         :real-mode="realMode"
         :chart-values="chartValues"
         :chart-values-init="chartValuesInit"
+        :effective-values="effectiveValues"
         :yaml-form="yamlForm"
         :yaml-form-options="yamlFormOptions"
         :yaml-diff-mode-options="yamlDiffModeOptions"
@@ -964,6 +1014,7 @@ export default {
               :is-view="isView"
               :chart-values="chartValues"
               :chart-values-init="chartValuesInit"
+        :effective-values="effectiveValues"
               :yaml-form="yamlForm"
               :yaml-form-options="yamlFormOptions"
               :yaml-diff-mode-options="yamlDiffModeOptions"

@@ -10,7 +10,7 @@ import merge from 'lodash/merge';
 import { CATALOG } from '@shell/config/types';
 import { sortBy } from '@shell/utils/sort';
 import { allHash } from '@shell/utils/promise';
-import { mergeWithReplace } from '@shell/utils/object';
+import { clone, mergeWithReplace } from '@shell/utils/object';
 import ResourceTabs from '@shell/components/form/ResourceTabs/index.vue';
 
 export default {
@@ -75,7 +75,18 @@ export default {
         return '';
       }
 
-      const userValues = this.value?.values || {};
+      // Strip Rancher's auto-injected global.cattle context so "Your values"
+      // shows only what the user customized - matching the install/edit view,
+      // which removes it via removeGlobalValuesFrom() (it is re-injected on save).
+      const userValues = clone(this.value?.values || {});
+
+      if (userValues.global?.cattle) {
+        delete userValues.global.cattle;
+      }
+
+      if (userValues.global && !Object.keys(userValues.global).length) {
+        delete userValues.global;
+      }
 
       return Object.keys(userValues).length ? jsyaml.dump(userValues) : '';
     },

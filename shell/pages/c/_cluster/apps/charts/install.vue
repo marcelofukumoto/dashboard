@@ -880,6 +880,17 @@ export default {
       }
     },
 
+    /*
+      Keep the read-only "Effective values" pane in sync as the user edits their
+      overrides. YamlEditor does not react to its `value` prop, so push the
+      recomputed effective YAML into it via its ref.
+    */
+    valuesYaml() {
+      this.$nextTick(() => {
+        this.$refs.effectiveEditor?.updateValue(this.effectiveYaml);
+      });
+    },
+
     formYamlOption(neu, old) {
       switch (neu) {
       case VALUES_STATE.FORM:
@@ -1105,8 +1116,6 @@ export default {
             this.chartValues.global.imagePullSecrets = [this.selectedImagePullSecret];
           }
         }
-
-        this.valuesYaml = saferDump(this.chartValues);
       }
     },
 
@@ -2038,6 +2047,7 @@ export default {
                     Effective values <span class="values-pane__hint">(chart defaults + your values, read-only)</span>
                   </div>
                   <YamlEditor
+                    ref="effectiveEditor"
                     :value="effectiveYaml"
                     class="values-pane__editor"
                     :scrolling="true"

@@ -98,7 +98,30 @@ export default {
       const counts = this.$store.getters[`management/all`](COUNT)?.[0]?.counts || {};
       const count = counts[MANAGEMENT.CLUSTER] || {};
 
-      return count?.summary.count;
+      return (count?.summary.count || 0) + this.fakeClusterCount;
+    },
+
+    // DEV-ONLY: ?fakeClusters=N pads the unpinned list + count so master's sidebar can be tested with a
+    // large estate without provisioning. No-op without the param.
+    fakeClusterCount() {
+      return Math.max(0, parseInt(this.$route.query.fakeClusters, 10) || 0);
+    },
+
+    fakeClusters() {
+      return Array.from({ length: this.fakeClusterCount }, (_, i) => ({
+        id:              `fake-${ i }`,
+        label:           `fake-cluster-${ i + 1 }`,
+        ready:           true,
+        providerNavLogo: '',
+        badge:           undefined,
+        iconColor:       '',
+        isLocal:         false,
+        pinned:          false,
+        description:     '',
+        pin:             () => {},
+        unpin:           () => {},
+        clusterRoute:    { name: 'home' },
+      }));
     },
 
     routeComboActive() {
@@ -142,7 +165,9 @@ export default {
      * (see description of helper.clustersOthers for more details)
      */
     clustersFiltered() {
-      return this.hasProvCluster ? this.helper.clustersOthers : [];
+      const real = this.hasProvCluster ? this.helper.clustersOthers : [];
+
+      return this.fakeClusterCount ? [...real, ...this.fakeClusters] : real;
     },
 
     pinnedClustersHeight() {

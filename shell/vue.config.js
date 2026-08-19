@@ -9,6 +9,7 @@ const {
 } = require('./vue-config-helper.js');
 const har = require('./server/har-file');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 const VirtualModulesPlugin = require('webpack-virtual-modules');
 
 // Suppress info level logging messages from http-proxy-middleware
@@ -617,6 +618,19 @@ module.exports = function(dir, appConfig = {}) {
       config.plugins.push(getPackageImport(dir));
       config.plugins.push(createEnvVariablesPlugin(routerBasePath, rancherEnv));
       config.plugins.push(new NodePolyfillPlugin({ additionalAliases: ['process'] })); // required from Webpack 5 to polyfill node modules
+
+      // Monaco migration: bundle the Monaco editor worker + monaco-yaml's worker
+      // (custom language). languages:[] drops the unused json/css/html/ts workers to
+      // keep the bundle down — we only edit YAML. This also injects MonacoEnvironment,
+      // so components/CodeMirror.vue doesn't need import.meta-based worker wiring.
+      config.plugins.push(new MonacoWebpackPlugin({
+        languages:       [],
+        customLanguages: [{
+          label:  'yaml',
+          entry:  'monaco-yaml',
+          worker: { id: 'monaco-yaml/yamlWorker', entry: 'monaco-yaml/yaml.worker' },
+        }],
+      }));
 
       // The static assets need to be in the built assets directory in order to get served (primarily the favicon)
       config.plugins.push(new CopyWebpackPlugin({ patterns: [{ from: path.join(SHELL_ABS, 'static'), to: '.' }] }));

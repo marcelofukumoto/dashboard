@@ -3902,6 +3902,11 @@
     path-browserify "^1.0.1"
     vscode-uri "^3.0.8"
 
+"@vscode/l10n@^0.0.18":
+  version "0.0.18"
+  resolved "https://registry.yarnpkg.com/@vscode/l10n/-/l10n-0.0.18.tgz#916d3a5e960dbab47c1c56f58a7cb5087b135c95"
+  integrity sha512-KYSIHVmslkaCDyw013pphY+d7x1qV8IZupYfeIfzNA+nsaWHbn5uPuQRvdRFsa9zFzGeudPuoGoZ1Op4jrJXIQ==
+
 "@vue/babel-helper-vue-jsx-merge-props@^1.4.0":
   version "1.4.0"
   resolved "https://registry.npmjs.org/@vue/babel-helper-vue-jsx-merge-props/-/babel-helper-vue-jsx-merge-props-1.4.0.tgz#8d53a1e21347db8edbe54d339902583176de09f2"
@@ -6032,19 +6037,6 @@ co@^4.6.0:
   resolved "https://registry.npmjs.org/co/-/co-4.6.0.tgz#6ea6bdf3d853ae54ccb8e47bfa0bf3f9031fb184"
   integrity sha512-QVb0dM5HvG+uaxitm8wONl7jltx8dqhfU33DcqtOZcLSVIKSDDLDi7+0LbAKiyI8hD9u42m2YxXSkMGWThaecQ==
 
-codemirror-editor-vue3@2.8.0:
-  version "2.8.0"
-  resolved "https://registry.npmjs.org/codemirror-editor-vue3/-/codemirror-editor-vue3-2.8.0.tgz#5d7e3c8bc1fac88e64f349fa03f8aac2e6b7a845"
-  integrity sha512-ebYGNhBpLmQNLguXzNyMMkn6K8v3lcS5/Ncvdn6YS4bLGEHE67MfsJIS/WV0L7I6WavUuFlY/Rs/AJKChIwSwg==
-  dependencies:
-    codemirror "^5"
-    diff-match-patch "^1.0.5"
-
-codemirror@5.65.21, codemirror@^5:
-  version "5.65.21"
-  resolved "https://registry.npmjs.org/codemirror/-/codemirror-5.65.21.tgz#cacf320606c5450ad3b3da34bb9c666afec21068"
-  integrity sha512-6teYk0bA0nR3QP0ihGMoxuKzpl5W80FpnHpBJpgy66NK3cZv5b/d/HY8PnRvfSsCG1MTfr92u2WUl+wT0E40mQ==
-
 collect-v8-coverage@^1.0.0:
   version "1.0.3"
   resolved "https://registry.npmjs.org/collect-v8-coverage/-/collect-v8-coverage-1.0.3.tgz#cc1f01eb8d02298cbc9a437c74c70ab4e5210b80"
@@ -7228,11 +7220,6 @@ detect-node@^2.0.4:
   resolved "https://registry.npmjs.org/detect-node/-/detect-node-2.1.0.tgz#c9c70775a49c3d03bc2c06d9a73be550f978f8b1"
   integrity sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==
 
-diff-match-patch@^1.0.5:
-  version "1.0.5"
-  resolved "https://registry.npmjs.org/diff-match-patch/-/diff-match-patch-1.0.5.tgz#abb584d5f10cd1196dfc55aa03701592ae3f7b37"
-  integrity sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==
-
 diff-sequences@^29.6.3:
   version "29.6.3"
   resolved "https://registry.npmjs.org/diff-sequences/-/diff-sequences-29.6.3.tgz#4deaf894d11407c51efc8418012f9e70b84ea921"
@@ -7873,6 +7860,7 @@ eslint-plugin-jest@29.15.2:
 
 "eslint-plugin-local-rules@link:./eslint-plugin-local-rules":
   version "0.0.0"
+  uid ""
 
 "eslint-plugin-local-rules@link:eslint-plugin-local-rules":
   version "0.0.0"
@@ -7934,6 +7922,18 @@ eslint-plugin-react@^7.37.5:
     semver "^6.3.1"
     string.prototype.matchall "^4.0.12"
     string.prototype.repeat "^1.0.0"
+
+eslint-plugin-vue@10.10.0:
+  version "10.10.0"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-vue/-/eslint-plugin-vue-10.10.0.tgz#e957b56853dea54e738136d849d85929954bdf3d"
+  integrity sha512-dL9x9rBHqqNcByWiLOHK6L0SB97V82/NC0cZRn9cXPjM7pCuWlpQQP9bFH4vjBv80ej1ZpzAkuD8zWH1o9bZbA==
+  dependencies:
+    "@eslint-community/eslint-utils" "^4.9.1"
+    natural-compare "^1.4.0"
+    nth-check "^2.1.1"
+    postcss-selector-parser "^7.1.4"
+    semver "^7.8.5"
+    xml-name-validator "^5.0.0"
 
 eslint-plugin-vue@10.9.2:
   version "10.9.2"
@@ -10553,6 +10553,11 @@ json5@^2.1.2, json5@^2.2.3:
   resolved "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz#78cd6f1a19bdc12b73db5ad0c61efd66c1e29283"
   integrity sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==
 
+jsonc-parser@^3.0.0:
+  version "3.3.1"
+  resolved "https://registry.yarnpkg.com/jsonc-parser/-/jsonc-parser-3.3.1.tgz#f2a524b4f7fd11e3d791e559977ad60b98b798b4"
+  integrity sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==
+
 jsonfile@^4.0.0:
   version "4.0.0"
   resolved "https://registry.npmjs.org/jsonfile/-/jsonfile-4.0.0.tgz#8771aae0799b64076b76640fca058f9c10e33ecb"
@@ -10734,7 +10739,7 @@ loader-utils@^1.0.2, loader-utils@^1.1.0, loader-utils@^1.2.3:
     emojis-list "^3.0.0"
     json5 "^1.0.1"
 
-loader-utils@^2.0.0, loader-utils@^2.0.4:
+loader-utils@^2.0.0, loader-utils@^2.0.2, loader-utils@^2.0.4:
   version "2.0.4"
   resolved "https://registry.npmjs.org/loader-utils/-/loader-utils-2.0.4.tgz#8b5cb38b5c34a9a018ee1fc0e6a066d1dfcc528c"
   integrity sha512-xXqpXoINfFhgua9xiqD8fPFHgkoq1mmmpE92WlDbm9rNRd/EbRb+Gqf908T2DMfuHjjJlksiK2RbHVOdD/MqSw==
@@ -11339,6 +11344,63 @@ module-alias@^2.2.2:
   version "2.3.4"
   resolved "https://registry.npmjs.org/module-alias/-/module-alias-2.3.4.tgz#7c2b0442ba1114744e97288963db637859db4094"
   integrity sha512-bOclZt8hkpuGgSSoG07PKmvzTizROilUTvLNyrMqvlC9snhs7y7GzjNWAVbISIOlhCP1T14rH1PDAV9iNyBq/w==
+
+monaco-editor-webpack-plugin@^7.1.0:
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/monaco-editor-webpack-plugin/-/monaco-editor-webpack-plugin-7.1.1.tgz#5c90c8ccfadd11a9168d439d1f5b96a397431553"
+  integrity sha512-WxdbFHS3Wtz4V9hzhe/Xog5hQRSMxmDLkEEYZwqMDHgJlkZo00HVFZR0j5d0nKypjTUkkygH3dDSXERLG4757A==
+  dependencies:
+    loader-utils "^2.0.2"
+
+monaco-editor@^0.52.0:
+  version "0.52.2"
+  resolved "https://registry.yarnpkg.com/monaco-editor/-/monaco-editor-0.52.2.tgz#53c75a6fcc6802684e99fd1b2700299857002205"
+  integrity sha512-GEQWEZmfkOGLdd3XK8ryrfWz3AIP8YymVXiPHEdewrUq7mh0qrKrfHLNCXcbB6sTnMLnOZ3ztSiKcciFUkIJwQ==
+
+monaco-languageserver-types@^0.4.0:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/monaco-languageserver-types/-/monaco-languageserver-types-0.4.1.tgz#edd761b714743077c8506364bd77350be2258949"
+  integrity sha512-uLiYM6K6jPqAa1ni9lRBoj8ZJAErOcegBrfEpurIUUO8cBhlhrGYjWbjhl4OPcxUNoj1JvqSETjwCTyhGgwymQ==
+  dependencies:
+    monaco-types "^0.1.0"
+    vscode-languageserver-protocol "^3.0.0"
+    vscode-uri "^3.0.0"
+
+monaco-marker-data-provider@^1.0.0:
+  version "1.2.5"
+  resolved "https://registry.yarnpkg.com/monaco-marker-data-provider/-/monaco-marker-data-provider-1.2.5.tgz#f589e46cf9339247536315764fe0c87b7c5828de"
+  integrity sha512-5ZdcYukhPwgYMCvlZ9H5uWs5jc23BQ8fFF5AhSIdrz5mvYLsqGZ58ZLxTv8rCX6+AxdJ8+vxg1HVSk+F2bLosg==
+  dependencies:
+    monaco-types "^0.1.0"
+
+monaco-types@^0.1.0:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/monaco-types/-/monaco-types-0.1.2.tgz#77cf7bbd14f7ba7e5f2210cc61ae28611fcae1bc"
+  integrity sha512-8LwfrlWXsedHwAL41xhXyqzPibS8IqPuIXr9NdORhonS495c2/wky+sI1PRLvMCuiI0nqC2NH1six9hdiRY4Xg==
+
+monaco-worker-manager@^2.0.0:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/monaco-worker-manager/-/monaco-worker-manager-2.0.1.tgz#f67c54dfca34ed4b225d5de84e77b24b4e36de8a"
+  integrity sha512-kdPL0yvg5qjhKPNVjJoym331PY/5JC11aPJXtCZNwWRvBr6jhkIamvYAyiY5P1AWFmNOy0aRDRoMdZfa71h8kg==
+
+monaco-yaml@^5.2.0:
+  version "5.5.1"
+  resolved "https://registry.yarnpkg.com/monaco-yaml/-/monaco-yaml-5.5.1.tgz#9771c91d6b54456a1a398b028dd27435f473b58e"
+  integrity sha512-vLR1EoV7Au0tkuA9T6ZJr2q7CooRP69AvlqzWh9Gui6amuijdTsfCAQHtCFobRMwkhbuly6J1Q16NziTTiWtWQ==
+  dependencies:
+    "@vscode/l10n" "^0.0.18"
+    jsonc-parser "^3.0.0"
+    monaco-languageserver-types "^0.4.0"
+    monaco-marker-data-provider "^1.0.0"
+    monaco-types "^0.1.0"
+    monaco-worker-manager "^2.0.0"
+    path-browserify "^1.0.0"
+    prettier "^3.0.0"
+    proxy-disposable "^1.0.0"
+    vscode-languageserver-textdocument "^1.0.0"
+    vscode-languageserver-types "^3.0.0"
+    vscode-uri "^3.0.0"
+    yaml "^2.0.0"
 
 mrmime@^2.0.0:
   version "2.0.1"
@@ -12098,9 +12160,9 @@ pascal-case@^3.1.2:
     no-case "^3.0.4"
     tslib "^2.0.3"
 
-path-browserify@^1.0.1:
+path-browserify@^1.0.0, path-browserify@^1.0.1:
   version "1.0.1"
-  resolved "https://registry.npmjs.org/path-browserify/-/path-browserify-1.0.1.tgz#d98454a9c3753d5790860f16f68867b9e46be1fd"
+  resolved "https://registry.yarnpkg.com/path-browserify/-/path-browserify-1.0.1.tgz#d98454a9c3753d5790860f16f68867b9e46be1fd"
   integrity sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==
 
 path-exists@^3.0.0:
@@ -12551,6 +12613,14 @@ postcss-selector-parser@^7.1.0:
     cssesc "^3.0.0"
     util-deprecate "^1.0.2"
 
+postcss-selector-parser@^7.1.4:
+  version "7.1.5"
+  resolved "https://registry.yarnpkg.com/postcss-selector-parser/-/postcss-selector-parser-7.1.5.tgz#ee7b090724eb60739b530660e5b402200e694a97"
+  integrity sha512-KvvtD7SrlBP7dlgkBghEE3r84CABm5SmV2aNcG4oCA+qDnJ/tvKonFVvwWAyyWUEwxuNawdfEAZKP9zM3oZ2Uw==
+  dependencies:
+    cssesc "^3.0.0"
+    util-deprecate "^1.0.2"
+
 postcss-svgo@^5.1.0:
   version "5.1.0"
   resolved "https://registry.npmjs.org/postcss-svgo/-/postcss-svgo-5.1.0.tgz#0a317400ced789f233a28826e77523f15857d80d"
@@ -12589,6 +12659,11 @@ prelude-ls@^1.2.1:
   version "2.8.8"
   resolved "https://registry.npmjs.org/prettier/-/prettier-2.8.8.tgz#e8c5d7e98a4305ffe3de2e1fc4aca1a71c28b1da"
   integrity sha512-tdN8qQGvNjw4CHbY+XXk0JgCXn9QiF21a55rBe5LJAU+kDyC4WQn4+awm2Xfk2lQMk5fKup9XgzTZtGkjBdP9Q==
+
+prettier@^3.0.0:
+  version "3.9.6"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.9.6.tgz#b3ea5146515d40fc53f18aa63f74dfab1e10dbf6"
+  integrity sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==
 
 pretty-bytes@^5.6.0:
   version "5.6.0"
@@ -12684,6 +12759,11 @@ proxy-addr@~2.0.7:
   dependencies:
     forwarded "0.2.0"
     ipaddr.js "1.9.1"
+
+proxy-disposable@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/proxy-disposable/-/proxy-disposable-1.0.0.tgz#c61f2ebcf1215600088de75badf5882873c64382"
+  integrity sha512-Y673BKpFqk8XkYuoK9DGZ1RIzldz5SkzxTKc/+DkpaMdrDEbEalWlO/uMRMdJsXvdbTybJI26XDwN0KJpZDN4w==
 
 proxy-from-env@1.0.0:
   version "1.0.0"
@@ -14803,9 +14883,32 @@ vm-browserify@^1.0.1:
   resolved "https://registry.npmjs.org/vm-browserify/-/vm-browserify-1.1.2.tgz#78641c488b8e6ca91a75f511e7a3b32a86e5dda0"
   integrity sha512-2ham8XPWTONajOR0ohOKOHXkm3+gaBmGut3SRuu75xLd/RRaY6vqgh8NBYYk7+RW3u5AtzPQZG8F10LHkl0lAQ==
 
-vscode-uri@^3.0.8:
+vscode-jsonrpc@9.0.1:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/vscode-jsonrpc/-/vscode-jsonrpc-9.0.1.tgz#5e848a4addf004b6337156f7858a006e0838b4f5"
+  integrity sha512-rfuA6T75H6m5EkbhtEPzre9pT0HPcDI2MMy4+nPFIBks5J8JBAUHD4tRYSgaBOijIEC7SRkC1kKyXTLqbmh9jw==
+
+vscode-languageserver-protocol@^3.0.0:
+  version "3.18.2"
+  resolved "https://registry.yarnpkg.com/vscode-languageserver-protocol/-/vscode-languageserver-protocol-3.18.2.tgz#e7fb36e6ba32bc7ba622257adb78a6126273ddc5"
+  integrity sha512-XRyDbT0Pp3sSNti3JmxVEUMySWCSi1hhM+/KUlCy1hV1zmrqpM1OwO12EAki8blhmLuIMpaJrYbo0OzGVfK2Qg==
+  dependencies:
+    vscode-jsonrpc "9.0.1"
+    vscode-languageserver-types "3.18.0"
+
+vscode-languageserver-textdocument@^1.0.0:
+  version "1.0.12"
+  resolved "https://registry.yarnpkg.com/vscode-languageserver-textdocument/-/vscode-languageserver-textdocument-1.0.12.tgz#457ee04271ab38998a093c68c2342f53f6e4a631"
+  integrity sha512-cxWNPesCnQCcMPeenjKKsOCKQZ/L6Tv19DTRIGuLWe32lyzWhihGVJ/rcckZXJxfdKCFvRLS3fpBIsV/ZGX4zA==
+
+vscode-languageserver-types@3.18.0, vscode-languageserver-types@^3.0.0:
+  version "3.18.0"
+  resolved "https://registry.yarnpkg.com/vscode-languageserver-types/-/vscode-languageserver-types-3.18.0.tgz#132321229604836bab710c97487e6cdafb9bd7bb"
+  integrity sha512-8TsGPNMIMiiBdkORgRSvLjuiEIiAFtO+KssmYWxQ+uSVvlf7RjK8YKCOjPzZ+YA04jXEV7+7LvkSmHkhpNS99g==
+
+vscode-uri@^3.0.0, vscode-uri@^3.0.8:
   version "3.1.0"
-  resolved "https://registry.npmjs.org/vscode-uri/-/vscode-uri-3.1.0.tgz#dd09ec5a66a38b5c3fffc774015713496d14e09c"
+  resolved "https://registry.yarnpkg.com/vscode-uri/-/vscode-uri-3.1.0.tgz#dd09ec5a66a38b5c3fffc774015713496d14e09c"
   integrity sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==
 
 vue-component-type-helpers@^2.0.0:
@@ -15338,6 +15441,11 @@ xml-name-validator@^4.0.0:
   version "4.0.0"
   resolved "https://registry.npmjs.org/xml-name-validator/-/xml-name-validator-4.0.0.tgz#79a006e2e63149a8600f15430f0a4725d1524835"
   integrity sha512-ICP2e+jsHvAj2E2lIHxa5tjXRlKDJo4IdvPvCXbXQGdzSfmSpNVyIKMvoZHjDY9DP0zV17iI85o90vRFXNccRw==
+
+xml-name-validator@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/xml-name-validator/-/xml-name-validator-5.0.0.tgz#82be9b957f7afdacf961e5980f1bf227c0bf7673"
+  integrity sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==
 
 xml-naming@^0.1.0:
   version "0.1.0"

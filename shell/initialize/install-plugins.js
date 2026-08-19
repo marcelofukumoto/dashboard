@@ -14,7 +14,6 @@ import axios from '@shell/utils/axios';
 import config from '@shell/utils/config';
 import axiosShell from '@shell/plugins/axios';
 import codeMirror from '@shell/plugins/codemirror-loader';
-import { InstallCodeMirror } from 'codemirror-editor-vue3';
 import * as intNumber from '@shell/directives/int-number';
 import dashboardClientInit from '@shell/plugins/dashboard-client-init';
 import plugin from '@shell/plugins/plugin';
@@ -40,7 +39,8 @@ export async function installPlugins(vueApp) {
       prevent:          ['input', 'textarea', 'select'],
       preventContainer: ['#modal-container-element']
     });
-  vueApp.use(InstallCodeMirror);
+  // Monaco migration: the editor is created imperatively in components/CodeMirror.vue;
+  // no global editor install plugin needed.
 }
 
 export async function installInjectedPlugins(app, vueApp) {

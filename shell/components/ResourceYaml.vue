@@ -166,6 +166,13 @@ export default {
 
       this.cm = cm;
 
+      // Monaco migration: the CodeMirror 5 auto-fold helpers (foldLinesMatching,
+      // foldYaml, getMode().fold, execCommand('foldAll')) don't exist on Monaco.
+      // Guard so the editor still works; reimplement via Monaco folding ranges later.
+      if ( typeof cm?.foldLinesMatching !== 'function' ) {
+        return;
+      }
+
       if ( this.isEdit ) {
         cm.foldLinesMatching(/^status:\s*$/);
       }

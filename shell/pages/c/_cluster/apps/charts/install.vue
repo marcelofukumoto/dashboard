@@ -304,7 +304,12 @@ export default {
         this.preserveCustomRegistryValue();
         userValues = diff(this.loadedVersionValues, this.chartValues);
       } else if ( this.existing ) {
-        await this.existing.fetchValues(); // In theory this has already been called, but do again to be safe
+        // Force so the release's stored chart defaults (release.chart.values) are
+        // loaded, not just a partially-cached secret. The Effective values pane
+        // falls back to these when the live version fetch (versionInfo) is
+        // unavailable, e.g. an App Collection OCI registry 429. This matches the
+        // read-only detail view, which also fetches with force.
+        await this.existing.fetchValues(true);
         /* For an already installed app, use the values from the previous install. */
         userValues = clone(this.existing.values || {});
       } else {

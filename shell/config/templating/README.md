@@ -17,7 +17,7 @@ Two flavours of page:
 | Kind | Annotation | `data` keys | Rendered by |
 |------|-----------|-------------|-------------|
 | **Template** (JSON widgets) | `templates.rancher.io/kind: template` (or omitted) | `template` (JSON) | Built-in widget components (`resourceList`, `overview`) |
-| **Code** (runtime Vue SFC) | `templates.rancher.io/kind: code` | `meta` (JSON) + `view.vue` (SFC) | `vue3-sfc-loader`, compiled in-browser |
+| **Code** (runtime Vue SFC) | `templates.rancher.io/kind: code` | `meta` (JSON) + `view.vue` (SFC) | `@vue/compiler-sfc`, compiled in-browser |
 
 Plus one special page:
 
@@ -124,12 +124,15 @@ Three files, deliberately isolated in their own **async chunk** (loaded via dyna
 page's synchronous init and cause circular-dependency init errors
 (`__WEBPACK_DEFAULT_EXPORT__ before initialization`).
 
-- **`sfc-loader.js`** — `compileSFC(source)` wraps `vue3-sfc-loader`'s `loadModule`. Uses a
-  Proxy `moduleCache` so only the components the SFC actually imports get executed (eager
-  execution of every component blanks the app). Strips `lang="scss|sass|less"` from
-  `<style>` (the loader has no preprocessor; treat as plain CSS). Disallows any import that
-  isn't `vue` or a known component. Collects injected `<style>` elements so they can be
-  removed on unmount. **Uses `new Function` → requires CSP `unsafe-eval`.**
+- **`sfc-loader.js`** — `compileSFC(source)` compiles the SFC with **`@vue/compiler-sfc`
+  directly** (`parse` → `compileScript`/`rewriteDefault` → `compileTemplate` →
+  `compileStyle`), then rewrites the emitted ESM (`import … from 'vue'` / component imports,
+  `export function render`) into a plain function body and instantiates it via `new Function`,
+  injecting `Vue` and a `__req` bound to the component registry. Only the components the SFC
+  actually imports are resolved (via `__req` → `resolveComponent`). scss/sass/less are treated
+  as plain CSS (no preprocessor). Injected `<style>` elements are returned for cleanup on
+  unmount. Webpack resolves `@vue/compiler-sfc`'s browser build (`compiler-sfc.esm-browser.js`,
+  ~1.7MB) into this file's async chunk. **Uses `new Function` → requires CSP `unsafe-eval`.**
 - **`component-registry.js`** — what an SFC may import:
   - **`@shell/components`** via `require.context` (sync), mapped by key **without executing**
     (`buildKeyMap`), executed on demand in `resolveComponent`.
@@ -222,7 +225,7 @@ instead).
 shell/config/templating/
   template-engine.js            Discovery, parse, nav registration, live reload, delete handling
   component-registry.js         What SFCs may import (@shell + @components), lazy resolution
-  sfc-loader.js                 compileSFC() — vue3-sfc-loader wrapper (async chunk)
+  sfc-loader.js                 compileSFC() — @vue/compiler-sfc pipeline (async chunk)
   custom-view-builder.aiagentconfig.yaml        JSON-widget builder persona
   custom-view-code-builder.aiagentconfig.yaml   Code-view builder persona
   white-canvas-builder.aiagentconfig.yaml       Fast real-time canvas persona

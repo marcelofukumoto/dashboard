@@ -96,7 +96,8 @@ const RANCHER_COMPONENTS = [
 //   - package dir:    '@components/Banner'             (named + default export)
 // Each entry is an ES-module namespace ({ __esModule, default, [Name] }) so BOTH
 //   import Banner from '@components/Banner'   and   import { Banner } from '@components/Banner'
-// work. __esModule makes vue3-sfc-loader unwrap .default (else it warns "missing render").
+// work. __esModule makes the loader's default-interop unwrap .default (else a default
+// import would be the namespace object and Vue warns "missing render").
 const EXTRA = {};
 const dirExports = {};
 

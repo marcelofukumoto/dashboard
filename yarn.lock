@@ -15178,31 +15178,6 @@ vue3-resize@0.2.0:
   resolved "https://registry.npmjs.org/vue3-resize/-/vue3-resize-0.2.0.tgz#a1f06468cb7add911dfe3cb980984fa865ea1c8b"
   integrity sha512-vZkbEv4PjMEWFV0igAxCvdSIH9hrIJjXyJ9XPTxH0cS/L2/VW1dLVORMWJKU0VXHpHiYKwskB62ju7aBQMVpOQ==
 
-vue3-sfc-loader@^0.9.5:
-  version "0.9.5"
-  resolved "https://registry.yarnpkg.com/vue3-sfc-loader/-/vue3-sfc-loader-0.9.5.tgz#f0d453a7af6cc98b13031da8b5ba6fbdcd5dc18a"
-  integrity sha512-RuzFftbFjdYV81zKnL1/SsaOhq5DXtxuclU3auo8pyI3uprvyD9ssgvxNQ5otBYnqePGCD8P+qgDlVaRPyMvfg==
-  dependencies:
-    "@babel/code-frame" "^7.16.7"
-    "@babel/core" "^7.23.9"
-    "@babel/generator" "^7.16.8"
-    "@babel/parser" "^7.23.9"
-    "@babel/plugin-proposal-dynamic-import" "^7.16.7"
-    "@babel/plugin-proposal-nullish-coalescing-operator" "^7.16.7"
-    "@babel/plugin-proposal-optional-chaining" "^7.16.7"
-    "@babel/plugin-transform-arrow-functions" "^7.16.7"
-    "@babel/plugin-transform-modules-commonjs" "^7.16.8"
-    "@babel/plugin-transform-typescript" "^7.23.6"
-    "@vue/babel-helper-vue-jsx-merge-props" "^1.2.1"
-    "@vue/babel-plugin-jsx" "^1.2.1"
-    "@vue/babel-preset-jsx" "^1.2.4"
-    "@vue/compiler-dom" "^3.4.15"
-    "@vue/compiler-sfc" "^3.4.15"
-    "@vue/component-compiler-utils" "^3.3.0"
-    "@vue/shared" "^3.4.15"
-    spark-md5 "^3.0.2"
-    vue-template-compiler "^2.7.16"
-
 vue3-virtual-scroll-list@0.2.1:
   version "0.2.1"
   resolved "https://registry.npmjs.org/vue3-virtual-scroll-list/-/vue3-virtual-scroll-list-0.2.1.tgz#7fdc5be066c9b8d877614626a0bc02eb1fd12ad0"

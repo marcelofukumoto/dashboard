@@ -3,7 +3,7 @@
 #   kubectl apply -f example-code-view.configmap.yaml
 #
 # The engine reads `data.meta` (JSON) to register the nav entry, and compiles
-# `data["view.vue"]` with vue3-sfc-loader when the page is opened. The component runs in
+# `data["view.vue"]` with @vue/compiler-sfc when the page is opened. The component runs in
 # the app tree, so it can use this.$store / this.$route and ANY @shell component (import
 # by bare name or full @shell/components path).
 #

@@ -166,6 +166,14 @@ export default {
 
       this.cm = cm;
 
+      // TODO(cm6): the auto-folding of status/annotations/managedFields/comments
+      // relied on CodeMirror 5 instance helpers (foldLinesMatching, foldYaml,
+      // getMode().fold, execCommand('foldAll')) that don't exist in CodeMirror 6.
+      // Guard so the editor still works on CM6; reimplement via a CM6 foldService.
+      if ( typeof cm?.foldLinesMatching !== 'function' ) {
+        return;
+      }
+
       if ( this.isEdit ) {
         cm.foldLinesMatching(/^status:\s*$/);
       }

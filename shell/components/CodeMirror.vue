@@ -1,9 +1,35 @@
 <script>
+import { Codemirror } from 'vue-codemirror';
+import { EditorState } from '@codemirror/state';
+import {
+  EditorView, lineNumbers, highlightActiveLine, keymap, drawSelection, highlightActiveLineGutter
+} from '@codemirror/view';
+import {
+  defaultKeymap, history, historyKeymap, indentWithTab
+} from '@codemirror/commands';
+import {
+  foldGutter, codeFolding, foldKeymap, indentOnInput, bracketMatching, syntaxHighlighting, defaultHighlightStyle
+} from '@codemirror/language';
+import { yaml } from '@codemirror/lang-yaml';
+import { linter, lintGutter } from '@codemirror/lint';
+import { oneDark } from '@codemirror/theme-one-dark';
+import jsyaml from 'js-yaml';
 import { KEYMAP } from '@shell/store/prefs';
 import { _EDIT, _VIEW } from '@shell/config/query-params';
 
+/**
+ * CM6 migration NOTE (spike): this adapter replaces the CodeMirror 5 wrapper
+ * (`codemirror-editor-vue3`) with `vue-codemirror` (CodeMirror 6). It preserves
+ * the public props/events/methods contract so consumers (YamlEditor.vue, etc.)
+ * need no changes. CM5-only options passed by parents — `extraKeys` with `cm.*`
+ * callbacks, `gutters` (CM5 gutter names), `cursorBlinkRate`, custom `foldYaml` —
+ * are intentionally ignored; CM6 handles indentation/folding/lint natively.
+ * TODO(cm6): vim/emacs keymaps, markdown line-break markers, styleSelectedText.
+ */
 export default {
   name: 'CodeMirror',
+
+  components: { Codemirror },
 
   emits: ['onReady', 'onInput', 'onChanges', 'onFocus', 'validationChanged'],
 
@@ -36,10 +62,10 @@ export default {
 
   data() {
     return {
-      codeMirrorRef:          null,
-      loaded:                 false,
-      removeKeyMapBox:        false,
-      hasLintErrors:          false,
+      view:                null,
+      loaded:              true, // CM6 extensions load synchronously; no async loader needed
+      removeKeyMapBox:     false,
+      hasLintErrors:       false,
       currFocusedElem:        undefined,
       isCodeMirrorFocused:    false,
       codeMirrorContainerRef: undefined
@@ -51,51 +77,72 @@ export default {
       return this.mode === _VIEW;
     },
 
-    combinedOptions() {
+    // CM5 options object is translated to CM6 extensions here.
+    extensions() {
       const theme = this.$store.getters['prefs/theme'];
-      const keymap = this.$store.getters['prefs/get'](KEYMAP);
+      const opts = this.options || {};
 
-      const out = {
-        // codemirror default options
-        tabSize:                 2,
-        indentWithTabs:          false,
-        mode:                    'yaml',
-        keyMap:                  keymap,
-        theme:                   `base16-${ theme }`,
-        lineNumbers:             true,
-        line:                    true,
-        styleActiveLine:         false,
-        lineWrapping:            true,
-        foldGutter:              true,
-        styleSelectedText:       true,
-        showCursorWhenSelecting: true,
-        autocorrect:             false,
-      };
+      const ext = [
+        yaml(),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        history(),
+        drawSelection(),
+        indentOnInput(),
+        bracketMatching(),
+        EditorView.lineWrapping,
+        keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
+        EditorView.contentAttributes.of({ 'aria-label': opts.screenReaderLabel || 'Code editor' }),
+        // vue-codemirror does not emit focus/blur, so track them via CM6 DOM handlers.
+        EditorView.domEventHandlers({
+          focus: () => this.onFocus(),
+          blur:  () => this.onBlur(),
+        }),
+      ];
 
-      if (this.asTextArea) {
-        out.lineNumbers = false;
-        out.foldGutter = false;
-        out.tabSize = 0;
-        out.extraKeys = { Tab: false };
+      const wantsLineNumbers = opts.lineNumbers !== false && !this.asTextArea;
+
+      if (wantsLineNumbers) {
+        ext.push(lineNumbers());
+        ext.push(highlightActiveLineGutter());
       }
 
-      Object.assign(out, this.options);
-
-      // parent components control lint with a boolean; if linting is enabled, we need to override that boolean with a custom error handler to wire lint errors into dashboard validation
-      if (this.options?.lint) {
-        out.lint = { onUpdateLinting: this.handleLintErrors };
+      if (!this.asTextArea && opts.foldGutter !== false) {
+        ext.push(codeFolding());
+        ext.push(foldGutter());
       }
 
-      // fixes https://github.com/rancher/dashboard/issues/13653
-      // we can't use the inert HTML prop on the parent because it disables all interaction
-      out.readOnly = !!this.isDisabled;
+      if (opts.styleActiveLine) {
+        ext.push(highlightActiveLine());
+      }
 
-      return out;
+      // parent components enable lint with a boolean; wire the diagnostics into
+      // dashboard validation via handleLintErrors (see validationChanged emit).
+      if (opts.lint) {
+        ext.push(lintGutter());
+        ext.push(linter((view) => this.runLint(view)));
+      }
+
+      if (this.isDisabled || opts.readOnly) {
+        ext.push(EditorState.readOnly.of(true));
+        ext.push(EditorView.editable.of(false));
+      }
+
+      if (theme === 'dark') {
+        ext.push(oneDark);
+      }
+
+      return ext;
+    },
+
+    tabSize() {
+      return this.asTextArea ? 0 : (this.options?.tabSize ?? 2);
     },
 
     keyMapTooltip() {
-      if (this.combinedOptions?.keyMap) {
-        const name = this.t(`prefs.keymap.${ this.combinedOptions.keyMap }`);
+      const keymapPref = this.$store.getters['prefs/get'](KEYMAP);
+
+      if (keymapPref) {
+        const name = this.t(`prefs.keymap.${ keymapPref }`);
 
         return this.t('codeMirror.keymap.indicatorToolip', { name });
       }
@@ -104,7 +151,7 @@ export default {
     },
 
     isNonDefaultKeyMap() {
-      return this.combinedOptions?.keyMap !== 'sublime';
+      return this.$store.getters['prefs/get'](KEYMAP) !== 'sublime';
     },
 
     isCodeMirrorContainerFocused() {
@@ -116,17 +163,7 @@ export default {
     }
   },
 
-  created() {
-    if (window.__codeMirrorLoader) {
-      window.__codeMirrorLoader().then(() => {
-        this.loaded = true;
-      });
-    } else {
-      console.error('Code mirror loader not available'); // eslint-disable-line no-console
-    }
-  },
-
-  async mounted() {
+  mounted() {
     const el = this.$refs.codeMirrorContainer;
 
     el.addEventListener('keydown', this.handleKeyPress);
@@ -143,17 +180,6 @@ export default {
     hasLintErrors(neu) {
       this.$emit('validationChanged', !neu);
     },
-
-    isCodeMirrorContainerFocused: {
-      handler(neu) {
-        const codeMirrorEl = this.codeMirrorRef?.getInputField();
-
-        if (codeMirrorEl) {
-          codeMirrorEl.tabIndex = neu ? -1 : 0;
-        }
-      },
-      immediate: true
-    }
   },
 
   methods: {
@@ -181,49 +207,58 @@ export default {
 
       // if parent container is focused and we press a trigger, focus goes to the editor inside
       if (this.isCodeMirrorContainerFocused && (ev.code === 'Enter' || ev.code === 'Space')) {
-        this.codeMirrorRef.focus();
+        this.view?.focus();
       }
     },
-    /**
-     * Codemirror yaml linting uses js-yaml parse
-     * it does not distinguish between warnings and errors so we will treat all yaml lint messages as errors
-     * other codemirror linters (eg json) will report from, to, severity where severity may be 'warning' or 'error'
-     * only 'error' level linting will trigger a validation event from this component
-    */
-    handleLintErrors(diagnostics = []) {
-      const hasLintErrors = diagnostics.filter((d) => !d.severity || d.severity === 'error').length > 0;
 
-      this.hasLintErrors = hasLintErrors;
+    /**
+     * YAML linting uses js-yaml parse. It does not distinguish between warnings
+     * and errors so we treat all yaml lint messages as errors. Only 'error' level
+     * linting triggers a validation event from this component.
+     */
+    runLint(view) {
+      const text = view.state.doc.toString();
+      const diagnostics = [];
+
+      try {
+        jsyaml.load(text);
+      } catch (ex) {
+        const docLen = view.state.doc.length;
+        const from = Math.min(ex?.mark?.position ?? 0, docLen);
+        const to = Math.min(from + 1, docLen);
+
+        diagnostics.push({
+          from, to, severity: 'error', message: ex.message || 'Invalid YAML'
+        });
+      }
+
+      this.handleLintErrors(diagnostics);
+
+      return diagnostics;
+    },
+
+    handleLintErrors(diagnostics = []) {
+      this.hasLintErrors = diagnostics.filter((d) => !d.severity || d.severity === 'error').length > 0;
     },
 
     focus() {
-      if ( this.$refs.codeMirrorRef ) {
-        this.$refs.codeMirrorRef.cminstance.focus();
-      }
+      this.view?.focus();
     },
 
+    // CM6 measures automatically; kept as a no-op so consumers calling refresh() still work.
     refresh() {
-      if ( this.$refs.codeMirrorRef ) {
-        this.$refs.codeMirrorRef.refresh();
-      }
+      this.view?.requestMeasure();
     },
 
-    onReady(codeMirrorRef) {
+    onReady(payload) {
+      this.view = payload.view;
       this.$emit('validationChanged', true);
-
-      this.$nextTick(() => {
-        codeMirrorRef.refresh();
-        this.codeMirrorRef = codeMirrorRef;
-      });
-      this.$emit('onReady', codeMirrorRef);
+      this.$emit('onReady', payload.view);
     },
 
-    onInput(newCode) {
+    onChange(newCode) {
       this.$emit('onInput', newCode);
-    },
-
-    onChanges(codeMirrorRef, changes) {
-      this.$emit('onChanges', codeMirrorRef, changes);
+      this.$emit('onChanges', this.view, newCode);
     },
 
     onFocus() {
@@ -237,9 +272,13 @@ export default {
     },
 
     updateValue(value) {
-      if ( this.$refs.codeMirrorRef ) {
-        this.$refs.codeMirrorRef.cminstance.doc.setValue(value);
+      const view = this.view;
+
+      if (!view || value === view.state.doc.toString()) {
+        return;
       }
+
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
     },
 
     closeKeyMapInfo() {
@@ -278,15 +317,15 @@ export default {
       <Codemirror
         id="code-mirror-el"
         ref="codeMirrorRef"
-        :value="value"
-        :options="combinedOptions"
+        class="codemirror-container"
+        :model-value="value"
+        :extensions="extensions"
         :disabled="isDisabled"
-        :original-style="true"
+        :indent-with-tab="!asTextArea"
+        :tab-size="tabSize"
+        :autofocus="false"
         @ready="onReady"
-        @input="onInput"
-        @changes="onChanges"
-        @focus="onFocus"
-        @blur="onBlur"
+        @change="onChange"
       />
       <span
         v-show="isCodeMirrorFocused"
@@ -309,7 +348,26 @@ export default {
       @include focus-outline;
     }
 
-    &.as-text-area .codemirror-container{
+    // CM6 editor chrome — inherit dashboard colors/fonts so the theme vars show through.
+    .cm-editor {
+      background: none;
+      font-size: inherit;
+
+      .cm-gutters {
+        background: inherit;
+        border: none;
+      }
+
+      .cm-content {
+        font-family: monospace;
+      }
+
+      &.cm-focused {
+        outline: none;
+      }
+    }
+
+    &.as-text-area .codemirror-container {
       min-height: 40px;
       position: relative;
       display: block;
@@ -330,71 +388,8 @@ export default {
         border-color: var(--primary-border);
       }
 
-      .CodeMirror-code {
-        .CodeMirror-line {
-          &:not(:last-child)>span:after,
-          .cm-markdown-single-trailing-space-odd:before,
-          .cm-markdown-single-trailing-space-even:before {
-            color: var(--muted);
-            position: absolute;
-            line-height: 20px;
-            pointer-events: none;
-          }
-          &:not(:last-child)>span:after {
-            content: '↵';
-            margin-left: 2px;
-          }
-          .cm-markdown-single-trailing-space-odd:before,
-          .cm-markdown-single-trailing-space-even:before {
-            font-weight: bold;
-            content: '·';
-          }
-        }
-      }
-
-      .CodeMirror-lines {
+      .cm-editor {
         color: var(--input-text);
-        padding: 0;
-
-        .CodeMirror-line > span > span {
-          &.cm-overlay {
-            font-family: monospace;
-          }
-        }
-
-        .CodeMirror-line > span {
-          font-family: $body-font;
-        }
-      }
-
-      .CodeMirror-sizer {
-        min-height: 20px;
-      }
-
-      .CodeMirror-selected {
-        background-color: var(--primary) !important;
-      }
-
-      .CodeMirror-selectedtext {
-        color: var(--primary-text);
-      }
-
-      .CodeMirror-line::selection,
-      .CodeMirror-line > span::selection,
-      .CodeMirror-line > span > span::selection {
-        color: var(--primary-text);
-        background-color: var(--primary);
-      }
-
-      .CodeMirror-line::-moz-selection,
-      .CodeMirror-line > span::-moz-selection,
-      .CodeMirror-line > span > span::-moz-selection {
-        color: var(--primary-text);
-        background-color: var(--primary);
-      }
-
-      .CodeMirror-gutters .CodeMirror-foldgutter:empty {
-        display: none;
       }
     }
   }
@@ -413,20 +408,6 @@ export default {
     .codemirror-container {
       z-index: 0;
       font-size: inherit !important;
-
-      //rm no longer extant selector
-      .CodeMirror {
-        height: initial;
-        background: none
-      }
-
-      .CodeMirror-gutters {
-        background: inherit;
-      }
-
-      .CodeMirror-wrap pre {
-        word-break: break-word;
-      }
     }
 
     .keymap.overlay {
@@ -485,5 +466,4 @@ export default {
       }
     }
   }
-
 </style>

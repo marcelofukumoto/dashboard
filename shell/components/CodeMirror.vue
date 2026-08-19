@@ -1,9 +1,8 @@
 <script>
-import { Codemirror } from 'vue-codemirror';
-import { EditorState } from '@codemirror/state';
 import {
-  EditorView, lineNumbers, highlightActiveLine, keymap, drawSelection, highlightActiveLineGutter
+  EditorView, lineNumbers, highlightActiveLine, highlightActiveLineGutter, keymap, drawSelection
 } from '@codemirror/view';
+import { EditorState, Compartment } from '@codemirror/state';
 import {
   defaultKeymap, history, historyKeymap, indentWithTab
 } from '@codemirror/commands';
@@ -18,26 +17,20 @@ import { KEYMAP } from '@shell/store/prefs';
 import { _EDIT, _VIEW } from '@shell/config/query-params';
 
 /**
- * CM6 migration NOTE (spike): this adapter replaces the CodeMirror 5 wrapper
- * (`codemirror-editor-vue3`) with `vue-codemirror` (CodeMirror 6). It preserves
- * the public props/events/methods contract so consumers (YamlEditor.vue, etc.)
- * need no changes. CM5-only options passed by parents — `extraKeys` with `cm.*`
- * callbacks, `gutters` (CM5 gutter names), `cursorBlinkRate`, custom `foldYaml` —
- * are intentionally ignored; CM6 handles indentation/folding/lint natively.
- * TODO(cm6): vim/emacs keymaps, markdown line-break markers, styleSelectedText.
+ * CM6 migration (spike, DIRECT): this adapter drives CodeMirror 6 imperatively via
+ * @codemirror/* — no third-party Vue wrapper (dropped `vue-codemirror`). The editor
+ * is a framework-agnostic EditorView, mounted in mounted()/destroyed in beforeUnmount(),
+ * exactly like the Monaco spike. It preserves the public props/events/methods contract
+ * so consumers (YamlEditor.vue, etc.) need no changes. CM5-only options (extraKeys with
+ * cm.* callbacks, gutters, cursorBlinkRate, custom foldYaml) are ignored.
+ * TODO(cm6): vim/emacs keymaps, foldYaml outline, markdown line-break markers.
  */
 export default {
   name: 'CodeMirror',
 
-  components: { Codemirror },
-
   emits: ['onReady', 'onInput', 'onChanges', 'onFocus', 'validationChanged'],
 
   props: {
-    /**
-     * Sets the edit mode for Text Area.
-     * @values _EDIT, _VIEW
-     */
     mode: {
       type:    String,
       default: _EDIT
@@ -62,80 +55,16 @@ export default {
 
   data() {
     return {
-      view:                null,
-      loaded:              true, // CM6 extensions load synchronously; no async loader needed
+      loaded:              true,
       removeKeyMapBox:     false,
+      isCodeMirrorFocused: false,
       hasLintErrors:       false,
-      currFocusedElem:        undefined,
-      isCodeMirrorFocused:    false,
-      codeMirrorContainerRef: undefined
     };
   },
 
   computed: {
     isDisabled() {
       return this.mode === _VIEW;
-    },
-
-    // CM5 options object is translated to CM6 extensions here.
-    extensions() {
-      const theme = this.$store.getters['prefs/theme'];
-      const opts = this.options || {};
-
-      const ext = [
-        yaml(),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        history(),
-        drawSelection(),
-        indentOnInput(),
-        bracketMatching(),
-        EditorView.lineWrapping,
-        keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
-        EditorView.contentAttributes.of({ 'aria-label': opts.screenReaderLabel || 'Code editor' }),
-        // vue-codemirror does not emit focus/blur, so track them via CM6 DOM handlers.
-        EditorView.domEventHandlers({
-          focus: () => this.onFocus(),
-          blur:  () => this.onBlur(),
-        }),
-      ];
-
-      const wantsLineNumbers = opts.lineNumbers !== false && !this.asTextArea;
-
-      if (wantsLineNumbers) {
-        ext.push(lineNumbers());
-        ext.push(highlightActiveLineGutter());
-      }
-
-      if (!this.asTextArea && opts.foldGutter !== false) {
-        ext.push(codeFolding());
-        ext.push(foldGutter());
-      }
-
-      if (opts.styleActiveLine) {
-        ext.push(highlightActiveLine());
-      }
-
-      // parent components enable lint with a boolean; wire the diagnostics into
-      // dashboard validation via handleLintErrors (see validationChanged emit).
-      if (opts.lint) {
-        ext.push(lintGutter());
-        ext.push(linter((view) => this.runLint(view)));
-      }
-
-      if (this.isDisabled || opts.readOnly) {
-        ext.push(EditorState.readOnly.of(true));
-        ext.push(EditorView.editable.of(false));
-      }
-
-      if (theme === 'dark') {
-        ext.push(oneDark);
-      }
-
-      return ext;
-    },
-
-    tabSize() {
-      return this.asTextArea ? 0 : (this.options?.tabSize ?? 2);
     },
 
     keyMapTooltip() {
@@ -153,68 +82,112 @@ export default {
     isNonDefaultKeyMap() {
       return this.$store.getters['prefs/get'](KEYMAP) !== 'sublime';
     },
-
-    isCodeMirrorContainerFocused() {
-      return this.currFocusedElem === this.codeMirrorContainerRef;
-    },
-
-    codeMirrorContainerTabIndex() {
-      return this.isCodeMirrorFocused ? 0 : -1;
-    }
-  },
-
-  mounted() {
-    const el = this.$refs.codeMirrorContainer;
-
-    el.addEventListener('keydown', this.handleKeyPress);
-    this.codeMirrorContainerRef = this.$refs.codeMirrorContainer;
-  },
-
-  beforeUnmount() {
-    const el = this.$refs.codeMirrorContainer;
-
-    el.removeEventListener('keydown', this.handleKeyPress);
   },
 
   watch: {
+    value(neu) {
+      const cur = this.view?.state.doc.toString();
+
+      if (this.view && (neu ?? '') !== cur) {
+        this.view.dispatch({ changes: { from: 0, to: this.view.state.doc.length, insert: neu ?? '' } });
+      }
+    },
+
+    isDisabled(neu) {
+      this.view?.dispatch({ effects: this.readOnlyComp.reconfigure(this.readOnlyExt(neu)) });
+    },
+
     hasLintErrors(neu) {
       this.$emit('validationChanged', !neu);
     },
   },
 
+  mounted() {
+    const theme = this.$store.getters['prefs/theme'];
+    const opts = this.options || {};
+
+    this.readOnlyComp = new Compartment();
+
+    const extensions = [
+      yaml(),
+      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      history(),
+      drawSelection(),
+      indentOnInput(),
+      bracketMatching(),
+      EditorView.lineWrapping,
+      keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
+      EditorView.contentAttributes.of({ 'aria-label': opts.screenReaderLabel || 'Code editor' }),
+      EditorView.domEventHandlers({
+        focus: () => this.onFocus(),
+        blur:  () => this.onBlur(),
+      }),
+      EditorView.updateListener.of((update) => {
+        if (!update.docChanged) {
+          return;
+        }
+
+        const val = update.state.doc.toString();
+
+        if (val === (this.value ?? '')) {
+          return; // ignore echoes from a parent-pushed value
+        }
+        this.$emit('onInput', val);
+        this.$emit('onChanges', this.view, val);
+      }),
+      this.readOnlyComp.of(this.readOnlyExt(this.isDisabled || opts.readOnly)),
+      theme === 'dark' ? oneDark : [],
+    ];
+
+    if (!this.asTextArea && opts.lineNumbers !== false) {
+      extensions.push(lineNumbers(), highlightActiveLineGutter());
+    }
+
+    if (!this.asTextArea && opts.foldGutter !== false) {
+      extensions.push(codeFolding(), foldGutter());
+    }
+
+    if (opts.styleActiveLine) {
+      extensions.push(highlightActiveLine());
+    }
+
+    if (opts.lint) {
+      extensions.push(lintGutter(), linter((view) => this.runLint(view)));
+    }
+
+    this.view = new EditorView({
+      parent: this.$refs.editorEl,
+      doc:    this.value ?? '',
+      extensions,
+    });
+
+    this.$refs.codeMirrorContainer.addEventListener('keydown', this.handleKeyPress);
+
+    this.$emit('validationChanged', true);
+    this.$emit('onReady', this.view);
+  },
+
+  beforeUnmount() {
+    this.$refs.codeMirrorContainer?.removeEventListener('keydown', this.handleKeyPress);
+    this.view?.destroy();
+  },
+
   methods: {
-    focusChanged(ev, isBlurred = false) {
-      if (isBlurred) {
-        this.currFocusedElem = undefined;
-      } else {
-        this.currFocusedElem = ev.target;
-      }
+    readOnlyExt(on) {
+      return on ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : [];
     },
 
     handleKeyPress(ev) {
-      // allows pressing escape in the editor, useful for modal editing with vim
+      // allow pressing escape in the editor, useful for modal editing with vim
       if (this.isCodeMirrorFocused && ev.code === 'Escape') {
         ev.preventDefault();
         ev.stopPropagation();
       }
-
-      // make focus leave the editor for it's parent container so that we can tab
-      const didPressEscapeSequence = ev.shiftKey && ev.code === 'Escape';
-
-      if (this.isCodeMirrorFocused && didPressEscapeSequence) {
-        this.$refs?.codeMirrorContainer?.focus();
-      }
-
-      // if parent container is focused and we press a trigger, focus goes to the editor inside
-      if (this.isCodeMirrorContainerFocused && (ev.code === 'Enter' || ev.code === 'Space')) {
-        this.view?.focus();
-      }
     },
 
     /**
-     * YAML linting uses js-yaml parse. It does not distinguish between warnings
-     * and errors so we treat all yaml lint messages as errors. Only 'error' level
-     * linting triggers a validation event from this component.
+     * YAML linting uses js-yaml parse; all yaml lint messages are treated as errors.
+     * Only 'error' level linting triggers a validation event from this component.
      */
     runLint(view) {
       const text = view.state.doc.toString();
@@ -232,38 +205,23 @@ export default {
         });
       }
 
-      this.handleLintErrors(diagnostics);
+      this.hasLintErrors = diagnostics.some((d) => !d.severity || d.severity === 'error');
 
       return diagnostics;
-    },
-
-    handleLintErrors(diagnostics = []) {
-      this.hasLintErrors = diagnostics.filter((d) => !d.severity || d.severity === 'error').length > 0;
     },
 
     focus() {
       this.view?.focus();
     },
 
-    // CM6 measures automatically; kept as a no-op so consumers calling refresh() still work.
+    // CM6 measures automatically; kept so consumers calling refresh() still work.
     refresh() {
       this.view?.requestMeasure();
     },
 
-    onReady(payload) {
-      this.view = payload.view;
-      this.$emit('validationChanged', true);
-      this.$emit('onReady', payload.view);
-    },
-
-    onChange(newCode) {
-      this.$emit('onInput', newCode);
-      this.$emit('onChanges', this.view, newCode);
-    },
-
     onFocus() {
       this.isCodeMirrorFocused = true;
-      this.$emit('onFocus', this.isCodeMirrorFocused);
+      this.$emit('onFocus', true);
     },
 
     onBlur() {
@@ -272,13 +230,11 @@ export default {
     },
 
     updateValue(value) {
-      const view = this.view;
+      const cur = this.view?.state.doc.toString();
 
-      if (!view || value === view.state.doc.toString()) {
-        return;
+      if (this.view && (value ?? '') !== cur) {
+        this.view.dispatch({ changes: { from: 0, to: this.view.state.doc.length, insert: value ?? '' } });
       }
-
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
     },
 
     closeKeyMapInfo() {
@@ -291,52 +247,36 @@ export default {
 <template>
   <div
     ref="codeMirrorContainer"
-    :tabindex="codeMirrorContainerTabIndex"
-    class="code-mirror code-mirror-container"
+    class="code-mirror code-mirror-container codemirror-container"
     :class="{['as-text-area']: asTextArea}"
-    @focusin="focusChanged"
-    @blur="focusChanged($event, true)"
   >
-    <div v-if="loaded">
+    <div
+      v-if="showKeyMapBox && !removeKeyMapBox && keyMapTooltip && isNonDefaultKeyMap"
+      class="keymap overlay"
+    >
       <div
-        v-if="showKeyMapBox && !removeKeyMapBox && keyMapTooltip && isNonDefaultKeyMap"
-        class="keymap overlay"
+        v-clean-tooltip="keyMapTooltip"
+        class="keymap-indicator"
+        data-testid="code-mirror-keymap"
+        @click="closeKeyMapInfo"
       >
-        <div
-          v-clean-tooltip="keyMapTooltip"
-          class="keymap-indicator"
-          data-testid="code-mirror-keymap"
-          @click="closeKeyMapInfo"
-        >
-          <i class="icon icon-keyboard keymap-icon" />
-          <div class="close-indicator">
-            <i class="icon icon-close icon-sm" />
-          </div>
+        <i class="icon icon-keyboard keymap-icon" />
+        <div class="close-indicator">
+          <i class="icon icon-close icon-sm" />
         </div>
       </div>
-      <Codemirror
-        id="code-mirror-el"
-        ref="codeMirrorRef"
-        class="codemirror-container"
-        :model-value="value"
-        :extensions="extensions"
-        :disabled="isDisabled"
-        :indent-with-tab="!asTextArea"
-        :tab-size="tabSize"
-        :autofocus="false"
-        @ready="onReady"
-        @change="onChange"
-      />
-      <span
-        v-show="isCodeMirrorFocused"
-        class="escape-text"
-        role="alert"
-        :aria-describedby="t('wm.containerShell.escapeText')"
-      >{{ t('codeMirror.escapeText') }}</span>
     </div>
-    <div v-else>
-      Loading...
-    </div>
+    <div
+      ref="editorEl"
+      class="cm-host"
+      data-testid="code-mirror-el"
+    />
+    <span
+      v-show="isCodeMirrorFocused"
+      class="escape-text"
+      role="alert"
+      :aria-describedby="t('wm.containerShell.escapeText')"
+    >{{ t('codeMirror.escapeText') }}</span>
   </div>
 </template>
 
@@ -344,6 +284,9 @@ export default {
   $code-mirror-animation-time: 0.1s;
 
   .code-mirror {
+    position: relative;
+    margin-bottom: 20px;
+
     &.code-mirror-container:focus-visible {
       @include focus-outline;
     }
@@ -367,47 +310,24 @@ export default {
       }
     }
 
-    &.as-text-area .codemirror-container {
-      min-height: 40px;
-      position: relative;
-      display: block;
-      box-sizing: border-box;
-      width: 100%;
-      padding: 10px;
-      background-color: var(--input-bg);
-      border-radius: var(--border-radius);
-      border: solid var(--border-width) var(--input-border);
-      color: var(--input-text);
+    &.as-text-area {
+      margin-bottom: 0;
 
-      &:hover {
-        border-color: var(--input-hover-border);
-      }
-
-      &:focus, &.focus {
-        outline: none;
-        border-color: var(--primary-border);
-      }
-
-      .cm-editor {
+      .cm-host .cm-editor {
+        min-height: 40px;
+        padding: 6px 0;
+        background-color: var(--input-bg);
+        border-radius: var(--border-radius);
+        border: solid var(--border-width) var(--input-border);
         color: var(--input-text);
       }
     }
-  }
-
-  .code-mirror {
-    position: relative;
-    margin-bottom: 20px;
 
     .escape-text {
       font-size: 12px;
       position: absolute;
       bottom: -20px;
       left: 0;
-    }
-
-    .codemirror-container {
-      z-index: 0;
-      font-size: inherit !important;
     }
 
     .keymap.overlay {
@@ -446,7 +366,7 @@ export default {
 
         &:hover {
           border: 1px solid var(--primary);
-          border-radius: var(--border-radius);;
+          border-radius: var(--border-radius);
 
           .close-indicator {
             margin-left: -6px;
@@ -454,7 +374,7 @@ export default {
 
             .icon-close {
               opacity: 1;
-              transition: opacity $code-mirror-animation-time ease-in-out $code-mirror-animation-time; // Only animate when being shown
+              transition: opacity $code-mirror-animation-time ease-in-out $code-mirror-animation-time;
             }
           }
 

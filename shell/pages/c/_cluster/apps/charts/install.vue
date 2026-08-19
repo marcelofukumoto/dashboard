@@ -900,15 +900,32 @@ export default {
     },
 
     /*
-      Keep the read-only "Effective values" pane in sync as the user edits their
-      overrides. YamlEditor does not react to its `value` prop, so push the
-      recomputed effective YAML into it via its ref.
+      Keep the read-only "Effective values" pane in sync. Watch effectiveYaml
+      itself (not just valuesYaml) so the pane also updates when the chart
+      defaults arrive asynchronously - e.g. the existing release's values finish
+      loading, or versionInfo resolves. YamlEditor does not react to its `value`
+      prop, so push the recomputed YAML into it via its ref.
     */
-    valuesYaml() {
+    effectiveYaml() {
       this.$nextTick(() => {
         this.$refs.effectiveEditor?.updateValue(this.effectiveYaml);
         this.$refs.effectiveEditor?.refresh();
       });
+    },
+
+    /*
+      `existing` is populated asynchronously (after the initial fetch), so the
+      force-fetch in the setup path can be skipped. Force-load the release values
+      here whenever it appears, so the Effective values pane has the chart
+      defaults to fall back on when the live version fetch is unavailable.
+    */
+    existing: {
+      immediate: true,
+      handler(neu) {
+        if ( neu ) {
+          this.existing.fetchValues(true);
+        }
+      },
     },
 
     formYamlOption(neu, old) {

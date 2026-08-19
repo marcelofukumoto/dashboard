@@ -672,8 +672,22 @@ export default {
         overrides = {};
       }
 
+      /*
+        Chart defaults come from the live version fetch (versionInfo). When that
+        fetch is unavailable - e.g. an App Collection OCI registry 429 - fall back
+        to the defaults stored in the existing release, which is the same data the
+        read-only detail view reads. Without this, editing an installed app would
+        show only the overrides in the effective pane whenever the registry is
+        rate-limited, even though the detail view still renders correctly.
+      */
+      let chartDefaults = this.versionInfo?.values;
+
+      if ( ( !chartDefaults || !Object.keys(chartDefaults).length ) && this.existing?.valuesLoaded ) {
+        chartDefaults = this.existing.chartValues;
+      }
+
       const combined = mergeWithReplace(
-        merge({}, this.versionInfo?.values || {}),
+        merge({}, chartDefaults || {}),
         overrides,
       );
 

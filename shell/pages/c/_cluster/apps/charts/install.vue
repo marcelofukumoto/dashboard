@@ -413,6 +413,7 @@ export default {
       customRegistrySetting:                  '',
       serverUrlSetting:                       null,
       chartValues:                            null,
+      existingChartDefaults:                  {},
       clusterRegistry:                        '',
       originalYamlValues:                     null,
       previousYamlValues:                     null,
@@ -687,8 +688,8 @@ export default {
       */
       let chartDefaults = this.versionInfo?.values;
 
-      if ( ( !chartDefaults || !Object.keys(chartDefaults).length ) && this.existing?.valuesLoaded ) {
-        chartDefaults = this.existing.chartValues;
+      if ( !chartDefaults || !Object.keys(chartDefaults).length ) {
+        chartDefaults = this.existingChartDefaults;
       }
 
       const combined = mergeWithReplace(
@@ -921,9 +922,24 @@ export default {
     */
     existing: {
       immediate: true,
-      handler(neu) {
-        if ( neu ) {
-          this.existing.fetchValues(true);
+      async handler(neu) {
+        if ( !neu ) {
+          return;
+        }
+
+        /*
+          Load the release's stored chart defaults and capture them into a plain
+          data prop. `existing` can be reassigned to a fresh (unfetched) model
+          instance during setup, so reading existing.chartValues directly in the
+          computed is unreliable; the captured copy is stable and holds the same
+          release's defaults regardless of which instance is current. The
+          Effective values pane falls back to these when the live version fetch
+          (versionInfo) is unavailable, e.g. an App Collection OCI registry 429.
+        */
+        await neu.fetchValues(true);
+
+        if ( neu.valuesLoaded ) {
+          this.existingChartDefaults = clone(neu.chartValues || {});
         }
       },
     },

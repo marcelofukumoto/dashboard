@@ -74,8 +74,10 @@ const CODE = /^(?:(?!__tests__|\.d\.ts).)*\.(vue|js|ts)$/;
 const SHELL_CONTEXTS = [
   ['@shell/components', require.context('@shell/components', true, VUE_ONLY)],
   ['@shell/utils', require.context('@shell/utils', true, CODE)],
-  ['@shell/models', require.context('@shell/models', true, CODE)],
   ['@shell/mixins', require.context('@shell/mixins', true, CODE)],
+  // @shell/models is DROPPED: 85% of its files import @shell/config/store/plugins, and
+  // bundling them all into this chunk crashed at init ("Cannot access '<var>' before
+  // initialization") — a circular-dependency TDZ. Expose specific models explicitly if needed.
 ];
 
 // [name, source path, component] for every @components export. The path is the real

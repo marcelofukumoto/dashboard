@@ -133,16 +133,34 @@ page's synchronous init and cause circular-dependency init errors
   as plain CSS (no preprocessor). Injected `<style>` elements are returned for cleanup on
   unmount. Webpack resolves `@vue/compiler-sfc`'s browser build (`compiler-sfc.esm-browser.js`,
   ~1.7MB) into this file's async chunk. **Uses `new Function` → requires CSP `unsafe-eval`.**
-- **`component-registry.js`** — what an SFC may import:
+- **`component-registry.js`** — what an SFC may import. Three sources, resolved lazily so only
+  what a page actually imports is executed:
   - **`@shell/components`** via `require.context` (sync), mapped by key **without executing**
-    (`buildKeyMap`), executed on demand in `resolveComponent`.
-  - **`@components`** (rancher-components) via **explicit imports** of each component (a
-    `require.context` there breaks this module's own init). Keep the list in sync as the
-    package grows.
+    (`buildKeyMap`), executed on demand in `resolveComponent`. `@shell/components` is a leaf of
+    the import graph, so a wildcard context over it is cycle-safe.
+  - **`@components`** (rancher-components) via **explicit imports** of each component. A
+    `require.context` over `@components` does NOT work — it pulls the package's barrels into a
+    context that TDZ-crashes at chunk-init (`Cannot access '<var>' before initialization`).
+    Keep the explicit list in sync as the package grows.
+  - **~648 `@shell` modules** (utils, mixins, models, edit, detail, list, dialog, composables,
+    chart, directives, cloud-credential, machine-config, promptRemove) via **explicit
+    namespace imports** registered by real path (`SHELL_MODULES`). These are **auto-generated**
+    by `generate-registry.mjs`, which SCC-scans the `@shell` import graph and emits an import
+    for every module that is NOT part of an import cycle. Explicit imports are cycle-safe even
+    when a module transitively touches a cyclic cluster (webpack bundles those deps in the main
+    chunk, exactly as the app does). A `require.context` over these subtrees does NOT work
+    (same TDZ crash); the ~17 genuinely-cyclic modules (`utils/array`↔`object`, `utils/router`,
+    `utils/validators`, `create-yaml`, …) and the app-core dirs (`config`, `store`, `plugins`,
+    `initialize`, `server`) are excluded.
   - Supported import forms mirror real code so pages copy verbatim: bare name (`'RcButton'`),
-    `@shell` full path, `@components` dir (default + named). Each `@components` entry is an
-    ES-module namespace `{ __esModule, default, [Name] }`; `__esModule` makes the loader
-    unwrap `.default` (else it warns "missing render").
+    `@shell` full path (`@shell/components/ResourceTable`, `@shell/edit/pod`), `@shell/utils/x`
+    named imports, and `@components` dir (default + named). `@components` and `SHELL_MODULES`
+    entries are ES-module namespaces `{ __esModule, default, [name…] }`; `__esModule` makes the
+    loader unwrap `.default` (else Vue warns "missing render").
+  - **To refresh the list** (e.g. after `@shell` gains modules): run
+    `node shell/config/templating/generate-registry.mjs` and paste its `IMPORTS`/`ENTRIES`
+    output over the generated block. It re-runs the SCC scan, so newly-cyclic modules drop out
+    automatically.
 - **`TemplateCode.vue`** — dynamically imports `sfc-loader`, compiles the `source` prop,
   `markRaw`s the component, mounts it with `<component :is>`, and **recompiles whenever
   `source` changes** (this is the live-reload primitive). Cleans up injected styles on
@@ -209,8 +227,12 @@ instead).
 
 - **Vue 3 only**: never `this.$set` / `Vue.set` — assign directly (`obj.k = v`); reactivity
   is automatic. Options API, no `<script setup>`.
-- **Imports**: only `vue` and `@shell` / `@components` components, by bare name. **Not**
-  `@shell/config`, mixins, utils, models, npm, or relative paths.
+- **Imports**: `vue` plus a large slice of `@shell` — components (`@shell/components`, bare
+  name or full path), `@components` (bare/named), most `@shell/utils` (named, by real path),
+  `@shell/mixins`, and the resource UIs/models (`@shell/edit|detail|list|models/<type>`). See
+  §4 for the generated allow-list. **Not** available: `@shell/config`, `@shell/store`,
+  `@shell/plugins`, `@shell/server`, npm packages, relative paths, or the ~17 cyclic `@shell`
+  modules (`utils/array`↔`object`, `utils/router`, `utils/validators`, …).
 - **No invented components** (`CreateButton` doesn't exist). Buttons: `RcButton` or
   `<button class="btn role-primary">`. `ButtonGroup` is a segmented toggle, not a Save footer.
 - **`Labels` collision**: import the form one by full path
@@ -224,7 +246,9 @@ instead).
 ```
 shell/config/templating/
   template-engine.js            Discovery, parse, nav registration, live reload, delete handling
-  component-registry.js         What SFCs may import (@shell + @components), lazy resolution
+  component-registry.js         What SFCs may import (@shell/components wildcard + @components
+                                explicit + ~648 generated acyclic @shell modules), lazy resolve
+  generate-registry.mjs         SCC-scan generator for component-registry's SHELL_MODULES block
   sfc-loader.js                 compileSFC() — @vue/compiler-sfc pipeline (async chunk)
   custom-view-builder.aiagentconfig.yaml        JSON-widget builder persona
   custom-view-code-builder.aiagentconfig.yaml   Code-view builder persona
@@ -281,6 +305,17 @@ kubectl --kubeconfig="$KC" apply -f shell/config/templating/examples/certificate
   for namespaced types.
 - `@components` entries need `__esModule: true` or the loader renders them as
   `{ default: {...} }` and warns "missing render".
+- **`require.context` over an app-core subtree TDZ-crashes at chunk-init** (`Cannot access
+  '<var>' before initialization`) — hit with `@components`, `@shell/utils`, `@shell/models`,
+  and the whole `@shell`. Bundling a densely-cyclic subtree into the code-view async chunk
+  forces an init order that trips a circular dependency. The async-chunk isolation is
+  necessary but NOT sufficient; **do not re-attempt these wildcards** (the code comments say so
+  too). Only `@shell/components` (a leaf of the graph) is wildcard-safe.
+- **Exposing @shell is done with EXPLICIT imports of SCC-acyclic modules**, not a wildcard.
+  Explicit imports are cycle-safe (webpack places shared deps in the main chunk, as the app
+  does), even when a module transitively touches a cycle. `generate-registry.mjs` finds the
+  acyclic set via Tarjan SCC and emits the import block. Webpack dedups them against the main
+  bundle, so exposing ~648 modules only grew the code-view chunk ~150 KB.
 
 ## 11. Known limitations / TODO
 

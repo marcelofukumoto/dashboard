@@ -76,14 +76,18 @@ spec:
     - Write cluster data:
         const o = await this.$store.dispatch('cluster/create', { type, metadata, spec }); await o.save();
         await existing.remove();
-    - Imports: ONLY 'vue' and @shell COMPONENTS (files under @shell/components), by bare name:
-        import ResourceTable from 'ResourceTable';
-        import LabeledInput from 'LabeledInput';
-        import LabeledSelect from 'LabeledSelect';
-        import Checkbox from 'Checkbox';
-        import Banner from 'Banner';
-        import RcButton from 'RcButton';
-      NOT @shell/config, mixins, utils, models, npm packages, or relative paths.
+    - Imports: 'vue' plus a large slice of @shell — use the SAME path the Rancher source uses:
+      * COMPONENTS: @shell/components (bare name or full path) + @components (named):
+          import ResourceTable from 'ResourceTable';
+          import RcButton from 'RcButton';
+          import { Banner } from '@components/Banner';
+      * UTILS (real path + named): import { ucFirst } from '@shell/utils/string';
+      * MIXINS: import ResourceFetch from '@shell/mixins/resource-fetch';
+      * RESOURCE UIs / MODELS: @shell/edit/<type>, @shell/detail/<type>, @shell/list/<type>,
+          @shell/models/<type>, e.g. import PodEdit from '@shell/edit/pod';
+      NOT available: @shell/config, @shell/store, @shell/plugins, @shell/server, npm packages,
+      relative paths, and a few cyclic modules (utils/array, utils/object, utils/router, ...).
+      An import that errors "not available to custom views" is one of those — remove it.
     - Buttons: RcButton (variant primary/secondary, size large, :to for nav) or
       <button class="btn role-primary">. There is NO CreateButton. ButtonGroup is a toggle,
       not a Save/Cancel footer.

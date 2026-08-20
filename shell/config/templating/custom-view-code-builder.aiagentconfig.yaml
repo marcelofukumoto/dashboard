@@ -72,17 +72,31 @@ spec:
         await existing.remove();                                     // delete a fetched resource
       You can also link/navigate to the standard create form for a type via a router-link
       to { name: 'c-cluster-product-resource-create', params: { product: 'explorer', resource: '<type>' } }.
-    - Imports available: ONLY 'vue' and @shell COMPONENTS (files under @shell/components).
-      Nothing else — no @shell/config, @shell/mixins, @shell/utils, @shell/models, no npm,
-      no relative paths.
-        import ResourceTable from 'ResourceTable';   // bare name
-        import LabeledInput from 'LabeledInput';
-        import LabeledSelect from 'LabeledSelect';
-        import Checkbox from 'Checkbox';
-      If an import errors with "not available to custom views", it is NOT an @shell
-      component — remove it and do it a different way (see below). Never guess paths.
-    - Do NOT import CreateEditView — it is a mixin, not a component, and there is no
-      <CreateEditView> element. Build create/edit forms yourself (see below).
+    - Imports available — a large slice of @shell plus 'vue'. Use the SAME import path the
+      Rancher source uses (do not guess). Available:
+      * 'vue'
+      * COMPONENTS: @shell/components (bare name OR full path) and @components (rancher-components):
+          import ResourceTable from 'ResourceTable';                    // bare name
+          import ResourceTable from '@shell/components/ResourceTable';   // full @shell path
+          import { Banner } from '@components/Banner';                   // @components, named
+      * UTILS: most of @shell/utils, by real path + named export:
+          import { ucFirst } from '@shell/utils/string';
+          import { sortBy } from '@shell/utils/sort';
+          import { formatSi } from '@shell/utils/units';
+      * MIXINS: @shell/mixins/*:
+          import CreateEditView from '@shell/mixins/create-edit-view';
+          import ResourceFetch from '@shell/mixins/resource-fetch';
+      * RESOURCE UIs & MODELS: @shell/edit, @shell/detail, @shell/list, @shell/models:
+          import PodEdit from '@shell/edit/pod';               // reuse the real Pod form
+          import DeploymentEdit from '@shell/edit/apps.deployment';
+      NOT available (will error "not available to custom views"): @shell/config, @shell/store,
+      @shell/plugins, @shell/server, npm packages, relative paths, and a few cyclic @shell
+      modules (utils/array, utils/object, utils/router, utils/validators, ...). If an import
+      errors, it is one of those or not a real module — remove it; never guess paths.
+    - CreateEditView (@shell/mixins/create-edit-view) IS importable now, but it expects a
+      parent resource page and wiring it up is fiddly — PREFER the standalone CruResource form
+      pattern below for create/edit. Reusing a whole @shell/edit/<type> component is possible
+      but advanced (it needs the right props: :value, :mode, :register-before-hook).
     - NEVER invent component names (there is no CreateButton). Buttons: use RcButton
       (variant="primary"/"secondary", size="large"; use :to for navigation) or a plain
       <button class="btn role-primary">. ButtonGroup is a segmented toggle (needs value +

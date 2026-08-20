@@ -63,7 +63,9 @@ import StringList from '@components/StringList/StringList.vue';
 // even when it transitively imports a cyclic cluster (webpack bundles those deps in the
 // main chunk, as the app does). Covers utils, mixins, models, edit/detail/list, dialog,
 // composables, chart, directives, cloud-credential, machine-config, promptRemove. In-cycle
-// modules are excluded by construction. Regenerate with the SCC generator + re-splice.
+// modules are excluded by construction. To refresh: run
+//   node shell/config/templating/generate-registry.mjs
+// and paste its IMPORTS/ENTRIES output over this block and the SHELL_MODULES array below.
 import * as S_chart_example from '@shell/chart/example';
 import * as S_chart_gatekeeper from '@shell/chart/gatekeeper';
 import * as S_chart_istio from '@shell/chart/istio';

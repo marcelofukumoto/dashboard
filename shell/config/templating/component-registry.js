@@ -1,12 +1,7 @@
 // Lazy registry of components for runtime-compiled custom-view SFCs.
 //
-// @shell: exposed via ONE require.context PER SAFE SUBTREE (sync) — mapped by ctx.keys()
-// (lists only) and executed on demand when the SFC imports one. Eager execution disrupts
-// the app. We do NOT require.context all of @shell in one shot: that drags in browser-hostile
-// code (e.g. @shell/server imports node: built-ins) and @shell/config (which contains THIS
-// file → self-cycle), and failed to build. Instead we opt IN a curated list of subtrees
-// below. Adding a subtree is one line; if it breaks the build (node deps) or crashes at
-// chunk-init (circular deps, like @components did), remove it.
+// @shell/components: exposed via require.context (sync) — mapped by ctx.keys() (lists only)
+// and executed on demand when the SFC imports one. Eager execution disrupts the app.
 //
 // @components (rancher-components): exposed via EXPLICIT imports of every component. We do
 // NOT require.context this package — doing so pulls the whole package (including its barrels)
@@ -62,22 +57,7 @@ import RcSectionBadges from '@components/RcSection/RcSectionBadges.vue';
 import RcSeparator from '@components/RcSeparator/RcSeparator.vue';
 import StringList from '@components/StringList/StringList.vue';
 
-// Regexes: components are .vue only; utils/models/mixins are code modules (.js/.ts), never
-// .d.ts type declarations (they fail to compile as modules) and never __tests__.
-const VUE_ONLY = /^(?:(?!__tests__).)*\.vue$/;
-const CODE = /^(?:(?!__tests__|\.d\.ts).)*\.(vue|js|ts)$/;
-
-// Curated, opt-in @shell subtrees. require.context needs a STRING LITERAL dir, so each is
-// spelled out. Add a line to expose more; remove a line if it breaks the build or crashes.
-// EXCLUDED on purpose: config (self-cycle), server (node built-ins), store/plugins/initialize
-// (app bootstrap + side effects + heavy cycles), apis/core/types (type-only / api plumbing).
-const SHELL_CONTEXTS = [
-  ['@shell/components', require.context('@shell/components', true, VUE_ONLY)],
-  ['@shell/utils', require.context('@shell/utils', true, CODE)],
-  // DROPPED (chunk-init circular-dependency TDZ, "Cannot access '<var>' before
-  // initialization"): @shell/models (85% import config/store/plugins) and @shell/mixins.
-  // Isolating whether @shell/utils alone is cycle-safe; if not, only @shell/components stays.
-];
+const ctx = require.context('@shell/components', true, /^(?:(?!__tests__).)*\.vue$/);
 
 // [name, source path, component] for every @components export. The path is the real
 // .vue location; the DIRECTORY of that path is the package import path used in real code
@@ -153,7 +133,7 @@ Object.entries(dirExports).forEach(([dir, comps]) => {
 
 let keyMap = null;
 
-// Build import-id -> { ctx, key } across every @shell subtree, WITHOUT executing any module.
+// Build import-id -> context key WITHOUT executing any module.
 function buildKeyMap() {
   if (keyMap) {
     return keyMap;
@@ -161,29 +141,24 @@ function buildKeyMap() {
 
   keyMap = {};
 
-  SHELL_CONTEXTS.forEach(([base, ctx]) => {
-    ctx.keys().forEach((key) => {
-      const rel = key.replace(/^\.\//, '');
-      const parts = rel.replace(/\.(vue|js|ts)$/, '').split('/');
-      // For Foo/index.* the import id is the DIRECTORY (Foo), not "index".
-      const isIndex = parts[parts.length - 1] === 'index' && parts.length > 1;
-      const name = isIndex ? parts[parts.length - 2] : parts[parts.length - 1];
-      const path = `${ base }/${ rel }`;
-      const entry = { ctx, key };
+  ctx.keys().forEach((key) => {
+    const rel = key.replace(/^\.\//, '');
+    const parts = rel.replace(/\.vue$/, '').split('/');
+    // For Foo/index.vue the component name/import id is the DIRECTORY (Foo), not "index".
+    const isIndex = parts[parts.length - 1] === 'index' && parts.length > 1;
+    const name = isIndex ? parts[parts.length - 2] : parts[parts.length - 1];
+    const path = `@shell/components/${ rel }`;
 
-      // Bare name: first-wins (components are listed first, so they win shared bare names);
-      // full paths are always unambiguous.
-      if (!(name in keyMap)) {
-        keyMap[name] = entry;
-      }
-      keyMap[path] = entry;
-      keyMap[path.replace(/\.(vue|js|ts)$/, '')] = entry;
+    if (!(name in keyMap)) {
+      keyMap[name] = key;
+    }
+    keyMap[path] = key;
+    keyMap[path.replace(/\.vue$/, '')] = key;
 
-      // Foo/index.* is normally imported as '<base>/<dir>/Foo' — add that key too.
-      if (isIndex) {
-        keyMap[`${ base }/${ parts.slice(0, -1).join('/') }`] = entry;
-      }
-    });
+    // Foo/index.vue is normally imported as '@shell/components/Foo' — add that key too.
+    if (isIndex) {
+      keyMap[`@shell/components/${ parts.slice(0, -1).join('/') }`] = key;
+    }
   });
 
   return keyMap;
@@ -199,7 +174,7 @@ export function resolveComponent(id) {
     return EXTRA[id];
   }
 
-  const entry = buildKeyMap()[id];
+  const key = id in buildKeyMap() ? buildKeyMap()[id] : null;
 
-  return entry ? entry.ctx(entry.key) : undefined;
+  return key ? ctx(key) : undefined;
 }

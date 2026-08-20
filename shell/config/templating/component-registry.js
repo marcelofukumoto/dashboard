@@ -57,7 +57,32 @@ import RcSectionBadges from '@components/RcSection/RcSectionBadges.vue';
 import RcSeparator from '@components/RcSeparator/RcSeparator.vue';
 import StringList from '@components/StringList/StringList.vue';
 
+// @shell UTILITY MODULES — EXPLICIT imports, added in BATCHES. A require.context over the
+// whole @shell/utils subtree crashes at chunk-init (circular deps); explicit single-module
+// imports are safe (webpack resolves each individually, like the @components list above).
+// Each is a namespace import so `import { fn } from '@shell/utils/x'` resolves its named
+// exports. Add a batch, build + deploy to confirm it stays cycle-free, then add the next.
+// --- Batch 1 (acyclic utils only) ---
+// NOTE: @shell/utils/array <-> @shell/utils/object form an import CYCLE (found via SCC
+// analysis), so they are intentionally OMITTED here to avoid a chunk-init TDZ; expose them
+// later with care if needed. These five have no cycles in the @shell import graph.
+import * as UtilString from '@shell/utils/string';
+import * as UtilSort from '@shell/utils/sort';
+import * as UtilPromise from '@shell/utils/promise';
+import * as UtilUnits from '@shell/utils/units';
+import * as UtilDuration from '@shell/utils/duration';
+
 const ctx = require.context('@shell/components', true, /^(?:(?!__tests__).)*\.vue$/);
+
+// [import path, namespace module] for every explicitly-exposed @shell util. Registered by
+// full path only (utils are imported by path + named export, never a bare name).
+const SHELL_MODULES = [
+  ['@shell/utils/string', UtilString],
+  ['@shell/utils/sort', UtilSort],
+  ['@shell/utils/promise', UtilPromise],
+  ['@shell/utils/units', UtilUnits],
+  ['@shell/utils/duration', UtilDuration],
+];
 
 // [name, source path, component] for every @components export. The path is the real
 // .vue location; the DIRECTORY of that path is the package import path used in real code
@@ -129,6 +154,12 @@ Object.entries(dirExports).forEach(([dir, comps]) => {
   EXTRA[dir] = {
     __esModule: true, ...comps, default: comps[dirName] || Object.values(comps)[0]
   };
+});
+
+// Register each explicitly-exposed @shell util under its real import path, as an ES-module
+// namespace so `import { fn } from '@shell/utils/x'` resolves the named export.
+SHELL_MODULES.forEach(([path, mod]) => {
+  EXTRA[path] = { __esModule: true, ...mod };
 });
 
 let keyMap = null;

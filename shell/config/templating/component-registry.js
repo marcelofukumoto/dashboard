@@ -4,9 +4,16 @@
 // and executed on demand when the SFC imports one. Eager execution disrupts the app.
 //
 // @components (rancher-components): exposed via EXPLICIT imports of every component. We do
-// NOT require.context this package — doing so breaks component-registry's own module init
-// ("Cannot read properties of undefined (reading 'hasComponent')"), whereas explicit
-// single-module imports are safe. Keep this list in sync with @components as it grows.
+// NOT require.context this package — doing so pulls the whole package (including its barrels)
+// into a context that creates a circular dependency at chunk-init, crashing the registry
+// before it resolves anything ("Cannot read properties of undefined (reading 'hasComponent')"
+// / "Cannot access '<var>' before initialization"). Explicit single-module imports sidestep
+// the cycle. Keep this list in sync with @components as it grows.
+//
+// DO NOT re-attempt the require.context('@components') wildcard: it was tried a second time
+// AFTER this file was moved to its own async chunk (below) and STILL crashed with
+// "Cannot access '<minified>' before initialization" on the deployed build. The async-chunk
+// isolation is necessary but NOT sufficient; the package barrels are the problem.
 //
 // This file is loaded via a dynamic import from TemplateCode (its own async chunk); a
 // static import would pull require.context into the page's sync init and cause circulars.

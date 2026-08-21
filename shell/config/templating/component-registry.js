@@ -603,6 +603,117 @@ import * as S_models_token from '@shell/models/token';
 import * as S_models_ui_cattle_io_navlink from '@shell/models/ui.cattle.io.navlink';
 import * as S_models_workload from '@shell/models/workload';
 import * as S_models_workload_service from '@shell/models/workload.service';
+import * as S_pages_404 from '@shell/pages/404';
+import * as S_pages_about from '@shell/pages/about';
+import * as S_pages_account_create_key from '@shell/pages/account/create-key';
+import * as S_pages_account from '@shell/pages/account';
+import * as S_pages_auth_login from '@shell/pages/auth/login';
+import * as S_pages_auth_logout from '@shell/pages/auth/logout';
+import * as S_pages_auth_setup from '@shell/pages/auth/setup';
+import * as S_pages_auth_verify from '@shell/pages/auth/verify';
+import * as S_pages_c__cluster__product__resource__id from '@shell/pages/c/_cluster/_product/_resource/_id';
+import * as S_pages_c__cluster__product__resource__namespace__id from '@shell/pages/c/_cluster/_product/_resource/_namespace/_id';
+import * as S_pages_c__cluster__product__resource_create from '@shell/pages/c/_cluster/_product/_resource/create';
+import * as S_pages_c__cluster__product__resource from '@shell/pages/c/_cluster/_product/_resource';
+import * as S_pages_c__cluster__product from '@shell/pages/c/_cluster/_product';
+import * as S_pages_c__cluster__product_members from '@shell/pages/c/_cluster/_product/members';
+import * as S_pages_c__cluster__product_namespaces from '@shell/pages/c/_cluster/_product/namespaces';
+import * as S_pages_c__cluster__product_projectsnamespaces from '@shell/pages/c/_cluster/_product/projectsnamespaces';
+import * as S_pages_c__cluster__template_TemplateCode from '@shell/pages/c/_cluster/_template/TemplateCode';
+import * as S_pages_c__cluster__template_TemplateOverview from '@shell/pages/c/_cluster/_template/TemplateOverview';
+import * as S_pages_c__cluster__template_TemplateResourceList from '@shell/pages/c/_cluster/_template/TemplateResourceList';
+import * as S_pages_c__cluster__template_WhiteCanvas from '@shell/pages/c/_cluster/_template/WhiteCanvas';
+import * as S_pages_c__cluster__template from '@shell/pages/c/_cluster/_template';
+import * as S_pages_c__cluster__template_sources from '@shell/pages/c/_cluster/_template/sources';
+import * as S_pages_c__cluster_apps_charts_AddRepoLink from '@shell/pages/c/_cluster/apps/charts/AddRepoLink';
+import * as S_pages_c__cluster_apps_charts_AppChartCardFooter from '@shell/pages/c/_cluster/apps/charts/AppChartCardFooter';
+import * as S_pages_c__cluster_apps_charts_AppChartCardSubHeader from '@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader';
+import * as S_pages_c__cluster_apps_charts_StatusLabel from '@shell/pages/c/_cluster/apps/charts/StatusLabel';
+import * as S_pages_c__cluster_apps_charts_chart from '@shell/pages/c/_cluster/apps/charts/chart';
+import * as S_pages_c__cluster_apps_charts from '@shell/pages/c/_cluster/apps/charts';
+import * as S_pages_c__cluster_apps_charts_install_helpers from '@shell/pages/c/_cluster/apps/charts/install.helpers';
+import * as S_pages_c__cluster_apps_charts_install from '@shell/pages/c/_cluster/apps/charts/install';
+import * as S_pages_c__cluster_auth_config__id from '@shell/pages/c/_cluster/auth/config/_id';
+import * as S_pages_c__cluster_auth_config from '@shell/pages/c/_cluster/auth/config';
+import * as S_pages_c__cluster_auth_group_principal_assign_edit from '@shell/pages/c/_cluster/auth/group.principal/assign-edit';
+import * as S_pages_c__cluster_auth_roles__resource__id from '@shell/pages/c/_cluster/auth/roles/_resource/_id';
+import * as S_pages_c__cluster_auth_roles__resource_create from '@shell/pages/c/_cluster/auth/roles/_resource/create';
+import * as S_pages_c__cluster_auth_roles from '@shell/pages/c/_cluster/auth/roles';
+import * as S_pages_c__cluster_auth_user_retention from '@shell/pages/c/_cluster/auth/user.retention';
+import * as S_pages_c__cluster_ecm from '@shell/pages/c/_cluster/ecm';
+import * as S_pages_c__cluster_explorer_ConfigBadge from '@shell/pages/c/_cluster/explorer/ConfigBadge';
+import * as S_pages_c__cluster_explorer_EventsTable from '@shell/pages/c/_cluster/explorer/EventsTable';
+import * as S_pages_c__cluster_explorer_explorer_utils from '@shell/pages/c/_cluster/explorer/explorer-utils';
+import * as S_pages_c__cluster_explorer from '@shell/pages/c/_cluster/explorer';
+import * as S_pages_c__cluster_explorer_projectsecret from '@shell/pages/c/_cluster/explorer/projectsecret';
+import * as S_pages_c__cluster_explorer_tools from '@shell/pages/c/_cluster/explorer/tools';
+import * as S_pages_c__cluster_explorer_workload_dashboard_ByNamespaceSection from '@shell/pages/c/_cluster/explorer/workload-dashboard/ByNamespaceSection';
+import * as S_pages_c__cluster_explorer_workload_dashboard_ByStateSection from '@shell/pages/c/_cluster/explorer/workload-dashboard/ByStateSection';
+import * as S_pages_c__cluster_explorer_workload_dashboard_ByTypeSection from '@shell/pages/c/_cluster/explorer/workload-dashboard/ByTypeSection';
+import * as S_pages_c__cluster_explorer_workload_dashboard_WorkloadCard from '@shell/pages/c/_cluster/explorer/workload-dashboard/WorkloadCard';
+import * as S_pages_c__cluster_explorer_workload_dashboard_WorkloadNamespaceCard from '@shell/pages/c/_cluster/explorer/workload-dashboard/WorkloadNamespaceCard';
+import * as S_pages_c__cluster_explorer_workload_dashboard_WorkloadTypeCard from '@shell/pages/c/_cluster/explorer/workload-dashboard/WorkloadTypeCard';
+import * as S_pages_c__cluster_explorer_workload_dashboard_composable from '@shell/pages/c/_cluster/explorer/workload-dashboard/composable';
+import * as S_pages_c__cluster_explorer_workload_dashboard from '@shell/pages/c/_cluster/explorer/workload-dashboard';
+import * as S_pages_c__cluster_explorer_workload_dashboard_types from '@shell/pages/c/_cluster/explorer/workload-dashboard/types';
+import * as S_pages_c__cluster_fleet_application__resource__id from '@shell/pages/c/_cluster/fleet/application/_resource/_id';
+import * as S_pages_c__cluster_fleet_application__resource_create from '@shell/pages/c/_cluster/fleet/application/_resource/create';
+import * as S_pages_c__cluster_fleet_application_create from '@shell/pages/c/_cluster/fleet/application/create';
+import * as S_pages_c__cluster_fleet_application from '@shell/pages/c/_cluster/fleet/application';
+import * as S_pages_c__cluster_fleet_application_suse_app_collection_ChartDetailBody from '@shell/pages/c/_cluster/fleet/application/suse-app-collection/ChartDetailBody';
+import * as S_pages_c__cluster_fleet_application_suse_app_collection_ChartDetailHeader from '@shell/pages/c/_cluster/fleet/application/suse-app-collection/ChartDetailHeader';
+import * as S_pages_c__cluster_fleet_application_suse_app_collection_chart from '@shell/pages/c/_cluster/fleet/application/suse-app-collection/chart';
+import * as S_pages_c__cluster_fleet_application_suse_app_collection_charts from '@shell/pages/c/_cluster/fleet/application/suse-app-collection/charts';
+import * as S_pages_c__cluster_fleet_application_suse_app_collection_credentials from '@shell/pages/c/_cluster/fleet/application/suse-app-collection/credentials';
+import * as S_pages_c__cluster_fleet_graph_config from '@shell/pages/c/_cluster/fleet/graph/config';
+import * as S_pages_c__cluster_fleet from '@shell/pages/c/_cluster/fleet';
+import * as S_pages_c__cluster_fleet_settings from '@shell/pages/c/_cluster/fleet/settings';
+import * as S_pages_c__cluster_gatekeeper_constraints from '@shell/pages/c/_cluster/gatekeeper/constraints';
+import * as S_pages_c__cluster_gatekeeper from '@shell/pages/c/_cluster/gatekeeper';
+import * as S_pages_c__cluster_istio from '@shell/pages/c/_cluster/istio';
+import * as S_pages_c__cluster_logging from '@shell/pages/c/_cluster/logging';
+import * as S_pages_c__cluster_longhorn from '@shell/pages/c/_cluster/longhorn';
+import * as S_pages_c__cluster_manager_cloudCredential__id from '@shell/pages/c/_cluster/manager/cloudCredential/_id';
+import * as S_pages_c__cluster_manager_cloudCredential_create from '@shell/pages/c/_cluster/manager/cloudCredential/create';
+import * as S_pages_c__cluster_manager_cloudCredential from '@shell/pages/c/_cluster/manager/cloudCredential';
+import * as S_pages_c__cluster_manager_drivers_kontainerDriver__id from '@shell/pages/c/_cluster/manager/drivers/kontainerDriver/_id';
+import * as S_pages_c__cluster_manager_drivers_kontainerDriver_create from '@shell/pages/c/_cluster/manager/drivers/kontainerDriver/create';
+import * as S_pages_c__cluster_manager_drivers_kontainerDriver from '@shell/pages/c/_cluster/manager/drivers/kontainerDriver';
+import * as S_pages_c__cluster_manager_drivers_nodeDriver__id from '@shell/pages/c/_cluster/manager/drivers/nodeDriver/_id';
+import * as S_pages_c__cluster_manager_drivers_nodeDriver_create from '@shell/pages/c/_cluster/manager/drivers/nodeDriver/create';
+import * as S_pages_c__cluster_manager_drivers_nodeDriver from '@shell/pages/c/_cluster/manager/drivers/nodeDriver';
+import * as S_pages_c__cluster_manager_hostedprovider from '@shell/pages/c/_cluster/manager/hostedprovider';
+import * as S_pages_c__cluster_manager_jwt_authentication from '@shell/pages/c/_cluster/manager/jwt.authentication';
+import * as S_pages_c__cluster_monitoring_alertmanagerconfig__alertmanagerconfigid from '@shell/pages/c/_cluster/monitoring/alertmanagerconfig/_alertmanagerconfigid';
+import * as S_pages_c__cluster_monitoring_alertmanagerconfig__alertmanagerconfigid_receiver from '@shell/pages/c/_cluster/monitoring/alertmanagerconfig/_alertmanagerconfigid/receiver';
+import * as S_pages_c__cluster_monitoring_alertmanagerconfig from '@shell/pages/c/_cluster/monitoring/alertmanagerconfig';
+import * as S_pages_c__cluster_monitoring from '@shell/pages/c/_cluster/monitoring';
+import * as S_pages_c__cluster_monitoring_monitor__namespace__id from '@shell/pages/c/_cluster/monitoring/monitor/_namespace/_id';
+import * as S_pages_c__cluster_monitoring_monitor_create from '@shell/pages/c/_cluster/monitoring/monitor/create';
+import * as S_pages_c__cluster_monitoring_monitor from '@shell/pages/c/_cluster/monitoring/monitor';
+import * as S_pages_c__cluster_monitoring_route_receiver__id from '@shell/pages/c/_cluster/monitoring/route-receiver/_id';
+import * as S_pages_c__cluster_monitoring_route_receiver_create from '@shell/pages/c/_cluster/monitoring/route-receiver/create';
+import * as S_pages_c__cluster_monitoring_route_receiver from '@shell/pages/c/_cluster/monitoring/route-receiver';
+import * as S_pages_c__cluster_navlinks__group from '@shell/pages/c/_cluster/navlinks/_group';
+import * as S_pages_c__cluster_neuvector from '@shell/pages/c/_cluster/neuvector';
+import * as S_pages_c__cluster_settings_DefaultLinksEditor from '@shell/pages/c/_cluster/settings/DefaultLinksEditor';
+import * as S_pages_c__cluster_settings_banners from '@shell/pages/c/_cluster/settings/banners';
+import * as S_pages_c__cluster_settings_brand from '@shell/pages/c/_cluster/settings/brand';
+import * as S_pages_c__cluster_settings from '@shell/pages/c/_cluster/settings';
+import * as S_pages_c__cluster_settings_links from '@shell/pages/c/_cluster/settings/links';
+import * as S_pages_c__cluster_settings_performance from '@shell/pages/c/_cluster/settings/performance';
+import * as S_pages_c__cluster_uiplugins_CatalogList from '@shell/pages/c/_cluster/uiplugins/CatalogList';
+import * as S_pages_c__cluster_uiplugins_PluginInfoPanel from '@shell/pages/c/_cluster/uiplugins/PluginInfoPanel';
+import * as S_pages_c__cluster_uiplugins_SetupUIPlugins from '@shell/pages/c/_cluster/uiplugins/SetupUIPlugins';
+import * as S_pages_c__cluster_uiplugins_catalogs from '@shell/pages/c/_cluster/uiplugins/catalogs';
+import * as S_pages_c__cluster_uiplugins from '@shell/pages/c/_cluster/uiplugins';
+import * as S_pages_clusters from '@shell/pages/clusters';
+import * as S_pages_diagnostic from '@shell/pages/diagnostic';
+import * as S_pages_fail_whale from '@shell/pages/fail-whale';
+import * as S_pages_home from '@shell/pages/home';
+import * as S_pages from '@shell/pages';
+import * as S_pages_prefs from '@shell/pages/prefs';
+import * as S_pages_readme from '@shell/pages/readme';
 import * as S_promptRemove_management_cattle_io_fleetworkspace from '@shell/promptRemove/management.cattle.io.fleetworkspace';
 import * as S_promptRemove_management_cattle_io_globalrole from '@shell/promptRemove/management.cattle.io.globalrole';
 import * as S_promptRemove_management_cattle_io_project from '@shell/promptRemove/management.cattle.io.project';
@@ -1257,6 +1368,117 @@ const SHELL_MODULES = [
   ['@shell/models/ui.cattle.io.navlink', S_models_ui_cattle_io_navlink],
   ['@shell/models/workload', S_models_workload],
   ['@shell/models/workload.service', S_models_workload_service],
+  ['@shell/pages/404', S_pages_404],
+  ['@shell/pages/about', S_pages_about],
+  ['@shell/pages/account/create-key', S_pages_account_create_key],
+  ['@shell/pages/account', S_pages_account],
+  ['@shell/pages/auth/login', S_pages_auth_login],
+  ['@shell/pages/auth/logout', S_pages_auth_logout],
+  ['@shell/pages/auth/setup', S_pages_auth_setup],
+  ['@shell/pages/auth/verify', S_pages_auth_verify],
+  ['@shell/pages/c/_cluster/_product/_resource/_id', S_pages_c__cluster__product__resource__id],
+  ['@shell/pages/c/_cluster/_product/_resource/_namespace/_id', S_pages_c__cluster__product__resource__namespace__id],
+  ['@shell/pages/c/_cluster/_product/_resource/create', S_pages_c__cluster__product__resource_create],
+  ['@shell/pages/c/_cluster/_product/_resource', S_pages_c__cluster__product__resource],
+  ['@shell/pages/c/_cluster/_product', S_pages_c__cluster__product],
+  ['@shell/pages/c/_cluster/_product/members', S_pages_c__cluster__product_members],
+  ['@shell/pages/c/_cluster/_product/namespaces', S_pages_c__cluster__product_namespaces],
+  ['@shell/pages/c/_cluster/_product/projectsnamespaces', S_pages_c__cluster__product_projectsnamespaces],
+  ['@shell/pages/c/_cluster/_template/TemplateCode', S_pages_c__cluster__template_TemplateCode],
+  ['@shell/pages/c/_cluster/_template/TemplateOverview', S_pages_c__cluster__template_TemplateOverview],
+  ['@shell/pages/c/_cluster/_template/TemplateResourceList', S_pages_c__cluster__template_TemplateResourceList],
+  ['@shell/pages/c/_cluster/_template/WhiteCanvas', S_pages_c__cluster__template_WhiteCanvas],
+  ['@shell/pages/c/_cluster/_template', S_pages_c__cluster__template],
+  ['@shell/pages/c/_cluster/_template/sources', S_pages_c__cluster__template_sources],
+  ['@shell/pages/c/_cluster/apps/charts/AddRepoLink', S_pages_c__cluster_apps_charts_AddRepoLink],
+  ['@shell/pages/c/_cluster/apps/charts/AppChartCardFooter', S_pages_c__cluster_apps_charts_AppChartCardFooter],
+  ['@shell/pages/c/_cluster/apps/charts/AppChartCardSubHeader', S_pages_c__cluster_apps_charts_AppChartCardSubHeader],
+  ['@shell/pages/c/_cluster/apps/charts/StatusLabel', S_pages_c__cluster_apps_charts_StatusLabel],
+  ['@shell/pages/c/_cluster/apps/charts/chart', S_pages_c__cluster_apps_charts_chart],
+  ['@shell/pages/c/_cluster/apps/charts', S_pages_c__cluster_apps_charts],
+  ['@shell/pages/c/_cluster/apps/charts/install.helpers', S_pages_c__cluster_apps_charts_install_helpers],
+  ['@shell/pages/c/_cluster/apps/charts/install', S_pages_c__cluster_apps_charts_install],
+  ['@shell/pages/c/_cluster/auth/config/_id', S_pages_c__cluster_auth_config__id],
+  ['@shell/pages/c/_cluster/auth/config', S_pages_c__cluster_auth_config],
+  ['@shell/pages/c/_cluster/auth/group.principal/assign-edit', S_pages_c__cluster_auth_group_principal_assign_edit],
+  ['@shell/pages/c/_cluster/auth/roles/_resource/_id', S_pages_c__cluster_auth_roles__resource__id],
+  ['@shell/pages/c/_cluster/auth/roles/_resource/create', S_pages_c__cluster_auth_roles__resource_create],
+  ['@shell/pages/c/_cluster/auth/roles', S_pages_c__cluster_auth_roles],
+  ['@shell/pages/c/_cluster/auth/user.retention', S_pages_c__cluster_auth_user_retention],
+  ['@shell/pages/c/_cluster/ecm', S_pages_c__cluster_ecm],
+  ['@shell/pages/c/_cluster/explorer/ConfigBadge', S_pages_c__cluster_explorer_ConfigBadge],
+  ['@shell/pages/c/_cluster/explorer/EventsTable', S_pages_c__cluster_explorer_EventsTable],
+  ['@shell/pages/c/_cluster/explorer/explorer-utils', S_pages_c__cluster_explorer_explorer_utils],
+  ['@shell/pages/c/_cluster/explorer', S_pages_c__cluster_explorer],
+  ['@shell/pages/c/_cluster/explorer/projectsecret', S_pages_c__cluster_explorer_projectsecret],
+  ['@shell/pages/c/_cluster/explorer/tools', S_pages_c__cluster_explorer_tools],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/ByNamespaceSection', S_pages_c__cluster_explorer_workload_dashboard_ByNamespaceSection],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/ByStateSection', S_pages_c__cluster_explorer_workload_dashboard_ByStateSection],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/ByTypeSection', S_pages_c__cluster_explorer_workload_dashboard_ByTypeSection],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/WorkloadCard', S_pages_c__cluster_explorer_workload_dashboard_WorkloadCard],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/WorkloadNamespaceCard', S_pages_c__cluster_explorer_workload_dashboard_WorkloadNamespaceCard],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/WorkloadTypeCard', S_pages_c__cluster_explorer_workload_dashboard_WorkloadTypeCard],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/composable', S_pages_c__cluster_explorer_workload_dashboard_composable],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard', S_pages_c__cluster_explorer_workload_dashboard],
+  ['@shell/pages/c/_cluster/explorer/workload-dashboard/types', S_pages_c__cluster_explorer_workload_dashboard_types],
+  ['@shell/pages/c/_cluster/fleet/application/_resource/_id', S_pages_c__cluster_fleet_application__resource__id],
+  ['@shell/pages/c/_cluster/fleet/application/_resource/create', S_pages_c__cluster_fleet_application__resource_create],
+  ['@shell/pages/c/_cluster/fleet/application/create', S_pages_c__cluster_fleet_application_create],
+  ['@shell/pages/c/_cluster/fleet/application', S_pages_c__cluster_fleet_application],
+  ['@shell/pages/c/_cluster/fleet/application/suse-app-collection/ChartDetailBody', S_pages_c__cluster_fleet_application_suse_app_collection_ChartDetailBody],
+  ['@shell/pages/c/_cluster/fleet/application/suse-app-collection/ChartDetailHeader', S_pages_c__cluster_fleet_application_suse_app_collection_ChartDetailHeader],
+  ['@shell/pages/c/_cluster/fleet/application/suse-app-collection/chart', S_pages_c__cluster_fleet_application_suse_app_collection_chart],
+  ['@shell/pages/c/_cluster/fleet/application/suse-app-collection/charts', S_pages_c__cluster_fleet_application_suse_app_collection_charts],
+  ['@shell/pages/c/_cluster/fleet/application/suse-app-collection/credentials', S_pages_c__cluster_fleet_application_suse_app_collection_credentials],
+  ['@shell/pages/c/_cluster/fleet/graph/config', S_pages_c__cluster_fleet_graph_config],
+  ['@shell/pages/c/_cluster/fleet', S_pages_c__cluster_fleet],
+  ['@shell/pages/c/_cluster/fleet/settings', S_pages_c__cluster_fleet_settings],
+  ['@shell/pages/c/_cluster/gatekeeper/constraints', S_pages_c__cluster_gatekeeper_constraints],
+  ['@shell/pages/c/_cluster/gatekeeper', S_pages_c__cluster_gatekeeper],
+  ['@shell/pages/c/_cluster/istio', S_pages_c__cluster_istio],
+  ['@shell/pages/c/_cluster/logging', S_pages_c__cluster_logging],
+  ['@shell/pages/c/_cluster/longhorn', S_pages_c__cluster_longhorn],
+  ['@shell/pages/c/_cluster/manager/cloudCredential/_id', S_pages_c__cluster_manager_cloudCredential__id],
+  ['@shell/pages/c/_cluster/manager/cloudCredential/create', S_pages_c__cluster_manager_cloudCredential_create],
+  ['@shell/pages/c/_cluster/manager/cloudCredential', S_pages_c__cluster_manager_cloudCredential],
+  ['@shell/pages/c/_cluster/manager/drivers/kontainerDriver/_id', S_pages_c__cluster_manager_drivers_kontainerDriver__id],
+  ['@shell/pages/c/_cluster/manager/drivers/kontainerDriver/create', S_pages_c__cluster_manager_drivers_kontainerDriver_create],
+  ['@shell/pages/c/_cluster/manager/drivers/kontainerDriver', S_pages_c__cluster_manager_drivers_kontainerDriver],
+  ['@shell/pages/c/_cluster/manager/drivers/nodeDriver/_id', S_pages_c__cluster_manager_drivers_nodeDriver__id],
+  ['@shell/pages/c/_cluster/manager/drivers/nodeDriver/create', S_pages_c__cluster_manager_drivers_nodeDriver_create],
+  ['@shell/pages/c/_cluster/manager/drivers/nodeDriver', S_pages_c__cluster_manager_drivers_nodeDriver],
+  ['@shell/pages/c/_cluster/manager/hostedprovider', S_pages_c__cluster_manager_hostedprovider],
+  ['@shell/pages/c/_cluster/manager/jwt.authentication', S_pages_c__cluster_manager_jwt_authentication],
+  ['@shell/pages/c/_cluster/monitoring/alertmanagerconfig/_alertmanagerconfigid', S_pages_c__cluster_monitoring_alertmanagerconfig__alertmanagerconfigid],
+  ['@shell/pages/c/_cluster/monitoring/alertmanagerconfig/_alertmanagerconfigid/receiver', S_pages_c__cluster_monitoring_alertmanagerconfig__alertmanagerconfigid_receiver],
+  ['@shell/pages/c/_cluster/monitoring/alertmanagerconfig', S_pages_c__cluster_monitoring_alertmanagerconfig],
+  ['@shell/pages/c/_cluster/monitoring', S_pages_c__cluster_monitoring],
+  ['@shell/pages/c/_cluster/monitoring/monitor/_namespace/_id', S_pages_c__cluster_monitoring_monitor__namespace__id],
+  ['@shell/pages/c/_cluster/monitoring/monitor/create', S_pages_c__cluster_monitoring_monitor_create],
+  ['@shell/pages/c/_cluster/monitoring/monitor', S_pages_c__cluster_monitoring_monitor],
+  ['@shell/pages/c/_cluster/monitoring/route-receiver/_id', S_pages_c__cluster_monitoring_route_receiver__id],
+  ['@shell/pages/c/_cluster/monitoring/route-receiver/create', S_pages_c__cluster_monitoring_route_receiver_create],
+  ['@shell/pages/c/_cluster/monitoring/route-receiver', S_pages_c__cluster_monitoring_route_receiver],
+  ['@shell/pages/c/_cluster/navlinks/_group', S_pages_c__cluster_navlinks__group],
+  ['@shell/pages/c/_cluster/neuvector', S_pages_c__cluster_neuvector],
+  ['@shell/pages/c/_cluster/settings/DefaultLinksEditor', S_pages_c__cluster_settings_DefaultLinksEditor],
+  ['@shell/pages/c/_cluster/settings/banners', S_pages_c__cluster_settings_banners],
+  ['@shell/pages/c/_cluster/settings/brand', S_pages_c__cluster_settings_brand],
+  ['@shell/pages/c/_cluster/settings', S_pages_c__cluster_settings],
+  ['@shell/pages/c/_cluster/settings/links', S_pages_c__cluster_settings_links],
+  ['@shell/pages/c/_cluster/settings/performance', S_pages_c__cluster_settings_performance],
+  ['@shell/pages/c/_cluster/uiplugins/CatalogList', S_pages_c__cluster_uiplugins_CatalogList],
+  ['@shell/pages/c/_cluster/uiplugins/PluginInfoPanel', S_pages_c__cluster_uiplugins_PluginInfoPanel],
+  ['@shell/pages/c/_cluster/uiplugins/SetupUIPlugins', S_pages_c__cluster_uiplugins_SetupUIPlugins],
+  ['@shell/pages/c/_cluster/uiplugins/catalogs', S_pages_c__cluster_uiplugins_catalogs],
+  ['@shell/pages/c/_cluster/uiplugins', S_pages_c__cluster_uiplugins],
+  ['@shell/pages/clusters', S_pages_clusters],
+  ['@shell/pages/diagnostic', S_pages_diagnostic],
+  ['@shell/pages/fail-whale', S_pages_fail_whale],
+  ['@shell/pages/home', S_pages_home],
+  ['@shell/pages', S_pages],
+  ['@shell/pages/prefs', S_pages_prefs],
+  ['@shell/pages/readme', S_pages_readme],
   ['@shell/promptRemove/management.cattle.io.fleetworkspace', S_promptRemove_management_cattle_io_fleetworkspace],
   ['@shell/promptRemove/management.cattle.io.globalrole', S_promptRemove_management_cattle_io_globalrole],
   ['@shell/promptRemove/management.cattle.io.project', S_promptRemove_management_cattle_io_project],
@@ -1442,10 +1664,17 @@ Object.entries(dirExports).forEach(([dir, comps]) => {
   };
 });
 
-// Register each explicitly-exposed @shell util under its real import path, as an ES-module
-// namespace so `import { fn } from '@shell/utils/x'` resolves the named export.
+// Register each explicitly-exposed @shell module under its real import path, as an ES-module
+// namespace so `import { fn } from '@shell/utils/x'` (or `import X from '@shell/edit/pod'`)
+// resolves. The generated paths are extension-less; also register the .vue/.js/.ts variants so
+// an import that includes the file extension (e.g. '@shell/pages/.../Foo.vue') still resolves.
 SHELL_MODULES.forEach(([path, mod]) => {
-  EXTRA[path] = { __esModule: true, ...mod };
+  const ns = { __esModule: true, ...mod };
+
+  EXTRA[path] = ns;
+  EXTRA[`${ path }.vue`] = ns;
+  EXTRA[`${ path }.js`] = ns;
+  EXTRA[`${ path }.ts`] = ns;
 });
 
 let keyMap = null;

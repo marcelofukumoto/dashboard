@@ -30,6 +30,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '.
 const DIRS = [
   'utils', 'mixins', 'models', 'edit', 'detail', 'list', 'dialog',
   'chart', 'composables', 'directives', 'cloud-credential', 'machine-config', 'promptRemove',
+  'pages',
 ];
 const EXTS = ['.ts', '.js', '.vue', '/index.ts', '/index.js', '/index.vue'];
 const skip = (n) => /\.(test|spec)\.|\.d\.ts$/.test(n) || n.includes('__mocks__') || n.includes('__tests__') || n.includes('unit-tests');

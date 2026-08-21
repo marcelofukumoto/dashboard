@@ -1,0 +1,88 @@
+# Custom HOME override. When this ConfigMap exists in the LOCAL cluster's `default` namespace,
+# shell/pages/home.vue renders its `view.vue` INSTEAD of the default Rancher home page (read
+# by hardcoded id default/home via the management steve store; no custom-view label needed, so
+# the template engine does NOT also add a nav entry). Delete it to restore the default Home.
+#
+#   kubectl apply -f home.configmap.yaml     # take over Home
+#   kubectl delete configmap home -n default # restore default Home
+#
+# The SFC runs in the app tree, so it can use this.$store (management store is ready on Home).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home
+  namespace: default
+data:
+  meta: '{"id":"home","name":"Home"}'
+  view.vue: |
+    <script>
+    export default {
+      async fetch() {
+        this.clusters = await this.$store
+          .dispatch('management/findAll', { type: 'management.cattle.io.cluster' })
+          .catch(() => []);
+      },
+      data() {
+        return { clusters: [] };
+      },
+    };
+    </script>
+
+    <template>
+      <div class="custom-home">
+        <div class="hero">
+          <h1>👋 Welcome — this is a Custom Home</h1>
+          <p>
+            The entire Home page is rendered at runtime from the
+            <code>default/home</code> ConfigMap. Edit that ConfigMap and this page reloads live.
+          </p>
+        </div>
+
+        <div class="clusters">
+          <h2>{{ clusters.length }} cluster(s)</h2>
+          <ul>
+            <li v-for="c in clusters" :key="c.id">
+              <router-link :to="{ name: 'c-cluster-explorer', params: { cluster: c.id } }">
+                {{ c.nameDisplay || c.metadata.name }}
+              </router-link>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </template>
+
+    <style scoped>
+    .custom-home {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+    .custom-home .hero {
+      text-align: center;
+      padding: 40px;
+      border-radius: 12px;
+      background: var(--nav-active);
+      margin-bottom: 32px;
+    }
+    .custom-home .hero code {
+      background: var(--body-bg);
+      border-radius: 4px;
+      padding: 1px 6px;
+    }
+    .custom-home .clusters h2 {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+    .custom-home .clusters ul {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .custom-home .clusters li {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    </style>

@@ -1,0 +1,143 @@
+# A SAVED Home template: master–detail on one page. Shows the usual Rancher cluster LIST
+# (ResourceTable over management.cattle.io.cluster); clicking a cluster name force-loads it
+# (dispatch loadCluster) and swaps in the Workloads overview for THAT cluster IN-PAGE; a Back
+# button returns to the list. Demonstrates using cluster-scoped widgets on Home.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-cluster-overview
+  namespace: default
+  labels:
+    templates.rancher.io/home-saved: "true"
+data:
+  meta: '{"name":"Cluster Overview"}'
+  view.vue: |
+    <script>
+    import ResourceTable from '@shell/components/ResourceTable';
+    import TemplateOverview from '@shell/pages/c/_cluster/_template/TemplateOverview.vue';
+
+    export default {
+      components: { ResourceTable, TemplateOverview },
+
+      async fetch() {
+        this.rows = await this.$store
+          .dispatch('management/findAll', { type: 'management.cattle.io.cluster' })
+          .catch(() => []);
+      },
+
+      data() {
+        return {
+          rows:           [],
+          selectedId:     null,
+          loadingCluster: false,
+          loadError:      '',
+          widget:         {
+            title:     'Workloads',
+            resources: ['pod', 'apps.deployment', 'apps.statefulset', 'apps.daemonset', 'batch.job', 'batch.cronjob'],
+          },
+        };
+      },
+
+      computed: {
+        schema() {
+          return this.$store.getters['management/schemaFor']('management.cattle.io.cluster');
+        },
+        // Only clusters that can actually be loaded/explored — they are the only ones that can
+        // show the workloads overview.
+        activeRows() {
+          return this.rows.filter((c) => {
+            if (typeof c.canExplore === 'boolean') {
+              return c.canExplore;
+            }
+            const s = (c.stateDisplay || (c.metadata && c.metadata.state && c.metadata.state.name) || '').toLowerCase();
+
+            return s === 'active' || s === 'running' || s === 'ready';
+          });
+        },
+        selectedCluster() {
+          return this.rows.find((c) => c.id === this.selectedId);
+        },
+      },
+
+      methods: {
+        clusterName(c) {
+          return c ? (c.nameDisplay || (c.spec && c.spec.displayName) || (c.metadata && c.metadata.name) || c.id) : '';
+        },
+        async openCluster(c) {
+          this.selectedId = c.id;
+          this.loadError = '';
+          this.loadingCluster = true;
+          try {
+            await this.$store.dispatch('loadCluster', { id: c.id });
+          } catch (e) {
+            this.loadError = e && e.message ? e.message : String(e);
+          } finally {
+            this.loadingCluster = false;
+          }
+        },
+        back() {
+          this.selectedId = null;
+        },
+      },
+    };
+    </script>
+
+    <template>
+      <div class="home-clusters">
+        <!-- LIST: the usual Rancher cluster table; name click opens the overview in-page -->
+        <template v-if="!selectedId">
+          <h1 class="mb-20">Clusters ({{ activeRows.length }} active)</h1>
+          <ResourceTable
+            v-if="schema"
+            :schema="schema"
+            :rows="activeRows"
+            :table-actions="false"
+            :row-actions="false"
+            :namespaced="false"
+          >
+            <template #cell:name="{ row }">
+              <a
+                href="#"
+                class="cluster-link"
+                @click.prevent="openCluster(row)"
+              >{{ clusterName(row) }}</a>
+            </template>
+          </ResourceTable>
+        </template>
+
+        <!-- DETAIL: the workloads overview for the loaded cluster -->
+        <template v-else>
+          <div class="head">
+            <button
+              class="btn btn-sm role-secondary"
+              @click="back"
+            >
+              ← Back to clusters
+            </button>
+            <h1 class="mt-10 mb-0">{{ clusterName(selectedCluster) }}</h1>
+          </div>
+          <div
+            v-if="loadingCluster"
+            class="text-muted mt-20"
+          >
+            Loading cluster…
+          </div>
+          <div
+            v-else-if="loadError"
+            class="text-error mt-20"
+          >
+            Could not load cluster: {{ loadError }}
+          </div>
+          <TemplateOverview
+            v-else
+            :widget="widget"
+          />
+        </template>
+      </div>
+    </template>
+
+    <style scoped>
+    .home-clusters { padding: 32px; }
+    .cluster-link { cursor: pointer; font-weight: 600; }
+    .head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; align-items: flex-start; }
+    </style>

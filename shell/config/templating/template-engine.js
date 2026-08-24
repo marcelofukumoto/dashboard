@@ -159,6 +159,32 @@ function navGroup(group) {
 }
 
 /**
+ * Register the "Custom View Sources" management entry (and its group). Shared by the full
+ * registerNav (enabled state) and registerSourcesOnly (disabled state) so this control page
+ * is present in BOTH states — it is the one place from which the whole feature can be turned
+ * back on after the kill switch has disabled everything else.
+ */
+function addSourcesEntry({ virtualType, labelGroup, weightGroup }, pushName) {
+  labelGroup(DEFAULT_GROUP, 'Custom Views');
+  weightGroup(DEFAULT_GROUP, DEFAULT_GROUP_WEIGHT, true);
+
+  if (pushName) {
+    pushName(DEFAULT_GROUP, SOURCES_TYPE);
+  }
+
+  virtualType({
+    label:      'Custom View Sources',
+    group:      DEFAULT_GROUP,
+    namespaced: false,
+    name:       SOURCES_TYPE,
+    icon:       'file',
+    weight:     -100,
+    route:      { name: 'c-cluster-explorer-custom-views' },
+    exact:      true,
+  });
+}
+
+/**
  * Register a side-nav entry per page of every loaded template.
  *
  * virtualType() defines the entry; basicType(names, group) is what actually PLACES it
@@ -221,19 +247,9 @@ function registerNav(commit) {
   // Management entry always lives in the default "Custom Views" group — a stable home
   // regardless of where individual templates place their pages. ALWAYS registered, even
   // with no view ConfigMaps yet, so the feature stays reachable.
-  labelGroup(DEFAULT_GROUP, 'Custom Views');
-  weightGroup(DEFAULT_GROUP, DEFAULT_GROUP_WEIGHT, true);
-  pushName(DEFAULT_GROUP, SOURCES_TYPE);
-  virtualType({
-    label:      'Custom View Sources',
-    group:      DEFAULT_GROUP,
-    namespaced: false,
-    name:       SOURCES_TYPE,
-    icon:       'file',
-    weight:     -100,
-    route:      { name: 'c-cluster-explorer-custom-views' },
-    exact:      true,
-  });
+  addSourcesEntry({
+    virtualType, labelGroup, weightGroup
+  }, pushName);
 
   // White Canvas — always present. A single live page bound to one hardcoded ConfigMap
   // (default/white-canvas), used for the fast real-time authoring loop.
@@ -264,6 +280,79 @@ function registerNav(commit) {
   registeredNames = currentNames;
 }
 
+// GLOBAL KILL SWITCH. A single management-cluster ConfigMap (default/templating-config) with
+// data.enabled === 'false' disables the ENTIRE ConfigMap templating system — custom views, their
+// nav entries, and the custom Home — so the app behaves like stock Rancher. Absent, or any value
+// other than 'false', means enabled (the default). Read from the MANAGEMENT store so the flag is
+// global (the same for every cluster), not per-cluster.
+export const TEMPLATING_CONFIG_ID = 'default/templating-config';
+
+export function isTemplatingEnabled(getters) {
+  const cm = getters['management/byId']?.(CONFIG_MAP, TEMPLATING_CONFIG_ID);
+
+  return !cm || cm.data?.enabled !== 'false';
+}
+
+/**
+ * Disabled-state nav. Register ONLY the "Custom View Sources" entry and drop everything
+ * else the engine previously added (view pages, White Canvas). This is the chicken-and-egg
+ * fix for the kill switch: with the whole system off, the one control page from which it can
+ * be turned back on stays in the side-nav; the custom Home is handled separately (home.vue).
+ */
+function registerSourcesOnly(commit) {
+  const {
+    virtualType, labelGroup, weightGroup, basicType
+  } = DSL({ commit }, EXPLORER);
+
+  addSourcesEntry({
+    virtualType, labelGroup, weightGroup
+  });
+  basicType([SOURCES_TYPE], DEFAULT_GROUP);
+
+  // Remove every OTHER entry we registered on a previous (enabled) pass.
+  const staleNames = registeredNames.filter((name) => name !== SOURCES_TYPE);
+
+  if (staleNames.length) {
+    commit('type-map/removeTypes', { product: EXPLORER, names: staleNames });
+  }
+  registeredNames = [SOURCES_TYPE];
+}
+
+/**
+ * Flip (or explicitly set) the global kill switch from the UI. Ensures the
+ * default/templating-config ConfigMap exists in the management store, writes data.enabled,
+ * then re-registers the nav immediately so the change is live. The custom Home reacts on its
+ * own via the reactive management getter (home.vue's templatingEnabled computed).
+ *
+ * `enabled` may be a boolean to set an explicit state, or omitted to toggle. Returns the new
+ * enabled state.
+ */
+export async function toggleTemplating(store, enabled) {
+  const desired = typeof enabled === 'boolean' ? enabled : !isTemplatingEnabled(store.getters);
+  const value = desired ? 'true' : 'false';
+  const existing = store.getters['management/byId'](CONFIG_MAP, TEMPLATING_CONFIG_ID);
+
+  if (existing) {
+    existing.data = { ...(existing.data || {}), enabled: value };
+    await existing.save();
+  } else {
+    const [namespace, name] = TEMPLATING_CONFIG_ID.split('/');
+    const cm = await store.dispatch('management/create', {
+      type:     CONFIG_MAP,
+      metadata: { name, namespace },
+      data:     { enabled: value },
+    });
+
+    await cm.save();
+  }
+
+  // The nav is driven by a watch on the CLUSTER store, which does not fire for this
+  // management-store change, so re-register (or clear) the entries explicitly.
+  reloadCustomViews(store);
+
+  return desired;
+}
+
 /**
  * Runtime entry point, called from loadCluster (store/index.js) AFTER cluster schemas
  * are available and BEFORE clusterReady flips true — so SideNav.getGroups() picks up
@@ -279,6 +368,17 @@ export async function loadCustomViews({ dispatch, commit, getters }) {
   // This runs on the critical path of cluster load (before clusterReady). A bad
   // template must never block cluster entry, so swallow everything here.
   try {
+    // Global kill switch — load the flag (management store) then bail out completely if disabled.
+    try {
+      await dispatch('management/find', { type: CONFIG_MAP, id: TEMPLATING_CONFIG_ID });
+    } catch (e) { /* flag not present/allowed -> treated as enabled */ }
+
+    if (!isTemplatingEnabled(getters)) {
+      registerSourcesOnly(commit);
+
+      return;
+    }
+
     // Only fetch if the user can list ConfigMaps in this cluster.
     if (getters['cluster/schemaFor'](CONFIG_MAP)) {
       // TODO(phase-next): use a server-side labelSelector instead of fetching all ConfigMaps.
@@ -304,6 +404,13 @@ export async function loadCustomViews({ dispatch, commit, getters }) {
 export function reloadCustomViews(store) {
   try {
     loadedTemplates = [];
+
+    // Global kill switch — drop everything except the Sources control entry if disabled.
+    if (!isTemplatingEnabled(store.getters)) {
+      registerSourcesOnly(store.commit);
+
+      return;
+    }
 
     if (store.getters['cluster/schemaFor'](CONFIG_MAP)) {
       loadedTemplates = extractTemplates(store.getters['cluster/all'](CONFIG_MAP));

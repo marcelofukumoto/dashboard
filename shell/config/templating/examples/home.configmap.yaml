@@ -1,88 +1,199 @@
-# Custom HOME override. When this ConfigMap exists in the LOCAL cluster's `default` namespace,
-# shell/pages/home.vue renders its `view.vue` INSTEAD of the default Rancher home page (read
-# by hardcoded id default/home via the management steve store; no custom-view label needed, so
-# the template engine does NOT also add a nav entry). Delete it to restore the default Home.
+# The "HOME" SAVED template: a faithful reproduction of the real Rancher Home page
+# (shell/pages/home.vue) rendered entirely from a ConfigMap. A demo that the stock Home can be
+# expressed as a runtime custom view.
 #
-#   kubectl apply -f home.configmap.yaml     # take over Home
-#   kubectl delete configmap home -n default # restore default Home
-#
-# The SFC runs in the app tree, so it can use this.$store (management store is ready on Home).
+# What differs from the original (because custom views cannot import @shell/config or @shell/store):
+#  - Table headers / type strings / product+route constants are INLINED instead of imported.
+#  - Uses ResourceTable (findAll) instead of PaginatedResourceTable, and drops the page-actions
+#    menu, the "too many clusters" alt list, and pref-based banner hiding.
+# The banner, cluster table (State/Name/Provider/Version/CPU/Memory/Pods), Manage/Import/Create
+# buttons, and the Community + dynamic-content sidebar all match the real Home.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: home
   namespace: default
+  labels:
+    templates.rancher.io/home-saved: "true"
 data:
-  meta: '{"id":"home","name":"Home"}'
+  meta: '{"id":"home","name":"HOME"}'
   view.vue: |
     <script>
+    import BannerGraphic from '@shell/components/BannerGraphic.vue';
+    import IndentedPanel from '@shell/components/IndentedPanel.vue';
+    import ResourceTable from '@shell/components/ResourceTable';
+    import CommunityLinks from '@shell/components/CommunityLinks.vue';
+    import DynamicContentBanner from '@shell/components/DynamicContent/DynamicContentBanner.vue';
+    import DynamicContentPanel from '@shell/components/DynamicContent/DynamicContentPanel.vue';
+    import { RcButton } from '@components/RcButton';
+    import { createMemoryFormat, formatSi, parseSi } from '@shell/utils/units';
+
+    // Inlined (custom views can't import @shell/config / @shell/store).
+    const MGMT_CLUSTER = 'management.cattle.io.cluster';
+    const PROV_CLUSTER = 'provisioning.cattle.io.cluster';
+    const MANAGER = 'manager';
+    const BLANK_CLUSTER = '_';
+
     export default {
-      async fetch() {
-        this.clusters = await this.$store
-          .dispatch('management/findAll', { type: 'management.cattle.io.cluster' })
-          .catch(() => []);
+      components: {
+        BannerGraphic, IndentedPanel, ResourceTable, CommunityLinks,
+        DynamicContentBanner, DynamicContentPanel, RcButton,
       },
+
+      async fetch() {
+        this.rows = await this.$store.dispatch('management/findAll', { type: MGMT_CLUSTER }).catch(() => []);
+      },
+
       data() {
-        return { clusters: [] };
+        return {
+          rows:   [],
+          // Private-label vendor name (the 'ui-pl' setting), falling back to 'Rancher'.
+          vendor: (this.$store.getters['management/byId']('management.cattle.io.setting', 'ui-pl') || {}).value || 'Rancher',
+          headers: [
+            {
+              name: 'state', labelKey: 'tableHeaders.state', value: 'stateDisplay',
+              sort: ['stateSort', 'nameSort'], width: 100, default: 'unknown', formatter: 'BadgeStateFormatter',
+            },
+            {
+              name: 'name', labelKey: 'tableHeaders.name', value: 'nameDisplay', sort: ['nameSort'], canBeVariable: true,
+            },
+            {
+              name: 'provider', labelKey: 'tableHeaders.provider', subLabel: 'Distro',
+              value: 'statusInfo.machineProvider',
+              sort: ['status.info.machineProvider', 'status.provider', 'status.driver'], formatter: 'ClusterProvider',
+            },
+            {
+              name: 'kubernetesVersion', labelKey: 'tableHeaders.version', subLabel: 'Architecture',
+              sort: 'statusInfo.kubernetesVersion', formatter: 'ClusterKubeVersion',
+            },
+            { name: 'cpu', labelKey: 'tableHeaders.cpu', value: '', sort: ['status.allocatable.cpuRaw'] },
+            { name: 'memory', labelKey: 'tableHeaders.memory', value: '', sort: ['status.allocatable.memoryRaw'] },
+            {
+              name: 'pods', labelKey: 'tableHeaders.pods', value: '', sort: ['status.allocatable.pods'],
+              formatter: 'PodsUsage', delayLoading: true,
+            },
+          ],
+          manageLocation: {
+            name: 'c-cluster-product-resource',
+            params: { product: MANAGER, cluster: BLANK_CLUSTER, resource: PROV_CLUSTER },
+          },
+          createLocation: {
+            name: 'c-cluster-product-resource-create',
+            params: { product: MANAGER, cluster: BLANK_CLUSTER, resource: PROV_CLUSTER },
+          },
+          importLocation: {
+            name: 'c-cluster-product-resource-create',
+            params: { product: MANAGER, cluster: BLANK_CLUSTER, resource: PROV_CLUSTER },
+            query: { mode: 'import' },
+          },
+        };
+      },
+
+      computed: {
+        schema() {
+          return this.$store.getters['management/schemaFor'](MGMT_CLUSTER);
+        },
+        provSchema() {
+          return this.$store.getters['management/schemaFor'](PROV_CLUSTER);
+        },
+        canCreateCluster() {
+          return !!this.provSchema;
+        },
+      },
+
+      methods: {
+        cpuAllocatable(c) {
+          const v = parseSi(c.status && c.status.allocatable && c.status.allocatable.cpu);
+
+          return v ? `${ v } ${ v === 1 ? 'core' : 'cores' }` : '';
+        },
+        memoryAllocatable(c) {
+          const parsed = (parseSi(c.status && c.status.allocatable && c.status.allocatable.memory) || 0).toString();
+
+          return formatSi(parsed, createMemoryFormat(parsed));
+        },
       },
     };
     </script>
 
     <template>
-      <div class="custom-home">
-        <div class="hero">
-          <h1>👋 Welcome — this is a Custom Home</h1>
-          <p>
-            The entire Home page is rendered at runtime from the
-            <code>default/home</code> ConfigMap. Edit that ConfigMap and this page reloads live.
-          </p>
-        </div>
+      <div class="home-page">
+        <BannerGraphic :title="`Welcome to ${ vendor }`" />
+        <DynamicContentBanner location="banner" />
 
-        <div class="clusters">
-          <h2>{{ clusters.length }} cluster(s)</h2>
-          <ul>
-            <li v-for="c in clusters" :key="c.id">
-              <router-link :to="{ name: 'c-cluster-explorer', params: { cluster: c.id } }">
-                {{ c.nameDisplay || c.metadata.name }}
-              </router-link>
-            </li>
-          </ul>
-        </div>
+        <IndentedPanel class="mt-20 mb-20">
+          <div class="row home-panels">
+            <div class="col main-panel">
+              <ResourceTable
+                v-if="schema"
+                :schema="schema"
+                :rows="rows"
+                :headers="headers"
+                :table-actions="false"
+                :row-actions="false"
+                key-field="id"
+                :namespaced="false"
+                :groupable="false"
+              >
+                <template #header-left>
+                  <div class="row table-heading">
+                    <h1 class="mb-0">Clusters</h1>
+                  </div>
+                </template>
+                <template #header-middle>
+                  <div class="table-heading">
+                    <RcButton variant="secondary" :to="manageLocation">Manage</RcButton>
+                    <RcButton v-if="canCreateCluster" :to="importLocation">Import Existing</RcButton>
+                    <RcButton v-if="canCreateCluster" :to="createLocation">Create</RcButton>
+                  </div>
+                </template>
+                <template #col:name="{ row }">
+                  <td class="col-name">
+                    <router-link
+                      v-if="row.canExplore"
+                      :to="{ name: 'c-cluster-explorer', params: { cluster: row.id } }"
+                    >
+                      {{ row.nameDisplay }}
+                    </router-link>
+                    <span v-else>{{ row.nameDisplay }}</span>
+                  </td>
+                </template>
+                <template #col:cpu="{ row }">
+                  <td v-if="cpuAllocatable(row)">{{ cpuAllocatable(row) }}</td>
+                  <td v-else>&mdash;</td>
+                </template>
+                <template #col:memory="{ row }">
+                  <td v-if="memoryAllocatable(row) && !memoryAllocatable(row).match(/^0 /)">{{ memoryAllocatable(row) }}</td>
+                  <td v-else>&mdash;</td>
+                </template>
+              </ResourceTable>
+            </div>
+
+            <div class="col span-3 side-panel">
+              <CommunityLinks />
+              <DynamicContentPanel location="rhs" />
+            </div>
+          </div>
+        </IndentedPanel>
       </div>
     </template>
 
     <style scoped>
-    .custom-home {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 48px 24px;
+    .home-panels {
+      display: flex;
+      align-items: stretch;
     }
-    .custom-home .hero {
-      text-align: center;
-      padding: 40px;
-      border-radius: 12px;
-      background: var(--nav-active);
-      margin-bottom: 32px;
+    .home-panels .col { margin: 0; }
+    .home-panels .main-panel { flex: auto; }
+    .home-panels .side-panel { margin-left: 1.75%; }
+    .table-heading {
+      align-items: center;
+      display: flex;
+      height: 39px;
     }
-    .custom-home .hero code {
-      background: var(--body-bg);
-      border-radius: 4px;
-      padding: 1px 6px;
-    }
-    .custom-home .clusters h2 {
-      font-size: 22px;
-      margin-bottom: 12px;
-    }
-    .custom-home .clusters ul {
-      list-style: none;
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 12px;
-    }
-    .custom-home .clusters li {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
+    .table-heading > * { margin-left: 10px; }
+    .col-name { max-width: 280px; }
+    @media screen and (max-width: 996px) {
+      .side-panel { display: none; }
     }
     </style>

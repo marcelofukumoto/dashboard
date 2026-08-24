@@ -1,7 +1,6 @@
-# A SAVED Home template: master–detail on one page. Shows the usual Rancher cluster LIST
-# (ResourceTable over management.cattle.io.cluster); clicking a cluster name force-loads it
-# (dispatch loadCluster) and swaps in the Workloads overview for THAT cluster IN-PAGE; a Back
-# button returns to the list. Demonstrates using cluster-scoped widgets on Home.
+# SAVED Home template = the faithful HOME reproduction, PLUS: the cluster list is sorted
+# active-first, and each active cluster has an "Overview" button that force-loads the cluster
+# (loadCluster) and swaps in its Workloads overview IN-PAGE (Back returns to the list).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,16 +12,35 @@ data:
   meta: '{"name":"Cluster Overview"}'
   view.vue: |
     <script>
+    import BannerGraphic from '@shell/components/BannerGraphic.vue';
+    import IndentedPanel from '@shell/components/IndentedPanel.vue';
     import ResourceTable from '@shell/components/ResourceTable';
+    import CommunityLinks from '@shell/components/CommunityLinks.vue';
+    import DynamicContentBanner from '@shell/components/DynamicContent/DynamicContentBanner.vue';
+    import DynamicContentPanel from '@shell/components/DynamicContent/DynamicContentPanel.vue';
+    import { RcButton } from '@components/RcButton';
+    import { createMemoryFormat, formatSi, parseSi } from '@shell/utils/units';
     import TemplateOverview from '@shell/pages/c/_cluster/_template/TemplateOverview.vue';
 
+    const MGMT_CLUSTER = 'management.cattle.io.cluster';
+    const PROV_CLUSTER = 'provisioning.cattle.io.cluster';
+    const MANAGER = 'manager';
+    const BLANK_CLUSTER = '_';
+
     export default {
-      components: { ResourceTable, TemplateOverview },
+      components: {
+        BannerGraphic, IndentedPanel, ResourceTable, CommunityLinks,
+        DynamicContentBanner, DynamicContentPanel, RcButton, TemplateOverview,
+      },
 
       async fetch() {
-        this.rows = await this.$store
-          .dispatch('management/findAll', { type: 'management.cattle.io.cluster' })
-          .catch(() => []);
+        const rows = await this.$store.dispatch('management/findAll', { type: MGMT_CLUSTER }).catch(() => []);
+
+        // Primary sort key so active clusters sort first (see the state header sort below).
+        rows.forEach((r) => {
+          try { r._activeSort = this.isActive(r) ? 0 : 1; } catch (e) { /* read-only model */ }
+        });
+        this.rows = rows;
       },
 
       data() {
@@ -31,28 +49,60 @@ data:
           selectedId:     null,
           loadingCluster: false,
           loadError:      '',
+          vendor:         (this.$store.getters['management/byId']('management.cattle.io.setting', 'ui-pl') || {}).value || 'Rancher',
           widget:         {
             title:     'Workloads',
             resources: ['pod', 'apps.deployment', 'apps.statefulset', 'apps.daemonset', 'batch.job', 'batch.cronjob'],
+          },
+          headers: [
+            {
+              name: 'state', labelKey: 'tableHeaders.state', value: 'stateDisplay',
+              sort: ['_activeSort', 'stateSort', 'nameSort'], width: 100, default: 'unknown', formatter: 'BadgeStateFormatter',
+            },
+            {
+              name: 'name', labelKey: 'tableHeaders.name', value: 'nameDisplay', sort: ['_activeSort', 'nameSort'], canBeVariable: true,
+            },
+            {
+              name: 'provider', labelKey: 'tableHeaders.provider', subLabel: 'Distro',
+              value: 'statusInfo.machineProvider',
+              sort: ['_activeSort', 'status.info.machineProvider', 'status.provider'], formatter: 'ClusterProvider',
+            },
+            {
+              name: 'kubernetesVersion', labelKey: 'tableHeaders.version', subLabel: 'Architecture',
+              sort: ['_activeSort', 'statusInfo.kubernetesVersion'], formatter: 'ClusterKubeVersion',
+            },
+            { name: 'cpu', labelKey: 'tableHeaders.cpu', value: '', sort: ['_activeSort', 'status.allocatable.cpuRaw'] },
+            { name: 'memory', labelKey: 'tableHeaders.memory', value: '', sort: ['_activeSort', 'status.allocatable.memoryRaw'] },
+            {
+              name: 'pods', labelKey: 'tableHeaders.pods', value: '', sort: ['_activeSort', 'status.allocatable.pods'],
+              formatter: 'PodsUsage', delayLoading: true,
+            },
+          ],
+          manageLocation: {
+            name: 'c-cluster-product-resource',
+            params: { product: MANAGER, cluster: BLANK_CLUSTER, resource: PROV_CLUSTER },
+          },
+          createLocation: {
+            name: 'c-cluster-product-resource-create',
+            params: { product: MANAGER, cluster: BLANK_CLUSTER, resource: PROV_CLUSTER },
+          },
+          importLocation: {
+            name: 'c-cluster-product-resource-create',
+            params: { product: MANAGER, cluster: BLANK_CLUSTER, resource: PROV_CLUSTER },
+            query: { mode: 'import' },
           },
         };
       },
 
       computed: {
         schema() {
-          return this.$store.getters['management/schemaFor']('management.cattle.io.cluster');
+          return this.$store.getters['management/schemaFor'](MGMT_CLUSTER);
         },
-        // Only clusters that can actually be loaded/explored — they are the only ones that can
-        // show the workloads overview.
-        activeRows() {
-          return this.rows.filter((c) => {
-            if (typeof c.canExplore === 'boolean') {
-              return c.canExplore;
-            }
-            const s = (c.stateDisplay || (c.metadata && c.metadata.state && c.metadata.state.name) || '').toLowerCase();
-
-            return s === 'active' || s === 'running' || s === 'ready';
-          });
+        provSchema() {
+          return this.$store.getters['management/schemaFor'](PROV_CLUSTER);
+        },
+        canCreateCluster() {
+          return !!this.provSchema;
         },
         selectedCluster() {
           return this.rows.find((c) => c.id === this.selectedId);
@@ -60,8 +110,26 @@ data:
       },
 
       methods: {
+        isActive(c) {
+          if (typeof c.canExplore === 'boolean') {
+            return c.canExplore;
+          }
+          const s = (c.stateDisplay || (c.metadata && c.metadata.state && c.metadata.state.name) || '').toLowerCase();
+
+          return s === 'active' || s === 'running' || s === 'ready';
+        },
         clusterName(c) {
-          return c ? (c.nameDisplay || (c.spec && c.spec.displayName) || (c.metadata && c.metadata.name) || c.id) : '';
+          return c ? (c.nameDisplay || (c.metadata && c.metadata.name) || c.id) : '';
+        },
+        cpuAllocatable(c) {
+          const v = parseSi(c.status && c.status.allocatable && c.status.allocatable.cpu);
+
+          return v ? `${ v } ${ v === 1 ? 'core' : 'cores' }` : '';
+        },
+        memoryAllocatable(c) {
+          const parsed = (parseSi(c.status && c.status.allocatable && c.status.allocatable.memory) || 0).toString();
+
+          return formatSi(parsed, createMemoryFormat(parsed));
         },
         async openCluster(c) {
           this.selectedId = c.id;
@@ -83,61 +151,102 @@ data:
     </script>
 
     <template>
-      <div class="home-clusters">
-        <!-- LIST: the usual Rancher cluster table; name click opens the overview in-page -->
+      <div class="home-page">
+        <!-- LIST: faithful Home, sorted active-first, with a per-cluster Overview button -->
         <template v-if="!selectedId">
-          <h1 class="mb-20">Clusters ({{ activeRows.length }} active)</h1>
-          <ResourceTable
-            v-if="schema"
-            :schema="schema"
-            :rows="activeRows"
-            :table-actions="false"
-            :row-actions="false"
-            :namespaced="false"
-          >
-            <template #cell:name="{ row }">
-              <a
-                href="#"
-                class="cluster-link"
-                @click.prevent="openCluster(row)"
-              >{{ clusterName(row) }}</a>
-            </template>
-          </ResourceTable>
+          <BannerGraphic :title="`Welcome to ${ vendor }`" />
+          <DynamicContentBanner location="banner" />
+
+          <IndentedPanel class="mt-20 mb-20">
+            <div class="row home-panels">
+              <div class="col main-panel">
+                <ResourceTable
+                  v-if="schema"
+                  :schema="schema"
+                  :rows="rows"
+                  :headers="headers"
+                  :table-actions="false"
+                  :row-actions="false"
+                  key-field="id"
+                  :namespaced="false"
+                  :groupable="false"
+                  default-sort-by="state"
+                >
+                  <template #header-left>
+                    <div class="row table-heading">
+                      <h1 class="mb-0">Clusters</h1>
+                    </div>
+                  </template>
+                  <template #header-middle>
+                    <div class="table-heading">
+                      <RcButton variant="secondary" :to="manageLocation">Manage</RcButton>
+                      <RcButton v-if="canCreateCluster" :to="importLocation">Import Existing</RcButton>
+                      <RcButton v-if="canCreateCluster" :to="createLocation">Create</RcButton>
+                    </div>
+                  </template>
+                  <template #col:name="{ row }">
+                    <td class="col-name">
+                      <span class="name-cell">
+                        <router-link
+                          v-if="row.canExplore"
+                          :to="{ name: 'c-cluster-explorer', params: { cluster: row.id } }"
+                        >
+                          {{ row.nameDisplay }}
+                        </router-link>
+                        <span v-else>{{ row.nameDisplay }}</span>
+                        <button
+                          v-if="isActive(row)"
+                          class="btn btn-sm role-secondary ml-5"
+                          @click.prevent="openCluster(row)"
+                        >
+                          Overview
+                        </button>
+                      </span>
+                    </td>
+                  </template>
+                  <template #col:cpu="{ row }">
+                    <td v-if="cpuAllocatable(row)">{{ cpuAllocatable(row) }}</td>
+                    <td v-else>&mdash;</td>
+                  </template>
+                  <template #col:memory="{ row }">
+                    <td v-if="memoryAllocatable(row) && !memoryAllocatable(row).match(/^0 /)">{{ memoryAllocatable(row) }}</td>
+                    <td v-else>&mdash;</td>
+                  </template>
+                </ResourceTable>
+              </div>
+
+              <div class="col span-3 side-panel">
+                <CommunityLinks />
+                <DynamicContentPanel location="rhs" />
+              </div>
+            </div>
+          </IndentedPanel>
         </template>
 
         <!-- DETAIL: the workloads overview for the loaded cluster -->
         <template v-else>
-          <div class="head">
-            <button
-              class="btn btn-sm role-secondary"
-              @click="back"
-            >
-              ← Back to clusters
-            </button>
-            <h1 class="mt-10 mb-0">{{ clusterName(selectedCluster) }}</h1>
-          </div>
-          <div
-            v-if="loadingCluster"
-            class="text-muted mt-20"
-          >
-            Loading cluster…
-          </div>
-          <div
-            v-else-if="loadError"
-            class="text-error mt-20"
-          >
-            Could not load cluster: {{ loadError }}
-          </div>
-          <TemplateOverview
-            v-else
-            :widget="widget"
-          />
+          <IndentedPanel class="mt-20 mb-20">
+            <div class="head">
+              <button class="btn btn-sm role-secondary" @click="back">← Back to clusters</button>
+              <h1 class="mt-10 mb-0">{{ clusterName(selectedCluster) }}</h1>
+            </div>
+            <div v-if="loadingCluster" class="text-muted mt-20">Loading cluster…</div>
+            <div v-else-if="loadError" class="text-error mt-20">Could not load cluster: {{ loadError }}</div>
+            <TemplateOverview v-else :widget="widget" />
+          </IndentedPanel>
         </template>
       </div>
     </template>
 
     <style scoped>
-    .home-clusters { padding: 32px; }
-    .cluster-link { cursor: pointer; font-weight: 600; }
+    .home-panels { display: flex; align-items: stretch; }
+    .home-panels .col { margin: 0; }
+    .home-panels .main-panel { flex: auto; }
+    .home-panels .side-panel { margin-left: 1.75%; }
+    .table-heading { align-items: center; display: flex; height: 39px; }
+    .table-heading > * { margin-left: 10px; }
+    .col-name { max-width: 320px; }
+    .name-cell { display: inline-flex; align-items: center; gap: 8px; }
     .head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; align-items: flex-start; }
+    @media screen and (max-width: 996px) { .side-panel { display: none; } }
     </style>

@@ -15,6 +15,7 @@ import {
 } from '@shell/config/types';
 import TemplateCode from '@shell/pages/c/_cluster/_template/TemplateCode.vue';
 import HomeConfigChat from '@shell/components/HomeConfigChat.vue';
+import { isTemplatingEnabled } from '@shell/config/templating/template-engine';
 import { NAME as MANAGER } from '@shell/config/product/manager';
 import { AGE, MGMT_CLUSTER_KUBE_VERSION, MGMT_CLUSTER_PROVIDER, STATE } from '@shell/config/table-headers';
 import { MODE, _IMPORT } from '@shell/config/query-params';
@@ -257,6 +258,12 @@ export default defineComponent({
       return u?.id || u?.metadata?.name || '';
     },
 
+    // Global kill switch — when disabled, Home behaves exactly like stock Rancher (no custom
+    // home, no editor). Read from the management store (see template-engine).
+    templatingEnabled(): boolean {
+      return isTemplatingEnabled(this.$store.getters);
+    },
+
     // The APPLIED pointer ConfigMap (data.global + data["<userId>"]), read reactively.
     appliedConfigMap(): any {
       return this.$store.getters['management/byId'](CONFIG_MAP, APPLIED_ID);
@@ -293,7 +300,12 @@ export default defineComponent({
     },
 
     // The source of the APPLIED template — what the page shows when the editor is CLOSED.
+    // Empty when the kill switch is off, so the default Home renders.
     appliedSource(): string {
+      if (!this.templatingEnabled) {
+        return '';
+      }
+
       return this.savedSourceOf(this.appliedSavedName);
     },
 
@@ -715,8 +727,12 @@ export default defineComponent({
 
 <template>
   <div class="home-root">
-    <!-- Edit bar — part of the Home page chrome, NOT the rendered custom-home template. -->
-    <div class="home-editbar">
+    <!-- Edit bar — part of the Home page chrome, NOT the rendered custom-home template. Hidden
+         entirely when the global kill switch is off (Home is then stock Rancher). -->
+    <div
+      v-if="templatingEnabled"
+      class="home-editbar"
+    >
       <button
         class="btn btn-sm role-secondary"
         data-testid="home-edit-toggle"

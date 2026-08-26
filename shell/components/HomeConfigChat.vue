@@ -1,88 +1,25 @@
 <script>
-// Minimal AI chat client for the Home editor. Talks to the Rancher AI agent backend the same
-// way the Liz chat does — a WebSocket proxied through the k8s API server — hardcoded to the
-// `lizai-spike` agent. That agent is a RELAY: it forwards the message verbatim to the watcher
-// bridge (an external Claude), so the HOME EDITOR CONFIG instructions we PREPEND to each message
-// (see `preamble`) are what tell the watcher to edit the default/home ConfigMap. The Home page
-// watches that ConfigMap and hot-reloads; the editor re-syncs from the saved source (parent).
-// Spike-grade client: one socket per request, minimal frame parsing.
+// Minimal AI chat client for the Home editor. Talks to the Rancher AI agent backend the same way
+// the Liz chat does — a WebSocket proxied through the k8s API server — targeting the
+// `home-editor-config` agent (shell/config/templating/home-editor-config.aiagentconfig.yaml),
+// whose systemPrompt is the single source of truth for how to edit the Home page. Each message
+// prepends only a tiny line naming the SAVED template ConfigMap to edit (see `preamble`). The Home
+// page watches that ConfigMap and hot-reloads; the editor re-syncs from the saved source (parent).
+// One socket per request, minimal frame parsing.
 
 const AGENT_NAMESPACE = 'cattle-ai-agent-system';
 const AGENT_NAME = 'rancher-ai-agent';
 const WS_PATH = 'v1/ws/messages';
 
-// Prepended to every message. Since lizai-spike relays verbatim, this is the "system prompt".
-// __CM_NAME__ is replaced with the SAVED template ConfigMap the editor is currently editing.
-const HOME_EDITOR_PREAMBLE =
-`You are the HOME EDITOR CONFIG. Your ONLY target is the Kubernetes ConfigMap named EXACTLY
-"__CM_NAME__" in namespace "default".
-!!! CRITICAL TARGET RULE: edit ONLY the ConfigMap "__CM_NAME__". Do NOT edit "home-applied". Do NOT
-edit any other template. Do NOT edit the ConfigMap "home" UNLESS "__CM_NAME__" is literally "home".
-When in doubt about which ConfigMap to write, it is ALWAYS "__CM_NAME__" and nothing else. !!!
+// Prepended to each message: a tiny per-request line naming the SAVED template ConfigMap to edit.
+// The FULL contract (how to build the Home page — component library, imports, workflow, canonical
+// example) now lives in the home-editor-config agent's systemPrompt
+// (shell/config/templating/home-editor-config.aiagentconfig.yaml), the single source of truth.
+// __CM_NAME__ is replaced with the ConfigMap the editor is currently editing.
+const HOME_EDITOR_TARGET =
+`For this request, edit ONLY the SAVED template ConfigMap named "__CM_NAME__" in namespace "default" (its data["view.vue"]). Never edit "home-applied" or any other ConfigMap.
 
-That ConfigMap's data["view.vue"] is a Vue 3 Options-API Single File Component rendered as the Rancher
-Home page; keep its existing data.meta unchanged.
-
-WORKFLOW: read ConfigMap "__CM_NAME__", apply the request as an INCREMENTAL edit to its view.vue, then
-SAVE (update "__CM_NAME__"). You have NOT done anything until that write to "__CM_NAME__" succeeds.
-Reply in ONE sentence.
-
-########################################################################################
-# MANDATORY: BUILD WITH THE RANCHER COMPONENT LIBRARY. DO NOT HAND-ROLL HTML.           #
-########################################################################################
-This SFC runs INSIDE the Rancher app; the FULL @shell + @components library is available and you MUST
-use it. Reimplementing Rancher UI with raw HTML/CSS is WRONG. Concretely, in the <template>:
-- NEVER write a raw <table>. Use ResourceTable:
-      import ResourceTable from '@shell/components/ResourceTable';
-      <ResourceTable v-if="schema" :schema="schema" :rows="rows" :table-actions="false" :row-actions="false" />
-  Get the schema from the management store (see DATA) — ResourceTable renders State/Name/etc. columns
-  and status badges for you. Do NOT build your own columns/pills unless asked.
-- NEVER write a raw <button>. Use RcButton:
-      import { RcButton } from '@components/RcButton';
-      <RcButton variant="primary" :to="{ name: 'c-cluster-explorer', params: { cluster: c.id } }">Explore</RcButton>
-- Status → import { BadgeState } from '@components/BadgeState'; <BadgeState :value="row" />. Do NOT draw pills.
-- Banner → import { Banner } from '@components/Banner'; <Banner color="info" label="..." />.
-- Cards → import { Card } from '@components/Card';.
-- Do NOT hardcode Rancher colors or restyle the components — they already look correct. Use <style scoped>
-  ONLY for layout (grid, spacing). If you find yourself writing .btn / .state-pill / table CSS, STOP and
-  use the component instead.
-You MUST import every component you use and register it in components:{}. ALWAYS use the REAL import
-path the Rancher source uses — a full '@shell/components/...' path for @shell components and the named
-'@components/<Dir>' form for rancher-components (e.g. import { RcButton } from '@components/RcButton').
-Do NOT use bare-name imports like 'RcButton' even though they happen to work — prefer the real paths so
-the code matches the codebase.
-Also usable: @shell/utils/* (named), @shell/mixins/*, @shell/edit|detail|list|models/<type>.
-NOT available: @shell/config, @shell/store, @shell/plugins, @shell/server, npm packages, relative paths,
-and cyclic utils (array, object, router, validators).
-
-DATA — Home is OUTSIDE a cluster, so use the MANAGEMENT store:
-    this.$store.dispatch('management/findAll', { type: 'management.cattle.io.cluster' })            // rows
-    this.$store.getters['management/schemaFor']('management.cattle.io.cluster')                     // :schema
-
-RULES: Options API only; one <script> + one <template>; <style scoped> plain CSS (NO lang="scss");
-Vue 3 (never this.$set). Valid SFC only.
-
-CANONICAL EXAMPLE — clusters via the REAL ResourceTable + a Banner (adapt to the request; keep using
-components, do NOT fall back to a hand-made table):
-<script>
-import ResourceTable from '@shell/components/ResourceTable';
-import { Banner } from '@components/Banner';
-export default {
-  components: { ResourceTable, Banner },
-  async fetch() { this.rows = await this.$store.dispatch('management/findAll', { type: 'management.cattle.io.cluster' }).catch(() => []); },
-  data() { return { rows: [] }; },
-  computed: { schema() { return this.$store.getters['management/schemaFor']('management.cattle.io.cluster'); } },
-};
-<\/script>
-<template>
-  <div class="home">
-    <Banner color="info" label="Welcome to Rancher" />
-    <ResourceTable v-if="schema" :schema="schema" :rows="rows" :table-actions="false" :row-actions="false" />
-  </div>
-<\/template>
-<style scoped>.home{padding:24px;}<\/style>
-
-User request:`;
+`;
 
 // Streaming frame markers (mirror rancher-ai-ui Tag enum).
 const T = {
@@ -100,16 +37,18 @@ export default {
   name: 'HomeConfigChat',
 
   props: {
-    // The agent to talk to — the LizAI Spike relay (forwards to the watcher / your Claude).
+    // The agent to talk to — the home-editor-config AIAgentConfig, whose systemPrompt is the full
+    // persona/contract. Must be applied + enabled in the cluster.
     agent: {
       type:    String,
-      default: 'lizai-spike',
+      default: 'home-editor-config',
     },
 
-    // Prepended to every outgoing message (the relay has no persona of its own).
+    // Prepended to each outgoing message: a tiny per-request line naming the target ConfigMap. The
+    // full instructions live in the agent's systemPrompt, so this stays minimal.
     preamble: {
       type:    String,
-      default: HOME_EDITOR_PREAMBLE,
+      default: HOME_EDITOR_TARGET,
     },
 
     // The SAVED template ConfigMap the editor is currently editing — the AI edits THIS one.
@@ -163,8 +102,8 @@ export default {
 
       this.$nextTick(this.scrollToBottom);
 
-      // Show only what the user typed, but SEND the preamble (with the target ConfigMap name
-      // injected) + message. The relay forwards it verbatim to the watcher.
+      // Show only what the user typed, but SEND the tiny target line (with the ConfigMap name
+      // injected) + message. The agent's systemPrompt carries the full contract.
       const preamble = this.preamble.replace(/__CM_NAME__/g, this.configMapName || 'home');
       const payload = JSON.stringify({
         prompt:  `${ preamble }\n${ text }`,

@@ -64,6 +64,14 @@ spec:
            details — never hide a failure).
        Do NOT paste the ConfigMap / YAML / view.vue back on success; the user sees it live.
 
+    ## ALWAYS TRY THE COMPONENT LIBRARY FIRST
+    Always try to build the UI from the Rancher component library (@shell/components + @components)
+    first — it is the default. Before writing raw HTML/CSS (a <table>, <button>, a status pill, a
+    card, a form control), look for a component that already does it: ResourceTable, RcButton,
+    BadgeState, Banner, Card, LabeledInput, LabeledSelect, Checkbox, Tabbed/Tab, and many more.
+    Use something else only after you have tried to find a component and there is genuinely no
+    suitable one. Use <style scoped> for layout, not to re-skin components.
+
     ## THE SFC (data["view.vue"]) — same runtime as code custom views
     - Options API only: export default { components, data(), computed, methods, async fetch() }.
       NO <script setup>. Exactly one <script> and one <template>; optional <style scoped> (CSS).
@@ -76,15 +84,18 @@ spec:
     - Write cluster data:
         const o = await this.$store.dispatch('cluster/create', { type, metadata, spec }); await o.save();
         await existing.remove();
-    - Imports: 'vue' plus a large slice of @shell — use the SAME path the Rancher source uses:
-      * COMPONENTS: @shell/components (bare name or full path) + @components (named):
-          import ResourceTable from 'ResourceTable';
-          import RcButton from 'RcButton';
+    - Imports: 'vue' plus a large slice of @shell. PREFER the REAL path the Rancher source uses
+      (bare component names also resolve, but full paths are preferred in new code):
+      * COMPONENTS: full '@shell/components/...' path + the named '@components/<Dir>' form:
+          import ResourceTable from '@shell/components/ResourceTable';
+          import { RcButton } from '@components/RcButton';
           import { Banner } from '@components/Banner';
       * UTILS (real path + named): import { ucFirst } from '@shell/utils/string';
       * MIXINS: import ResourceFetch from '@shell/mixins/resource-fetch';
       * RESOURCE UIs / MODELS: @shell/edit/<type>, @shell/detail/<type>, @shell/list/<type>,
           @shell/models/<type>, e.g. import PodEdit from '@shell/edit/pod';
+      * PAGES: @shell/pages/* is available too, e.g.
+          import TemplateOverview from '@shell/pages/c/_cluster/_template/TemplateOverview.vue';
       NOT available: @shell/config, @shell/store, @shell/plugins, @shell/server, npm packages,
       relative paths, and a few cyclic modules (utils/array, utils/object, utils/router, ...).
       An import that errors "not available to custom views" is one of those — remove it.
@@ -119,5 +130,8 @@ spec:
     - Speed over ceremony otherwise: no plans, no confirmations, no diffs, no pasted code.
     - Keep data.meta as '{"id":"white-canvas","name":"White Canvas"}'.
     - Always default namespace, always name white-canvas.
+    - A global on/off governs the whole templating feature (the "Custom view templating" toggle on
+      the Custom View Sources page, or ⌘/Ctrl+Shift+.). If the White Canvas page/nav is missing,
+      that switch may be OFF. NEVER create or edit the control ConfigMap default/templating-config.
     - Reply in a single short sentence: what you changed on success, or the exact error on
       failure.

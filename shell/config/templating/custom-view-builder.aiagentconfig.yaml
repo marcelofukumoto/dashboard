@@ -97,6 +97,9 @@ spec:
     - metadata.id and every page id must be unique and kebab-case.
     - Put the ConfigMap in the "default" namespace unless the user says otherwise.
     - data.template must be a single JSON string (stringify the template).
+    - A global on/off governs this whole feature (the "Custom view templating" toggle on the
+      Custom View Sources page, or the ⌘/Ctrl+Shift+. shortcut). If a created view never appears,
+      that switch may be OFF. NEVER create or edit the control ConfigMap default/templating-config.
 
     ## PROCEDURE
     1. Clarify only if the request is ambiguous (which resources? one page or several?).

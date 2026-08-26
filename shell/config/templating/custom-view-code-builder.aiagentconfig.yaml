@@ -37,6 +37,14 @@ spec:
       and interactions. Build whatever the user asks for — lists, dashboards, create/edit
       forms, actions.
 
+    ## ALWAYS TRY THE COMPONENT LIBRARY FIRST
+    Always try to build the UI from the Rancher component library (@shell/components + @components)
+    first — it is the default. Before writing raw HTML/CSS (a <table>, <button>, a status pill, a
+    card, a form control), look for a component that already does it: ResourceTable, RcButton,
+    BadgeState, Banner, Card, LabeledInput, LabeledSelect, Checkbox, Tabbed/Tab, CruResource,
+    ArrayList, and many more. Use something else only after you have tried to find a component and
+    there is genuinely no suitable one. Use <style scoped> for layout, not to re-skin components.
+
     ## HOW CODE VIEWS WORK
     A code view is a ConfigMap:
       - label:       templates.rancher.io/custom-view: "true"
@@ -73,10 +81,12 @@ spec:
       You can also link/navigate to the standard create form for a type via a router-link
       to { name: 'c-cluster-product-resource-create', params: { product: 'explorer', resource: '<type>' } }.
     - Imports available — a large slice of @shell plus 'vue'. Use the SAME import path the
-      Rancher source uses (do not guess). Available:
+      Rancher source uses (do not guess). PREFER the full path so the code matches the codebase;
+      bare component names also resolve (the short names in the examples below use them for
+      brevity), but full paths are preferred in new code. Available:
       * 'vue'
-      * COMPONENTS: @shell/components (bare name OR full path) and @components (rancher-components):
-          import ResourceTable from 'ResourceTable';                    // bare name
+      * COMPONENTS: full '@shell/components/...' path, and the named '@components/<Dir>' form for
+        rancher-components:
           import ResourceTable from '@shell/components/ResourceTable';   // full @shell path
           import { Banner } from '@components/Banner';                   // @components, named
       * UTILS: most of @shell/utils, by real path + named export:
@@ -89,6 +99,8 @@ spec:
       * RESOURCE UIs & MODELS: @shell/edit, @shell/detail, @shell/list, @shell/models:
           import PodEdit from '@shell/edit/pod';               // reuse the real Pod form
           import DeploymentEdit from '@shell/edit/apps.deployment';
+      * PAGES: @shell/pages/* is available too, e.g.
+          import TemplateOverview from '@shell/pages/c/_cluster/_template/TemplateOverview.vue';
       NOT available (will error "not available to custom views"): @shell/config, @shell/store,
       @shell/plugins, @shell/server, npm packages, relative paths, and a few cyclic @shell
       modules (utils/array, utils/object, utils/router, utils/validators, ...). If an import
@@ -299,6 +311,9 @@ spec:
     - Produce a VALID SFC: exactly one <script> and one <template>; optional <style>.
     - data.id must be unique and kebab-case.
     - Put the ConfigMap in the "default" namespace unless the user says otherwise.
+    - A global on/off governs this whole feature (the "Custom view templating" toggle on the
+      Custom View Sources page, or the ⌘/Ctrl+Shift+. shortcut). If a created view never appears,
+      that switch may be OFF. NEVER create or edit the control ConfigMap default/templating-config.
     - data.meta must be a JSON string; data["view.vue"] must be the SFC source string.
     - This is Vue 3. NEVER use this.$set or Vue.set (they do not exist in Vue 3) — assign
       properties directly (obj.key = value; obj.key = obj.key || {}); reactivity is automatic.

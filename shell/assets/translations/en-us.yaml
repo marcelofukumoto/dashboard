@@ -2528,6 +2528,9 @@ cluster:
     register-custom: Import any Kubernetes cluster
     create-capi: Create a cluster using Cluster API
   rke2:
+    addonRepoStale:
+      message: 'Add-on configuration for {names} could not be loaded — the referenced chart version is not in the "{repo}" repository index yet (it may still be syncing). Refresh the repository to try again.'
+      action: Refresh repository
     banner:
       psaChange: PSACT is now set to Rancher default automatically
       complianceOverride: Changing this setting may affect cluster security as it overrides default compliance settings

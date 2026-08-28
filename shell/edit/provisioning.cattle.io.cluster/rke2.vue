@@ -18,6 +18,7 @@ import {
   DEFAULT_WORKSPACE,
   SECRET,
   HCI,
+  CATALOG,
 } from '@shell/config/types';
 import { _CREATE, _EDIT, _VIEW } from '@shell/config/query-params';
 
@@ -254,6 +255,11 @@ export default {
        * { [chartName:string]: { chart: json, readme: string, values: json } }
        */
       versionInfo:                     {},
+      // Addon charts whose config failed to load — keyed by chart name -> { repo, version }. Happens when
+      // the chart-repo index lags the referenced chart version (e.g. a not-yet-synced rke2-charts repo).
+      // We surface this + offer a repo refresh instead of silently dropping the Add-on config tab.
+      addonLoadErrors:                 {},
+      refreshingAddonRepo:             false,
       membershipUpdate:                {},
       showDeprecatedPatchVersions:     false,
       systemRegistry:                  null,
@@ -702,6 +708,24 @@ export default {
       return versions.filter((x) => !!x);
     },
 
+    /**
+     * Addons whose config chart could not be loaded (see `addonLoadErrors`). Used to surface a warning +
+     * repo-refresh action rather than silently hiding the Add-on tab.
+     */
+    addonLoadErrorInfo() {
+      const names = Object.keys(this.addonLoadErrors);
+
+      if (!names.length) {
+        return null;
+      }
+
+      return {
+        names,
+        repo:   this.addonLoadErrors[names[0]].repo,
+        labels: names.map((n) => n.replace(/^rke2-/, '')).join(', '),
+      };
+    },
+
     cloudProviderOptions() {
       const out = [{
         label: this.$store.getters['i18n/t']('cluster.rke2.cloudProvider.defaultValue.label'),
@@ -1039,6 +1063,7 @@ export default {
       }
 
       this.versionInfo = {}; // Invalidate cache such that version info relevant to selected kube version is updated
+      this.addonLoadErrors = {};
       // Allow time for addonNames to update... then fetch any missing addons
       this.$nextTick(() => this.initAddons());
       if (this.mode === _CREATE) {
@@ -1979,6 +2004,7 @@ export default {
           });
 
           this.versionInfo[chartName] = res;
+          delete this.addonLoadErrors[chartName];
           const key = this.chartVersionKey(chartName);
 
           if (!this.userChartValues[key]) {
@@ -1986,6 +2012,10 @@ export default {
           }
         } catch (e) {
           console.error(`Failed to fetch or process chart info for ${ chartName }`); // eslint-disable-line no-console
+          // Record the failure so the UI can surface it and offer a repo refresh, rather than silently
+          // dropping the Add-on config tab (the chart version referenced by the kube release is not yet
+          // present in the chart repo's index — usually a repo that hasn't finished syncing).
+          this.addonLoadErrors[chartName] = { repo: entry.repo, version: entry.version };
         }
       }
     },
@@ -2009,6 +2039,34 @@ export default {
         }
 
         await this.getChartValue(chartName);
+      }
+    },
+
+    /**
+     * On-demand recovery for a chart repo whose index is behind: refresh the ClusterRepo (re-sync its
+     * index) and re-fetch the addon charts. Used when an addon's referenced chart version isn't yet in
+     * the repo index (addonLoadErrors) — e.g. a repo that hasn't finished syncing.
+     */
+    async refreshAddonRepo() {
+      const info = this.addonLoadErrorInfo;
+
+      if (!info || this.refreshingAddonRepo) {
+        return;
+      }
+
+      this.refreshingAddonRepo = true;
+
+      try {
+        const repo = await this.$store.dispatch('cluster/find', { type: CATALOG.CLUSTER_REPO, id: info.repo });
+
+        await repo.refresh();
+        this.addonLoadErrors = {};
+        await this.initAddons();
+        this.addonsRev++;
+      } catch (e) {
+        console.error('Failed to refresh the chart repository', e); // eslint-disable-line no-console
+      } finally {
+        this.refreshingAddonRepo = false;
       }
     },
 
@@ -2691,6 +2749,28 @@ export default {
           @error="e => errors.push(e)"
           @validationChanged="(val) => provisioningClusterValid = val"
         />
+        <Banner
+          v-if="addonLoadErrorInfo"
+          color="warning"
+          class="mb-20"
+        >
+          <div class="addon-repo-banner">
+            <span>{{ t('cluster.rke2.addonRepoStale.message', { names: addonLoadErrorInfo.labels, repo: addonLoadErrorInfo.repo }) }}</span>
+            <button
+              type="button"
+              class="btn role-secondary btn-sm"
+              :disabled="refreshingAddonRepo"
+              data-testid="addon-repo-refresh"
+              @click="refreshAddonRepo"
+            >
+              <i
+                v-if="refreshingAddonRepo"
+                class="icon icon-spinner icon-spin mr-5"
+              />
+              {{ t('cluster.rke2.addonRepoStale.action') }}
+            </button>
+          </div>
+        </Banner>
         <Tabbed
           :side-tabs="true"
           class="min-height"
@@ -3005,5 +3085,16 @@ export default {
 
 .header-warnings .banner {
   margin-bottom: 0;
+}
+
+.addon-repo-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .btn {
+    flex-shrink: 0;
+  }
 }
 </style>

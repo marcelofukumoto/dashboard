@@ -44,3 +44,4 @@ None
 - 2026-08-24: Stood down — maintainer signal still active (no re-enable observed).
 - 2026-08-25: Stood down — maintainer signal still active (no re-enable observed).
 - 2026-08-27: Stood down — maintainer signal still active (no re-enable observed).
+- 2026-08-28: Stood down — maintainer signal still active (no re-enable observed).

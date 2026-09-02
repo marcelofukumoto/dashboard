@@ -6,14 +6,14 @@ import CertManagerResourceTabs from './CertManagerResourceTabs.vue';
 import Tab from '@shell/components/Tabbed/Tab.vue';
 import ResourceTable from '@shell/components/ResourceTable.vue';
 import { CERTIFICATE_HEADERS } from '../table-headers';
-import { useRelatedTypes } from '../composables/useRelatedTypes';
-import { CERT_MANAGER } from '../types';
+import { useCertificatesForIssuer } from '../composables/useCertificatesForIssuer';
 
 const props = defineProps<{ value: any }>();
 
-// Related resources are read from the store; a directly loaded detail page has none yet. Gate the
-// related-data parts of the template on `loaded` so they render against the populated store.
-const { loaded } = useRelatedTypes([CERT_MANAGER.CERTIFICATE]);
+// The certificates referencing this issuer are read from the store; a directly loaded detail page
+// has none yet. Fetch just the matching certificates (by the indexed issuer column, not the whole
+// type) and gate the related-data parts of the template on `loaded`.
+const { loaded } = useCertificatesForIssuer(props.value);
 
 const { t } = useI18n(useStore());
 

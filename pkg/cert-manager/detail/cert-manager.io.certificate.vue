@@ -8,15 +8,16 @@ import Tab from '@shell/components/Tabbed/Tab.vue';
 import ResourceTable from '@shell/components/ResourceTable.vue';
 import CertManagerResourceTabs from '../components/CertManagerResourceTabs.vue';
 import { CERTIFICATE_REQUEST_HEADERS } from '../table-headers';
-import { useRelatedTypes } from '../composables/useRelatedTypes';
+import { useOwnedResources } from '../composables/useOwnedResources';
 import { CERT_MANAGER } from '../types';
 
 const props = defineProps<{ value: any }>();
 
-// Related resources are read from the store; a directly loaded detail page has none yet. Gate the
+// The issuance chain (CertificateRequest → Order → Challenge) is read from the store; a directly
+// loaded detail page has none yet. Fetch just this certificate's owned chain by id and gate the
 // related-data parts of the template on `loaded` so they render against the populated store. The
 // masthead cards read the model reactively, so they fill in on their own once the store is loaded.
-const { loaded } = useRelatedTypes([CERT_MANAGER.CERTIFICATE_REQUEST, CERT_MANAGER.ORDER, CERT_MANAGER.CHALLENGE]);
+const { loaded } = useOwnedResources(props.value, [CERT_MANAGER.CERTIFICATE_REQUEST, CERT_MANAGER.ORDER, CERT_MANAGER.CHALLENGE]);
 
 const { t } = useI18n(useStore());
 

@@ -9,14 +9,15 @@ import DetailText from '@shell/components/DetailText.vue';
 import ResourceTable from '@shell/components/ResourceTable.vue';
 import DetailSummary, { SummaryItem } from '../components/DetailSummary.vue';
 import { ORDER_HEADERS } from '../table-headers';
-import { useRelatedTypes } from '../composables/useRelatedTypes';
+import { useOwnedResources } from '../composables/useOwnedResources';
 import { CERT_MANAGER } from '../types';
 
 const props = defineProps<{ value: any }>();
 
-// Related resources are read from the store; a directly loaded detail page has none yet. Gate the
-// related-data parts of the template on `loaded` so they render against the populated store.
-const { loaded } = useRelatedTypes([CERT_MANAGER.ORDER, CERT_MANAGER.CHALLENGE]);
+// This request's Orders (and their Challenges) are read from the store; a directly loaded detail
+// page has none yet. Fetch just this request's owned chain by id and gate the related-data parts on
+// `loaded`.
+const { loaded } = useOwnedResources(props.value, [CERT_MANAGER.ORDER, CERT_MANAGER.CHALLENGE]);
 
 const { t } = useI18n(useStore());
 

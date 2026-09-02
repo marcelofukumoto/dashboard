@@ -7,6 +7,13 @@ export interface StatefulResource {
   stateSimpleColor: StateColor;
 }
 
+/** A pre-counted state bucket, as produced by a server-side summary (no models needed). */
+export interface OverviewStateCount {
+  state: string;
+  count: number;
+  color: StateColor;
+}
+
 /** One state's contribution to a card: a coloured dot, a label and a count. */
 export interface OverviewStatRow {
   label: string;

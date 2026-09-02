@@ -1,15 +1,18 @@
 import { STATES_ENUM } from '@shell/plugins/dashboard-store/resource-class';
 import { CERT_MANAGER } from '../../../types';
 import {
-  countByState, buildStatusCard, buildCertificateSummary, daysUntilExpiry,
-  buildExpiringSoon, buildIssuerCard,
+  countByState, buildStatusCard, buildStatusCardFromCounts, buildCertificateSummary, daysUntilExpiry,
+  buildExpiringSoon, buildIssuerCard, buildAcmeCard,
 } from '../aggregate';
-import type { StatefulResource, ExpiringCertificate, OverviewRouteFn } from '../types';
+import type { StatefulResource, OverviewStateCount, ExpiringCertificate, OverviewRouteFn } from '../types';
 
 const t = (key: string, args?: Record<string, unknown>) => (args ? `${ key }:${ args.count }` : key);
 const routeFor: OverviewRouteFn = (type: string) => ({ type } as any);
 
 const res = (state: string, stateSimpleColor: any): StatefulResource => ({ state, stateSimpleColor });
+const count = (state: string, color: any, n = 1): OverviewStateCount => ({
+  state, count: n, color
+});
 
 const NOW = new Date('2026-08-17T00:00:00Z').getTime();
 const inDays = (days: number) => new Date(NOW + days * 86_400_000).toISOString();
@@ -131,13 +134,45 @@ describe('cert-manager overview aggregate', () => {
     });
   });
 
+  describe('buildStatusCardFromCounts', () => {
+    const order = [STATES_ENUM.ACTIVE, STATES_ENUM.PENDING, STATES_ENUM.ERROR];
+
+    it('should total, order most-critical first and fill the bar from pre-counted states', () => {
+      const card = buildStatusCardFromCounts(
+        'k',
+        'Title',
+        CERT_MANAGER.ISSUER,
+        [count(STATES_ENUM.ACTIVE, 'success', 3), count(STATES_ENUM.ERROR, 'error', 1)],
+        order,
+        routeFor,
+      );
+
+      expect(card.total).toBe(4);
+      expect(card.rows.map((r) => r.color)).toStrictEqual(['error', 'success']);
+      expect(card.rows[0].count).toBe(1);
+      expect(card.segments).toStrictEqual([
+        { color: 'error', percent: 25 },
+        { color: 'success', percent: 75 },
+      ]);
+      expect(card.to).toStrictEqual({ type: CERT_MANAGER.ISSUER });
+    });
+
+    it('should have no segments and no rows when empty', () => {
+      const card = buildStatusCardFromCounts('k', 'Title', CERT_MANAGER.ISSUER, [], order, routeFor);
+
+      expect(card.total).toBe(0);
+      expect(card.segments).toStrictEqual([]);
+      expect(card.rows).toStrictEqual([]);
+    });
+  });
+
   describe('buildIssuerCard', () => {
-    it('should build an issuer-typed status card', () => {
+    it('should build an issuer-typed status card from state counts', () => {
       const card = buildIssuerCard(
         'issuers',
         'Issuers',
         CERT_MANAGER.ISSUER,
-        [res(STATES_ENUM.ACTIVE, 'success'), res(STATES_ENUM.ERROR, 'error')],
+        [count(STATES_ENUM.ACTIVE, 'success'), count(STATES_ENUM.ERROR, 'error')],
         routeFor,
       );
 
@@ -152,6 +187,22 @@ describe('cert-manager overview aggregate', () => {
       const card = buildIssuerCard('issuers', 'Issuers', CERT_MANAGER.ISSUER, [], routeFor, createAction);
 
       expect(card.createAction).toStrictEqual(createAction);
+    });
+  });
+
+  describe('buildAcmeCard', () => {
+    it('should build an ACME status card from state counts, with no create action', () => {
+      const card = buildAcmeCard(
+        'orders',
+        'Orders',
+        CERT_MANAGER.ORDER,
+        [count(STATES_ENUM.ACTIVE, 'success', 2), count(STATES_ENUM.PENDING, 'info', 1)],
+        routeFor,
+      );
+
+      expect(card.total).toBe(3);
+      expect(card.to).toStrictEqual({ type: CERT_MANAGER.ORDER });
+      expect(card.createAction).toBeUndefined();
     });
   });
 });

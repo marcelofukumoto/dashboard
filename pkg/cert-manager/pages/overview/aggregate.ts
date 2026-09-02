@@ -2,18 +2,11 @@ import { stateDisplay, STATES_ENUM } from '@shell/plugins/dashboard-store/resour
 import type { StateColor } from '@shell/utils/style';
 import { CERT_MANAGER } from '../../types';
 import type {
-  StatefulResource, OverviewStatRow, OverviewStatusCard, OverviewCreateAction, ExpiringSoonRow,
-  ExpiringCertificate, OverviewRouteFn,
+  StatefulResource, OverviewStateCount, OverviewStatRow, OverviewStatusCard, OverviewCreateAction,
+  ExpiringSoonRow, ExpiringCertificate, OverviewRouteFn,
 } from './types';
 
 type Translate = (key: string, args?: Record<string, unknown>) => string;
-
-/** One state, its running count and the colour to draw it in. */
-interface StateCount {
-  state: string;
-  count: number;
-  color: StateColor;
-}
 
 /**
  * Health cards list states most critical (red) first, down to least critical (green), so the eye
@@ -58,8 +51,8 @@ function indexIn(order: string[], state: string): number {
 }
 
 /** Group resources by their computed state, keeping the colour each model reports for that state. */
-export function countByState(resources: StatefulResource[]): StateCount[] {
-  const map = new Map<string, StateCount>();
+export function countByState(resources: StatefulResource[]): OverviewStateCount[] {
+  const map = new Map<string, OverviewStateCount>();
 
   for (const r of resources) {
     const existing = map.get(r.state);
@@ -76,7 +69,7 @@ export function countByState(resources: StatefulResource[]): StateCount[] {
   return [...map.values()];
 }
 
-function toSegments(counts: StateCount[], total: number): { color: StateColor; percent: number }[] {
+function toSegments(counts: OverviewStateCount[], total: number): { color: StateColor; percent: number }[] {
   if (!total) {
     return [];
   }
@@ -85,24 +78,27 @@ function toSegments(counts: StateCount[], total: number): { color: StateColor; p
 }
 
 /**
- * Build a stacked-bar + rows card from a set of resources, ordered by `order`. `routeFor` links the
- * whole card to the resource list. Rows are not links: the list filters on Steve's generic
- * `metadata.state.name`, not the domain state this model computes (expiring, in-progress, ...), so a
+ * Build a stacked-bar + rows card from state counts, ordered by `order`. `routeFor` links the whole
+ * card to the resource list. Rows are not links: the list filters on Steve's generic
+ * `metadata.state.name`, not the domain state this overview shows (expiring, in-progress, ...), so a
  * per-state deep-link would return empty or mismatched results. See utils/state.ts.
+ *
+ * Counts come either from local models (`countByState`) or from a server-side summary, so this takes
+ * the counts directly rather than the resources.
  */
-export function buildStatusCard(
+export function buildStatusCardFromCounts(
   key: string,
   title: string,
   type: string,
-  resources: StatefulResource[],
+  counts: OverviewStateCount[],
   order: string[],
   routeFor: OverviewRouteFn,
 ): OverviewStatusCard {
-  const counts = countByState(resources)
+  const sorted = [...counts]
     .sort((a, b) => COLOR_SEVERITY[a.color] - COLOR_SEVERITY[b.color] || indexIn(order, a.state) - indexIn(order, b.state));
-  const total = resources.length;
+  const total = counts.reduce((sum, c) => sum + c.count, 0);
 
-  const rows: OverviewStatRow[] = counts.map((c) => ({
+  const rows: OverviewStatRow[] = sorted.map((c) => ({
     label: stateDisplay(c.state, true),
     color: c.color,
     count: c.count,
@@ -113,9 +109,21 @@ export function buildStatusCard(
     title,
     to:       routeFor(type),
     total,
-    segments: toSegments(counts, total),
+    segments: toSegments(sorted, total),
     rows,
   };
+}
+
+/** As {@link buildStatusCardFromCounts}, but from local models. */
+export function buildStatusCard(
+  key: string,
+  title: string,
+  type: string,
+  resources: StatefulResource[],
+  order: string[],
+  routeFor: OverviewRouteFn,
+): OverviewStatusCard {
+  return buildStatusCardFromCounts(key, title, type, countByState(resources), order, routeFor);
 }
 
 /** The certificates-by-state summary card (a stacked bar plus one row per state). */
@@ -166,19 +174,19 @@ export function buildExpiringSoon(
 }
 
 /**
- * A readiness card for one issuer kind (Issuer or ClusterIssuer), by state. Issuers and
+ * A readiness card for one issuer kind (Issuer or ClusterIssuer), from state counts. Issuers and
  * ClusterIssuers are user-authored, so their cards carry a "create" action; ACME resources do not.
  */
 export function buildIssuerCard(
   key: string,
   title: string,
   type: string,
-  issuers: StatefulResource[],
+  counts: OverviewStateCount[],
   routeFor: OverviewRouteFn,
   createAction?: OverviewCreateAction,
   emptyLabel?: string,
 ): OverviewStatusCard {
-  const card = buildStatusCard(key, title, type, issuers, ISSUER_STATE_ORDER, routeFor);
+  const card = buildStatusCardFromCounts(key, title, type, counts, ISSUER_STATE_ORDER, routeFor);
 
   return {
     ...card,
@@ -187,13 +195,13 @@ export function buildIssuerCard(
   };
 }
 
-/** An ACME activity card (Orders or Challenges) by state. */
+/** An ACME activity card (Orders or Challenges) from state counts. */
 export function buildAcmeCard(
   key: string,
   title: string,
   type: string,
-  resources: StatefulResource[],
+  counts: OverviewStateCount[],
   routeFor: OverviewRouteFn,
 ): OverviewStatusCard {
-  return buildStatusCard(key, title, type, resources, ACME_STATE_ORDER, routeFor);
+  return buildStatusCardFromCounts(key, title, type, counts, ACME_STATE_ORDER, routeFor);
 }

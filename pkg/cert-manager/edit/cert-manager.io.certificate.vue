@@ -16,6 +16,7 @@ import { RadioGroup } from '@components/Form/Radio';
 import { Checkbox } from '@components/Form/Checkbox';
 import { _CREATE } from '@shell/config/query-params';
 import { RESOURCE_LABEL_SELECT_MODE } from '@shell/types/components/resourceLabeledSelect';
+import { PaginationParamFilter } from '@shell/types/store/pagination.types';
 import { CERT_MANAGER } from '../types';
 import {
   ISSUER_KINDS, ISSUER_GROUP, KEY_ALGORITHMS, KEY_SIZES, KEY_ENCODINGS, ROTATION_POLICIES, KEY_USAGES,
@@ -59,6 +60,11 @@ export default {
 
   data() {
     return {
+      // Whether the certificate's namespace holds at least one Issuer, for the empty-namespace
+      // banner. Under server-side pagination the store is not fully loaded, so this is answered with
+      // a small count request rather than by scanning `cluster/all`. Assume yes until known.
+      namespaceHasIssuers: true,
+
       fvFormRuleSets: [
         {
           path: 'metadata.name', rules: ['required', 'dnsLabel'], translationKey: 'nameNsDescription.name.label'
@@ -92,6 +98,8 @@ export default {
     }
 
     this.value.spec = spec;
+
+    this.refreshNamespaceIssuers();
   },
 
   computed: {
@@ -128,46 +136,75 @@ export default {
     },
 
     /**
-     * The Issuer/ClusterIssuer list views opt into server-side pagination, which would otherwise
-     * flip this picker into its paginated path too. Issuers are low-cardinality and the picker needs
-     * client-side namespace filtering, so we force the fetch-all path instead. This also keeps
-     * `cluster/all` populated, which `hasNoIssuersInNamespace` reads.
+     * The Issuer/ClusterIssuer types opt into server-side pagination, so let the picker paginate
+     * when it is enabled (DYNAMIC falls back to loading everything when it is not). Namespace
+     * scoping and option mapping move server-side via `issuerPaginatedSettings`.
      */
     issuerPaginateMode() {
-      return RESOURCE_LABEL_SELECT_MODE.ALL_RESOURCES;
+      return RESOURCE_LABEL_SELECT_MODE.DYNAMIC;
     },
 
     /**
-     * A namespaced Issuer must live alongside the Certificate; ClusterIssuers are global.
-     *
-     * The resources have to be mapped to `{ label, value }`: LabeledSelect reads `optionLabel`
-     * (default `label`) for display and `reduce` unwraps `value`, so handing it raw Steve models
-     * renders the whole serialised resource as the option text. `issuerRef.name` is a plain
-     * string, so label and value are both the resource name.
+     * Map each issuer to `{ label, value }`: LabeledSelect reads `optionLabel` (default `label`) for
+     * display and `reduce` unwraps `value`, so handing it raw Steve models renders the whole
+     * serialised resource as the option text. `issuerRef.name` is a plain string, so label and value
+     * are both the resource name.
+     */
+    issuerOptions() {
+      return (issuers) => issuers.map((issuer) => ({ label: issuer.metadata?.name, value: issuer.metadata?.name }));
+    },
+
+    /**
+     * Non-paginated fallback (SSP disabled): filter to the certificate's namespace client-side, as
+     * ClusterIssuers are global but a namespaced Issuer must live alongside the certificate.
      */
     issuerSelectSettings() {
       const namespace = this.value.metadata?.namespace;
       const isClusterIssuer = this.isClusterIssuer;
 
-      const updateResources = (issuers) => issuers
-        .filter((issuer) => isClusterIssuer || issuer.metadata?.namespace === namespace)
-        .map((issuer) => ({ label: issuer.metadata?.name, value: issuer.metadata?.name }));
+      const updateResources = (issuers) => this.issuerOptions(issuers
+        .filter((issuer) => isClusterIssuer || issuer.metadata?.namespace === namespace));
 
       return { updateResources };
     },
 
     /**
+     * Paginated settings: scope namespaced Issuers to the certificate's namespace server-side (add a
+     * namespace filter to the request) and map the returned page to `{ label, value }`. The dropdown
+     * is a flat list, so namespace grouping is turned off.
+     */
+    issuerPaginatedSettings() {
+      const namespace = this.value.metadata?.namespace;
+      const isClusterIssuer = this.isClusterIssuer;
+      const toOptions = this.issuerOptions;
+
+      return {
+        updateResources: (page) => toOptions(page),
+        requestSettings: (opts) => {
+          opts.groupByNamespace = false;
+
+          if (!isClusterIssuer && namespace) {
+            opts.filters = [
+              ...(opts.filters || []),
+              PaginationParamFilter.createSingleField({
+                field: 'metadata.namespace', value: namespace, exact: true
+              }),
+            ];
+          }
+
+          return opts;
+        },
+      };
+    },
+
+    /**
      * An Issuer must live in the same namespace as the Certificate, so picking a namespace with
      * none leaves the dropdown empty. Say why rather than just showing "No options".
+     * `namespaceHasIssuers` is kept current by a count request (see `refreshNamespaceIssuers`),
+     * since server-side pagination means the store is not fully loaded.
      */
     hasNoIssuersInNamespace() {
-      if (this.isClusterIssuer) {
-        return false;
-      }
-
-      const all = this.$store.getters['cluster/all'](CERT_MANAGER.ISSUER) || [];
-
-      return !all.some((issuer) => issuer.metadata?.namespace === this.value.metadata?.namespace);
+      return !this.isClusterIssuer && !this.namespaceHasIssuers;
     },
 
     hasNoIdentifier() {
@@ -210,6 +247,12 @@ export default {
       if (old) {
         this.value.spec.issuerRef.name = undefined;
       }
+      this.refreshNamespaceIssuers();
+    },
+
+    // Moving the certificate to another namespace changes which Issuers are in scope.
+    'value.metadata.namespace'() {
+      this.refreshNamespaceIssuers();
     },
 
     // Ed25519 has a single fixed key size, and an RSA size is invalid for ECDSA and vice versa.
@@ -234,6 +277,30 @@ export default {
       this.value.spec.secretTemplate = { ...this.value.spec.secretTemplate, [key]: keyValue };
     },
 
+    /**
+     * Answer "does this namespace have any Issuer?" with a 1-row request rather than by scanning a
+     * fully-loaded store (which server-side pagination no longer guarantees). ClusterIssuers are
+     * global, so the banner never applies to them. Fails open - a failed check does not falsely
+     * claim the namespace is empty.
+     */
+    async refreshNamespaceIssuers() {
+      const namespace = this.value.metadata?.namespace;
+
+      if (this.isClusterIssuer || !namespace) {
+        this.namespaceHasIssuers = true;
+
+        return;
+      }
+
+      try {
+        const url = `${ this.$store.getters['cluster/urlFor'](CERT_MANAGER.ISSUER) }&filter=metadata.namespace=${ encodeURIComponent(namespace) }&limit=1`;
+        const res = await this.$store.dispatch('cluster/request', { url });
+
+        this.namespaceHasIssuers = (res?.data || []).length > 0;
+      } catch {
+        this.namespaceHasIssuers = true;
+      }
+    },
   },
 };
 </script>
@@ -285,7 +352,7 @@ export default {
         <div class="row mmb-5">
           <div class="col span-6">
             <ResourceLabeledSelect
-              :key="issuerResourceType"
+              :key="`${ issuerResourceType }-${ value.metadata.namespace }`"
               v-model:value="value.spec.issuerRef.name"
               data-testid="cert-manager-certificate-issuer"
               :resource-type="issuerResourceType"
@@ -294,6 +361,7 @@ export default {
               :rules="fvGetAndReportPathRules('spec.issuerRef.name')"
               :paginate-mode="issuerPaginateMode"
               :all-resources-settings="issuerSelectSettings"
+              :paginated-resource-settings="issuerPaginatedSettings"
               required
             />
           </div>

@@ -693,25 +693,24 @@ export default {
       }
     }
 
-    const havePage = getters.havePage(type);
+    const havePageBefore = getters.havePage(type);
 
     opt = opt || {};
     opt.url = getters.urlFor(type, id, opt);
 
     const res = await dispatch('request', { opt, type });
 
-    if (!havePage && getters.havePage(type)) {
-      // There may be a super edge case where list --> detail (whilst loading) --> list navigation causes the list's rows to disappear
-      // Somehow the `findPage` from the list page returns before the `find`. The `find` then clears the page state in the cache.
-      // If this has happened silently return (we don't care about result)
-      // https://github.com/rancher/dashboard/issues/17524
-      console.warn(`Prevented \`find\` action from polluting cache for type "${ type }" (currently represents a page).`); // eslint-disable-line no-console
-
-      return;
-    }
+    // The cache for this type can represent a single page of results (server-side pagination), either because it
+    // already did before the request or because a `findPage` landed whilst this one was in flight (list --> detail
+    // --> list navigation does that). This resource is not part of that page, so it's stored by id only: it stays
+    // findable without becoming a row that isn't in the page, and the page itself survives, so any list showing it
+    // keeps its rows instead of emptying until something re-fetches.
+    const offPage = !!havePageBefore || !!getters.havePage(type);
 
     if (!opt.transient) {
-      await dispatch('load', { data: res, invalidatePageCache: opt.invalidatePageCache });
+      await dispatch('load', {
+        data: res, invalidatePageCache: opt.invalidatePageCache, offPage
+      });
     }
 
     if (!opt.transient && opt.watch !== false ) {
@@ -732,8 +731,14 @@ export default {
    * - if something calls `load` then the cache no longer has a page so we invalidate it
    * - however on resource create or remove this can lead to lists showing nothing... before the new page is fetched
    * - for those cases avoid invaliding the page cache
+   *
+   * offPage
+   * - the resource is known not to belong to the page the cache currently represents, so it's stored by id only
+   *   and the page is left alone
    */
-  load(ctx, { data, existing, invalidatePageCache }) {
+  load(ctx, {
+    data, existing, invalidatePageCache, offPage
+  }) {
     const { getters, commit } = ctx;
 
     let type = normalizeType(data.type);
@@ -767,7 +772,8 @@ export default {
       ctx,
       data,
       existing,
-      invalidatePageCache // Avoid havePage invalidation
+      invalidatePageCache, // Avoid havePage invalidation
+      offPage // Keep out of the list representing a page
     });
 
     if ( type === SCHEMA ) {

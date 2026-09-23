@@ -1,6 +1,6 @@
 import _actions from '@shell/plugins/dashboard-store/actions';
 
-const { findAll, findMatching } = _actions;
+const { find, findAll, findMatching } = _actions;
 
 describe('dashboard-store: actions', () => {
   describe('findAll', () => {
@@ -261,5 +261,53 @@ describe('dashboard-store: actions', () => {
         expect(getters.urlFor).toHaveBeenCalledWith(...output.getters.urlFor);
       }
     );
+  });
+  describe('find', () => {
+    const resource = { id: 'off-page', type: 'pod' };
+
+    // `havePage` is set when the cache for the type holds a single page of results (server-side pagination)
+    const setupContext = (havePage: unknown) => ({
+      state:   { config: { namespace: 'unitTest' } },
+      getters: {
+        byId:     jest.fn().mockReturnValueOnce(undefined).mockReturnValue(resource),
+        havePage: jest.fn(() => havePage),
+        urlFor:   jest.fn(() => 'getters.urlFor'),
+      },
+      rootGetters: {},
+      commit:      jest.fn(),
+      dispatch:    jest.fn((...args: unknown[]) => (args[0] === 'request' ? resource : undefined)),
+    });
+
+    const loadArgs = (dispatch: jest.Mock) => dispatch.mock.calls.find((call) => call[0] === 'load')?.[1];
+
+    it('loads the resource as off-page when the cache represents a page', async() => {
+      const ctx = setupContext({ request: {}, result: {} });
+
+      await find(ctx, {
+        type: 'pod', id: resource.id, opt: {}
+      });
+
+      expect(loadArgs(ctx.dispatch).offPage).toBe(true);
+    });
+
+    it('loads the resource normally when the cache does not represent a page', async() => {
+      const ctx = setupContext(null);
+
+      await find(ctx, {
+        type: 'pod', id: resource.id, opt: {}
+      });
+
+      expect(loadArgs(ctx.dispatch).offPage).toBe(false);
+    });
+
+    it('returns the resource even when the cache represents a page', async() => {
+      const ctx = setupContext({ request: {}, result: {} });
+
+      const result = await find(ctx, {
+        type: 'pod', id: resource.id, opt: {}
+      });
+
+      expect(result).toStrictEqual(resource);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { batchChanges, loadAdd } from '@shell/plugins/dashboard-store/mutations.js';
+import { batchChanges, load, loadAdd } from '@shell/plugins/dashboard-store/mutations.js';
 import { POD, WORKLOAD_TYPES } from '@shell/config/types';
 import Resource from '@shell/plugins/dashboard-store/resource-class';
 import mutationHelpers, { BatchPayload, ExpectedCaches, MutationFixture } from '@shell/plugins/steve/__tests__/utils/mutation.test.helpers';
@@ -388,6 +388,63 @@ describe('dashboard-store: mutations', () => {
 
       expect(cacheState).toStrictEqual(expected);
       expect(cacheMap).toStrictEqual(expectedMap);
+    });
+  });
+  describe('load', () => {
+    // A cache holding a single page of results (server-side pagination): `list` is the page, `havePage` describes it
+    const createPagedState = () => {
+      const inPage = createPodResource({ id: 'in-page' });
+
+      return {
+        types: {
+          [POD]: createCache({
+            havePage: true,
+            list:     [inPage],
+            map:      new Map([['in-page', inPage as Resource]]),
+          })
+        }
+      };
+    };
+
+    const ids = (resources: Resource[]) => resources.map((resource: any) => resource.id);
+
+    // `load` takes each of these, so they're spelled out rather than left off
+    const payload = (data: Record<string, unknown>, offPage = false) => ({
+      ctx, data, existing: undefined, cachedArgs: undefined, offPage
+    });
+
+    const offPagePod = () => ({ ...createPod(), id: 'off-page' });
+
+    it('adds a resource to the list and invalidates the page', () => {
+      const state = createPagedState();
+
+      load(state, payload(offPagePod()));
+
+      expect(ids(state.types[POD].list)).toStrictEqual(['in-page', 'off-page']);
+      expect(state.types[POD].map.get('off-page')).toBeDefined();
+      expect(state.types[POD].havePage).toBe(false);
+    });
+
+    it('keeps an off-page resource out of the list and leaves the page alone', () => {
+      const state = createPagedState();
+
+      load(state, payload(offPagePod(), true));
+
+      expect(ids(state.types[POD].list)).toStrictEqual(['in-page']);
+      expect(state.types[POD].map.get('off-page')).toBeDefined();
+      expect(state.types[POD].havePage).toBe(true);
+    });
+
+    it('still updates a resource that is part of the page', () => {
+      const state = createPagedState();
+
+      load(state, payload({
+        ...createPod(), id: 'in-page', change: true
+      }, true));
+
+      expect(ids(state.types[POD].list)).toStrictEqual(['in-page']);
+      expect((state.types[POD].map.get('in-page') as any).change).toBe(true);
+      expect(state.types[POD].havePage).toBe(true);
     });
   });
 });

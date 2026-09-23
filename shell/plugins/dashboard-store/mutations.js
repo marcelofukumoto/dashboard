@@ -93,9 +93,14 @@ export function createLoadArgs(ctx, dataType) {
  * - if something calls `load` then the cache no longer has a page so we invalidate it
  * - however on resource create or remove this can lead to lists showing nothing... before the new page is fetched
  * - for those cases avoid invaliding the page cache
+ *
+ * offPage
+ * - the resource is known not to belong to the page the cache currently represents (a fetch by id, for instance)
+ * - it's stored in the map only, so it can be found by id without becoming a row in a list showing that page
+ * - the page therefore stays intact and does not need invalidating
  */
 export function load(state, {
-  data, ctx, existing, cachedArgs, invalidatePageCache = true,
+  data, ctx, existing, cachedArgs, invalidatePageCache = true, offPage = false,
 }) {
   const { getters } = ctx;
   // Optimisation. This can run once per resource loaded.., so pass in from parent
@@ -153,9 +158,12 @@ export function load(state, {
   //
   // Ensure the `entry` is in both both list and cache
   // Note - We should be safe assuming the two collections have parity (not in map means not in list)
+  // Note - An `offPage` resource is the exception, it goes in the map only (see `offPage` above)
   //
   if (!inMap) {
-    cache.list.push(entry);
+    if (!offPage) {
+      cache.list.push(entry);
+    }
     cache.map.set(id, entry);
   }
 
@@ -171,13 +179,15 @@ export function load(state, {
     type = normalizeType(data.baseType);
     cache = state.types[type];
     if ( cache ) {
-      addObject(cache.list, entry);
+      if (!offPage) {
+        addObject(cache.list, entry);
+      }
       cache.map.set(id, entry);
     }
   }
 
-  // see `invalidatePageCache` description above
-  cache.havePage = invalidatePageCache ? false : cache.havePage;
+  // see `invalidatePageCache` and `offPage` descriptions above
+  cache.havePage = invalidatePageCache && !offPage ? false : cache.havePage;
 
   return entry;
 }

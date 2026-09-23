@@ -25,6 +25,7 @@
 None
 
 ## Round-Robin Log
+- 2026-09-23: Stood down — re-verified: all 13 historical Test Improver PRs closed, 0 open bot/daily-test-improver issues, last Monthly Activity issue (#199) closed not_planned 2026-04-29, no newer monthly issue exists and none created (per stand-down). No maintainer re-enable signal found.
 - 2026-08-04: Stood down — maintainer signal still active (no re-enable observed).
 - 2026-07-08: Stood down — maintainer signal still active (no re-enable observed).
 - 2026-05-31: Stood down — maintainer signal still active (no re-enable observed).

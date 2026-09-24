@@ -7232,6 +7232,7 @@ tableViews:
     deleteSelected: Delete Selected
   query:
     placeholder: 'Filter across all columns or only specific ones (e.g. state:error)'
+    clear: Clear filter
     inUse: "{count} in use"
     label: Label
     suggestions: Filter suggestions

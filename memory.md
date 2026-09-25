@@ -48,3 +48,4 @@ None
 - 2026-08-27: Stood down — maintainer signal still active (no re-enable observed).
 - 2026-08-28: Stood down — maintainer signal still active (no re-enable observed).
 - 2026-09-01: Stood down — maintainer signal still active (no re-enable observed).
+- 2026-09-25: Stood down — re-verified: all 13 historical Test Improver PRs closed (#11,#44,#72,#113,#123,#132,#154,#185,#198,#207,#212,#220,#221), 0 open bot/daily-test-improver issues, last Monthly Activity issue (#199) still closed not_planned since 2026-04-29 with only automated issue-grooming bot comments (no maintainer re-enable signal). No new monthly issue created, per stand-down policy. No action taken.

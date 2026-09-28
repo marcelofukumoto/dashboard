@@ -9208,7 +9208,10 @@ action:
     showPass: Show {area}
   clone: Clone
   disable: Disable
-  download: Export As...
+  download: Download YAML
+  # What the same action is called when the improved tables feature is on, where it offers the
+  # other formats alongside the yaml it has always given
+  downloadExport: Export As...
   edit: Edit Config
   editYaml: Edit YAML
   enable: Enable

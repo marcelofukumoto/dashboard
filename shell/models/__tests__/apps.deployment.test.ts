@@ -90,4 +90,33 @@ describe('class Deployment', () => {
       expect(deployment.replicaSetId).toStrictEqual(expected);
     });
   });
+
+  describe('deployedTimestamp', () => {
+    const creationTimestamp = '2020-01-01T00:00:00Z';
+
+    it.each([{
+      conditions: undefined,
+      expected:   creationTimestamp,
+    }, {
+      conditions: [{ type: 'Available', lastUpdateTime: '2021-01-01T00:00:00Z' }],
+      expected:   creationTimestamp,
+    }, {
+      conditions: [{ type: 'Available', lastUpdateTime: '2021-01-01T00:00:00Z' }, { type: 'Progressing', lastUpdateTime: '2021-06-15T12:00:00Z' }],
+      expected:   '2021-06-15T12:00:00Z',
+    }])('should return the last Progressing update, falling back to creation', ({ conditions, expected }) => {
+      const deployment = new Deployment({
+        id:       'any-id',
+        type:     WORKLOAD_TYPES.DEPLOYMENT,
+        metadata: {
+          name:      'any-name',
+          namespace: 'any-namespace',
+          uid:       'any-uid',
+          creationTimestamp,
+        },
+        status: { conditions },
+      });
+
+      expect(deployment.deployedTimestamp).toStrictEqual(expected);
+    });
+  });
 });

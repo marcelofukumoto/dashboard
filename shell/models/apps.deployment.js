@@ -34,6 +34,14 @@ export default class Deployment extends Workload {
     return selectedReplicaSet?.toId?.replace(`${ this.namespace }/`, '');
   }
 
+  get deployedTimestamp() {
+    // The Progressing condition is only touched when a roll-out starts or completes (new image, redeploy,
+    // rollback), not on a plain scale, so its last update is when the current revision was deployed
+    const progressing = (this.status?.conditions || []).find((c) => c.type === 'Progressing');
+
+    return progressing?.lastUpdateTime || this.creationTimestamp;
+  }
+
   async rollBack(cluster, deployment, revision) {
     const body = [
       {

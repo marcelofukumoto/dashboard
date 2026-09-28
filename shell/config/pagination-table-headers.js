@@ -50,8 +50,7 @@ export const STEVE_AGE_COL = {
 
 export const STEVE_DEPLOYED_COL = {
   ...DEPLOYED,
-  // Derived client-side from the pod template's redeploy/restart annotations, which aren't
-  // available as a raw field for the server to sort/search on.
+  // Read from the Progressing condition, which isn't indexed for the server to sort/search on
   sort:   false,
   search: false,
 };

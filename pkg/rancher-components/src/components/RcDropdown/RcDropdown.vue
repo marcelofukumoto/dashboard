@@ -20,21 +20,47 @@
  *    </template>
  *  </rc-dropdown>
  */
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useClickOutside } from '@shell/composables/useClickOutside';
 import { useDropdownContext } from '@components/RcDropdown/useDropdownContext';
 
 import type { Placement } from 'floating-vue';
 
-withDefaults(
+type ReferenceNode = () => Element | undefined | null;
+
+const props = withDefaults(
   defineProps<{
     // eslint-disable-next-line vue/require-default-prop
     ariaLabel?: string;
     // eslint-disable-next-line vue/require-default-prop
     distance?: number;
+    // eslint-disable-next-line vue/require-default-prop
+    skidding?: number;
+    /** Positions the menu against this element instead of the trigger */
+    // eslint-disable-next-line vue/require-default-prop
+    referenceNode?: ReferenceNode;
+    /** Off keeps a sub menu in line with the row that opened it rather than sliding it into view */
+    /** Opens and closes the menu from outside, for a menu opened by an item rather than a trigger */
+    open?: boolean;
+    shift?: boolean;
+    /** Off keeps a sub menu in line with its row rather than flipping it to the other side */
+    flip?: boolean;
     placement?: Placement;
+    /** What the menu has to stay inside, instead of the window - eg below a fixed masthead */
+    // eslint-disable-next-line vue/require-default-prop
+    boundary?: Element;
+    // eslint-disable-next-line vue/require-default-prop
+    overflowPadding?: number;
+    /** A class for the popper, which is mounted outside the component where scoped styles can't reach */
+    // eslint-disable-next-line vue/require-default-prop
+    popperClass?: string;
+    /** Leaves scrolling and padding to the menu's content, for content that scrolls itself */
+    flush?: boolean;
   }>(),
-  { placement: 'bottom-end' }
+  // `shift` keeps floating-vue's default: an omitted boolean prop would arrive as false
+  {
+    placement: 'bottom-end', shift: true, flip: true, open: false
+  }
 );
 
 const emit = defineEmits(['update:open']);
@@ -52,13 +78,57 @@ const {
 
 provideDropdownContext();
 
-const popperContainer = ref(null);
-const dropdownTarget = ref(null);
+watch(() => props.open, (open) => {
+  if (open !== isMenuOpen.value) {
+    showMenu(open);
+  }
+});
+
+const popperContainer = ref<HTMLElement | null>(null);
+const dropdownTarget = ref<HTMLElement | null>(null);
 
 useClickOutside(dropdownTarget, () => showMenu(false));
 
+/** A nested menu's key presses bubble up here too; only the innermost menu answers them */
+const ownsEvent = (e: Event) => {
+  const target = e.target as HTMLElement | null;
+
+  return !!dropdownTarget.value && target?.closest?.('[dropdown-menu-collection]') === dropdownTarget.value;
+};
+
+const onKeydown = (e: KeyboardEvent) => {
+  if (ownsEvent(e)) {
+    handleKeydown();
+  }
+};
+
+const onArrow = (e: KeyboardEvent, direction: 'down' | 'up') => {
+  if (!ownsEvent(e)) {
+    return;
+  }
+
+  e.preventDefault();
+  setFocus(direction);
+};
+
+const onTab = (e: KeyboardEvent) => {
+  if (ownsEvent(e)) {
+    showMenu(false);
+  }
+};
+
+const onEscape = (e: KeyboardEvent) => {
+  if (ownsEvent(e)) {
+    returnFocus();
+  }
+};
+
 const applyShow = () => {
-  setDropdownDimensions(dropdownTarget.value);
+  // A menu with a `boundary` is already sized to it, and this fixed measure would shrink it
+  if (!props.boundary) {
+    setDropdownDimensions(dropdownTarget.value);
+  }
+
   registerDropdownCollection(dropdownTarget.value);
   setFocus('down');
 };
@@ -74,6 +144,13 @@ const applyShow = () => {
     :container="popperContainer"
     :placement="placement"
     :distance="distance"
+    :skidding="skidding"
+    :reference-node="referenceNode"
+    :shift="shift"
+    :flip="flip"
+    :boundary="boundary"
+    :overflow-padding="overflowPadding"
+    :popper-class="popperClass"
     @apply-show="applyShow"
   >
     <slot name="default">
@@ -84,14 +161,15 @@ const applyShow = () => {
       <div
         ref="dropdownTarget"
         class="dropdownTarget"
+        :class="{ flush }"
         tabindex="-1"
         role="menu"
         aria-orientation="vertical"
         dropdown-menu-collection
         :aria-label="ariaLabel || 'Dropdown Menu'"
-        @keydown="handleKeydown"
-        @keydown.down.prevent="setFocus('down')"
-        @keydown.up.prevent="setFocus('up')"
+        @keydown="onKeydown"
+        @keydown.down="onArrow($event, 'down')"
+        @keydown.up="onArrow($event, 'up')"
       >
         <slot name="dropdownCollection">
           <!--Empty slot content-->
@@ -102,8 +180,8 @@ const applyShow = () => {
   <div
     ref="popperContainer"
     class="popperContainer"
-    @keydown.tab="showMenu(false)"
-    @keydown.escape="returnFocus"
+    @keydown.tab="onTab"
+    @keydown.escape="onEscape"
   >
     <!--Empty container for mounting popper content-->
   </div>
@@ -136,6 +214,11 @@ const applyShow = () => {
 
     &:focus-visible, &:focus {
       outline: none;
+    }
+
+    &.flush {
+      overflow: visible;
+      padding: 0;
     }
   }
 </style>

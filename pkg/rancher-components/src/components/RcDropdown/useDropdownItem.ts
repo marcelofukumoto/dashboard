@@ -76,9 +76,10 @@ export const useDropdownItem = () => {
       return;
     }
 
+    // `center` scrolls every ancestor, the page included, even when the menu fits on screen
     target?.scrollIntoView({
       behavior: 'smooth',
-      block:    'center',
+      block:    'nearest',
       inline:   'nearest',
     });
   };

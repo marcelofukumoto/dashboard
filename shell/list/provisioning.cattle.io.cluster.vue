@@ -11,7 +11,6 @@ import PaginatedResourceTable from '@shell/components/PaginatedResourceTable.vue
 import { PagTableFetchPageSecondaryResourcesOpts, PagTableFetchSecondaryResourcesOpts, PagTableFetchSecondaryResourcesReturns } from '@shell/types/components/paginatedResourceTable';
 import { FilterArgs, PaginationArgs, PaginationFilterField, PaginationParamFilter } from '@shell/types/store/pagination.types';
 import { ActionFindPageArgs } from '@shell/types/store/dashboard-store.types';
-import MachineSummaryGraph from '@shell/components/formatter/MachineSummaryGraph.vue';
 import MgmtCluster from '@shell/models/management.cattle.io.cluster';
 import ProvCluster from '@shell/models/provisioning.cattle.io.cluster';
 import ManagementClusterUtils from '@shell/list/utils/management.cattle.io.cluster.utils';
@@ -24,7 +23,6 @@ export default {
     Banner,
     PaginatedResourceTable,
     Masthead,
-    MachineSummaryGraph,
     RcButton,
   },
 
@@ -324,35 +322,7 @@ export default {
         :namespaced="true"
 
         :data-testid="'cluster-list'"
-      >
-        <template #cell:summary="{row}">
-          <!-- Replace the MACHINE_SUMMARY columns contents... but only if there's no stateParts -->
-          <span v-if="!row.stateParts.length">{{ row.statusInfo.nodeCount || 0 }}</span>
-          <MachineSummaryGraph
-            v-else
-            :row="row"
-          />
-        </template>
-        <template #cell:explorer="{row}">
-          <!-- Align side nav cluster, home page name link and cluster management cluster explor buttons on canExplore -->
-          <rc-button
-            v-if="row.canExplore"
-            variant="secondary"
-            data-testid="cluster-manager-list-explore-management"
-            :to="{name: 'c-cluster', params: {cluster: row.id}}"
-          >
-            {{ t('cluster.explore') }}
-          </rc-button>
-          <rc-button
-            v-else
-            variant="secondary"
-            data-testid="cluster-manager-list-explore"
-            :disabled="true"
-          >
-            {{ t('cluster.explore') }}
-          </rc-button>
-        </template>
-      </PaginatedResourceTable>
+      />
     </template>
   </div>
 </template>

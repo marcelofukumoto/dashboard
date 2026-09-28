@@ -4,7 +4,11 @@
  */
 import { useDropdownItem } from '@components/RcDropdown/useDropdownItem';
 
-const props = defineProps({ disabled: Boolean });
+const props = defineProps({
+  disabled:     Boolean,
+  /** Off for items that are settings rather than commands, so several can be changed in a row */
+  closeOnClick: { type: Boolean, default: true },
+});
 const emits = defineEmits(['click']);
 
 const {
@@ -20,7 +24,10 @@ const handleClick = (e: MouseEvent) => {
   }
 
   emits('click', e);
-  close();
+
+  if (props.closeOnClick) {
+    close();
+  }
 };
 
 </script>
@@ -45,6 +52,12 @@ const handleClick = (e: MouseEvent) => {
     <slot name="default">
       <!--Empty slot content-->
     </slot>
+    <span
+      v-if="$slots.after"
+      class="dropdown-item-after"
+    >
+      <slot name="after" />
+    </span>
   </div>
 </template>
 
@@ -61,7 +74,7 @@ const handleClick = (e: MouseEvent) => {
       cursor: pointer;
       background-color: var(--dropdown-hover-bg);
     }
-    &:focus-visible, &:focus {
+    &:focus-visible {
       @include focus-outline;
       outline-offset: 0;
     }
@@ -70,6 +83,13 @@ const handleClick = (e: MouseEvent) => {
       &:hover {
         cursor: not-allowed;
       }
+    }
+
+    .dropdown-item-after {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      padding-left: 16px;
     }
   }
 </style>

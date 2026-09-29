@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as jsyaml from 'js-yaml';
 import PromptRemove from '@/cypress/e2e/po/prompts/promptRemove.po';
 import { EXTRA_LONG_TIMEOUT_OPT } from '@/cypress/support/utils/timeouts';
+import ExportModalPo from '@/cypress/e2e/po/prompts/exportModal.po';
 
 const bundle = 'fleet-agent-local';
 const localWorkspace = 'fleet-local';
@@ -224,8 +225,9 @@ describe('Bundles', { testIsolation: false, tags: ['@fleet', '@adminUser'] }, ()
       fleetBundlesListPage.goTo();
       fleetBundlesListPage.waitForPage();
       headerPo.selectWorkspace(localWorkspace);
-      fleetBundlesListPage.list().actionMenu(customBundleName).getMenuItem('Download YAML')
+      fleetBundlesListPage.list().actionMenu(customBundleName).getMenuItem('Export As...')
         .click();
+      new ExportModalPo().download();
 
       const downloadedFilename = path.join(downloadsFolder, `${ customBundleName }.yaml`);
 

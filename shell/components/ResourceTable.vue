@@ -881,6 +881,7 @@ export default {
         :date-fields="viewDateFieldIds"
         :field-values="viewFieldValues"
         :pending-fields="viewPendingFields"
+        :loading-values="fieldValuesLoading"
         :rows="filteredRows"
         :unsupported-fields="unsupportedViewFields"
         :default-columns="defaultColumnIds"

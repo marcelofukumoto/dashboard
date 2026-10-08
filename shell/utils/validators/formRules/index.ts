@@ -176,6 +176,8 @@ export default function(
 
   const genericUrl: Validator = (val: string) => val && !isValidUrl(val) ? t('validation.genericUrl') : undefined;
 
+  const genericHttps: Validator = (val: string) => val && !isHttps(val) ? t('validation.genericHttps') : undefined;
+
   const urlRepository: Validator = (url: string) => {
     const message = t('validation.repository.url');
 
@@ -639,6 +641,7 @@ export default function(
     trailingForwardSlash,
     url,
     genericUrl,
+    genericHttps,
     matching,
     maxLength,
     maxValue,

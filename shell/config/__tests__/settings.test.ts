@@ -46,6 +46,20 @@ describe('Settings Configuration', () => {
     });
   });
 
+  describe('DYNAMIC_CONTENT_ENDPOINT', () => {
+    it('should be editable as an https URL that can be reset to the default', () => {
+      expect(ALLOWED_SETTINGS[SETTING.DYNAMIC_CONTENT_ENDPOINT]).toStrictEqual({
+        kind:     'url',
+        canReset: true,
+        ruleSet:  [{ name: 'genericUrl' }, { name: 'genericHttps' }]
+      });
+    });
+
+    it('should not be included in PROVISIONING_SETTINGS', () => {
+      expect(PROVISIONING_SETTINGS).not.toContain(SETTING.DYNAMIC_CONTENT_ENDPOINT);
+    });
+  });
+
   describe('PROVISIONING_SETTINGS array', () => {
     it('should contain all expected provisioning-related settings', () => {
       const expectedSettings = [

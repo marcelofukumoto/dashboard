@@ -146,6 +146,25 @@ describe('formRules', () => {
     );
   });
 
+  describe('genericHttps', () => {
+    const message = JSON.stringify({ message: 'validation.genericHttps' });
+    const testCases: [string | undefined, string | undefined][] = [
+      ['https://updates.rancher.io/rancher/$dist/updates', undefined],
+      ['HTTPS://example.com', undefined],
+      ['http://example.com', message],
+      ['example.com', message],
+      ['', undefined],
+      [undefined, undefined]
+    ];
+
+    it.each(testCases)(
+      'should return undefined or correct message for genericHttps(%p)',
+      (url, expected) => {
+        expect(formRules.genericHttps(url)).toStrictEqual(expected);
+      }
+    );
+  });
+
   describe('urlRepository', () => {
     const message = JSON.stringify({ message: 'validation.repository.url' });
     const testCases = [

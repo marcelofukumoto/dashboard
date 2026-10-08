@@ -25,18 +25,18 @@
       "version": ">=2.15.0 <2.17.0",
       "whatsNew": [
         {
-          "id": "dc-live-1",
-          "title": "Served by dynamic content (live)",
-          "description": "Fetched by the browser from the ui-content-endpoint setting, not from the bundled i18n."
+          "id": "dc-source",
+          "title": "Loaded from community/updates.json on the release-welcome-dc-docs branch",
+          "description": "Edited 2026-10-08 19:35. Source: github.com/marcelofukumoto/dashboard/blob/release-welcome-dc-docs/community/updates.json"
         },
         {
-          "id": "dc-live-2",
-          "title": "Edited without a release",
-          "description": "Change this file on GitHub and the next daily fetch picks it up."
+          "id": "dc-edit",
+          "title": "Edit that file to change this text",
+          "description": "Then clear rancher-updates-fetch-next in the browser and reload."
         }
       ],
       "prime": {
-        "title": "Go Prime (remote copy)",
+        "title": "From the URL, edited 2026-10-08 19:35",
         "description": "This card came from the community document.",
         "products": [
           "Rancher Manager",

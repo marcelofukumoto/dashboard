@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "releases": [
+    {
+      "name": "2.15.1"
+    },
+    {
+      "name": "2.14.3"
+    },
+    {
+      "name": "2.13.3"
+    },
+    {
+      "name": "2.12.7"
+    },
+    {
+      "name": "2.11.11"
+    },
+    {
+      "name": "2.10.3"
+    }
+  ],
+  "releaseWelcome": [
+    {
+      "version": ">=2.16.0 <2.17.0",
+      "whatsNew": [
+        {
+          "id": "dc-live-1",
+          "title": "Served by dynamic content (live)",
+          "description": "Fetched by the browser from the ui-content-endpoint setting, not from the bundled i18n."
+        },
+        {
+          "id": "dc-live-2",
+          "title": "Edited without a release",
+          "description": "Change this file on GitHub and the next daily fetch picks it up."
+        }
+      ],
+      "prime": {
+        "title": "Go Prime (remote copy)",
+        "description": "This card came from the community document.",
+        "products": [
+          "Rancher Manager",
+          "SUSE Security",
+          "SUSE Storage"
+        ],
+        "cta": {
+          "action": "Explore SUSE Rancher Prime",
+          "link": "https://www.suse.com/products/rancher/"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "releases": [
+    {
+      "name": "2.15.1"
+    },
+    {
+      "name": "2.14.5"
+    },
+    {
+      "name": "2.13.9"
+    },
+    {
+      "name": "2.12.13"
+    },
+    {
+      "name": "2.11.17"
+    },
+    {
+      "name": "2.10.10"
+    }
+  ],
+  "releaseWelcome": [
+    {
+      "version": ">=2.16.0 <2.17.0",
+      "whatsNew": [
+        {
+          "id": "dc-live-1",
+          "title": "Served by dynamic content (live)",
+          "description": "Fetched by the browser from the ui-content-endpoint setting, not from the bundled i18n."
+        },
+        {
+          "id": "dc-live-2",
+          "title": "Edited without a release",
+          "description": "Change this file on GitHub and the next daily fetch picks it up."
+        }
+      ],
+      "registration": {
+        "title": "Register (remote copy)",
+        "description": "This card came from the prime document:",
+        "benefits": [
+          {
+            "text": "24×7 support: open cases directly from your account",
+            "cta": {
+              "action": "Support handbook",
+              "link": "https://www.suse.com/support/handbook/"
+            }
+          },
+          {
+            "text": "Hardened images from the Prime trusted registry"
+          }
+        ],
+        "cta": {
+          "action": "Open SUSE Customer Center",
+          "link": "https://scc.suse.com/"
+        }
+      }
+    }
+  ]
+}

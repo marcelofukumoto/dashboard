@@ -1,11 +1,19 @@
 import { shallowMount } from '@vue/test-utils';
 import PrimePromoCard from '@shell/components/ReleaseWelcome/PrimePromoCard.vue';
-import { PRIME_PRODUCTS, PRIME_URL } from '@shell/config/release-welcome';
+import { ReleaseWelcomePrime } from '@shell/config/release-welcome';
 
 jest.mock('vuex', () => ({ ...jest.requireActual('vuex'), useStore: () => ({ getters: {} }) }));
 jest.mock('@shell/composables/useI18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }));
 
+const PRIME: ReleaseWelcomePrime = {
+  title:       'Go Prime',
+  description: 'Enterprise support',
+  products:    ['Rancher Manager', 'SUSE Security'],
+  cta:         { action: 'Explore', link: 'https://www.suse.com/products/rancher/' },
+};
+
 const createWrapper = () => shallowMount(PrimePromoCard, {
+  props:  { prime: PRIME },
   global: {
     mocks: { t: (key: string) => key },
     // Render the slots, the content sits inside the card and the tags
@@ -18,13 +26,19 @@ describe('component: PrimePromoCard', () => {
     const wrapper = createWrapper();
     const products = wrapper.findAll('.products li').map((li) => li.text());
 
-    expect(products).toStrictEqual(PRIME_PRODUCTS);
+    expect(products).toStrictEqual(PRIME.products);
+  });
+
+  it('should show the title and description', () => {
+    const wrapper = createWrapper();
+
+    expect([wrapper.find('h3').text(), wrapper.find('p').text()]).toStrictEqual([PRIME.title, PRIME.description]);
   });
 
   it('should link Rancher Prime', () => {
     const wrapper = createWrapper();
 
-    expect(wrapper.find('[data-testid="release-welcome-prime-explore"]').attributes('href')).toStrictEqual(PRIME_URL);
+    expect(wrapper.find('[data-testid="release-welcome-prime-explore"]').attributes('href')).toStrictEqual(PRIME.cta.link);
   });
 
   it('should open Rancher Prime in a new tab', () => {

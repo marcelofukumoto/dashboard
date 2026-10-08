@@ -1,6 +1,11 @@
 import { setVersionData } from '@shell/config/version';
 import { READ_RELEASE_WELCOME } from '@shell/store/prefs';
-import { openReleaseWelcome, releaseWelcomeVersion, shouldShowReleaseWelcome, showReleaseWelcomeIfNew } from '@shell/utils/release-welcome';
+import {
+  openReleaseWelcome, releaseWelcomeContent, releaseWelcomeVersion, shouldShowReleaseWelcome, showReleaseWelcomeIfNew
+} from '@shell/utils/release-welcome';
+import { getReleaseWelcomeContent } from '@shell/utils/dynamic-content/release-welcome';
+
+jest.mock('@shell/utils/dynamic-content/release-welcome', () => ({ getReleaseWelcomeContent: jest.fn(() => ({})) }));
 
 const setVersion = (version: string) => setVersionData({
   Version: version, RancherPrime: 'false', GitCommit: ''
@@ -126,6 +131,62 @@ describe('utils: release-welcome', () => {
 
       expect(commit).toHaveBeenCalledTimes(0);
       expect(dispatch).toHaveBeenCalledTimes(0);
+    });
+
+    it('should wait for dynamic content before opening the modal', async() => {
+      setVersion('v2.16.0');
+      const commit = jest.fn();
+      let loaded: Function = () => {};
+      const dynamicContent = new Promise((resolve) => {
+        loaded = resolve;
+      });
+
+      const shown = showReleaseWelcomeIfNew(commit, jest.fn().mockResolvedValue(undefined), createGetters('2.15'), dynamicContent);
+
+      await Promise.resolve();
+      expect(commit).toHaveBeenCalledTimes(0);
+
+      loaded();
+      await shown;
+
+      expect(commit).toHaveBeenCalledTimes(1);
+    });
+
+    it('should open the modal when dynamic content takes longer than 5 seconds', async() => {
+      jest.useFakeTimers();
+      setVersion('v2.16.0');
+      const commit = jest.fn();
+
+      const shown = showReleaseWelcomeIfNew(commit, jest.fn().mockResolvedValue(undefined), createGetters('2.15'), new Promise(() => {}));
+
+      await jest.advanceTimersByTimeAsync(5000);
+      await shown;
+
+      expect(commit).toHaveBeenCalledTimes(1);
+      jest.useRealTimers();
+    });
+  });
+
+  describe('releaseWelcomeContent', () => {
+    const t = (key: string) => `t:${ key }`;
+
+    it('should use the bundled content without dynamic content', () => {
+      const content = releaseWelcomeContent(t);
+
+      expect([content.whatsNew[0].title, content.prime.title, content.registration.title]).toStrictEqual([
+        't:releaseWelcome.whatsNew.features.navigation.title', 't:releaseWelcome.prime.title', 't:releaseWelcome.registration.title'
+      ]);
+    });
+
+    it('should use the sections from dynamic content and the bundled content for the others', () => {
+      const whatsNew = [{
+        id: 'remote', title: 'Remote', description: 'From dynamic content'
+      }];
+
+      jest.mocked(getReleaseWelcomeContent).mockReturnValueOnce({ whatsNew });
+      const content = releaseWelcomeContent(t);
+
+      expect([content.whatsNew, content.prime.title]).toStrictEqual([whatsNew, 't:releaseWelcome.prime.title']);
     });
   });
 });

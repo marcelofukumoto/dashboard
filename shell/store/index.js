@@ -872,10 +872,10 @@ export const actions = {
     if (isRancher) {
       await addReleaseNotesNotification(dispatch, getters);
 
-      fetchAndProcessDynamicContent(dispatch, getters, this.$axios);
+      const dynamicContent = fetchAndProcessDynamicContent(dispatch, getters, this.$axios);
 
-      // Welcome users to a new minor release, once
-      showReleaseWelcomeIfNew(commit, dispatch, getters);
+      // Welcome users to a new minor release, once. Its content can come from dynamic content
+      showReleaseWelcomeIfNew(commit, dispatch, getters, dynamicContent);
     }
 
     if (systemNamespaces) {

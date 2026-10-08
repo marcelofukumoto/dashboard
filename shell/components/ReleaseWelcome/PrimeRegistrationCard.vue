@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import { PropType } from 'vue';
 import { useStore } from 'vuex';
 import { RcButton } from '@components/RcButton';
 import { useI18n } from '@shell/composables/useI18n';
-import { PRIME_BENEFITS, SCC_URL, SUPPORT_HANDBOOK_URL } from '@shell/config/release-welcome';
+import { ReleaseWelcomeRegistration } from '@shell/config/release-welcome';
 import PrimeCard from '@shell/components/ReleaseWelcome/PrimeCard.vue';
+
+defineProps({
+  registration: {
+    type:     Object as PropType<ReleaseWelcomeRegistration>,
+    required: true
+  }
+});
 
 const store = useStore();
 const { t } = useI18n(store);
-
-const SUPPORT_BENEFIT = 'releaseWelcome.registration.benefits.support';
 </script>
 
 <template>
@@ -17,28 +23,28 @@ const SUPPORT_BENEFIT = 'releaseWelcome.registration.benefits.support';
     data-testid="release-welcome-registration"
   >
     <h3 id="release-welcome-registration-title">
-      {{ t('releaseWelcome.registration.title', {}, true) }}
+      {{ registration.title }}
     </h3>
-    <p>{{ t('releaseWelcome.registration.description', {}, true) }}</p>
+    <p>{{ registration.description }}</p>
     <ul class="benefits">
       <li
-        v-for="benefit in PRIME_BENEFITS"
-        :key="benefit"
+        v-for="benefit in registration.benefits"
+        :key="benefit.text"
       >
         <i
           class="icon icon-checkmark"
           aria-hidden="true"
         />
         <span class="benefit">
-          {{ t(benefit, {}, true) }}
+          {{ benefit.text }}
           <a
-            v-if="benefit === SUPPORT_BENEFIT"
-            :href="SUPPORT_HANDBOOK_URL"
+            v-if="benefit.cta"
+            :href="benefit.cta.link"
             target="_blank"
             rel="noopener noreferrer nofollow"
             data-testid="release-welcome-support-handbook"
           >
-            {{ t('releaseWelcome.registration.supportHandbook') }}
+            {{ benefit.cta.action }}
             <i
               class="icon icon-external-link"
               aria-hidden="true"
@@ -52,12 +58,12 @@ const SUPPORT_BENEFIT = 'releaseWelcome.registration.benefits.support';
       class="cta"
       variant="primary"
       size="small"
-      :href="SCC_URL"
+      :href="registration.cta.link"
       target="_blank"
       rel="noopener noreferrer nofollow"
       data-testid="release-welcome-registration-open"
     >
-      {{ t('releaseWelcome.registration.open', {}, true) }}
+      {{ registration.cta.action }}
       <span class="sr-only">{{ t('releaseWelcome.newTab') }}</span>
     </RcButton>
   </PrimeCard>

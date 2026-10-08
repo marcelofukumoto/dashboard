@@ -12,7 +12,7 @@ import { getVendor } from '@shell/config/private-label';
 import { isRancherPrime } from '@shell/config/version';
 import { SCC } from '@shell/store/features';
 import { isAdminUser } from '@shell/store/type-map';
-import { releaseWelcomeVersion } from '@shell/utils/release-welcome';
+import { releaseWelcomeContent, releaseWelcomeVersion } from '@shell/utils/release-welcome';
 
 defineProps({
   componentTestid: {
@@ -40,6 +40,8 @@ const { t } = useI18n(store);
 const vendor = getVendor();
 const version = releaseWelcomeVersion() || '';
 const isPrime = isRancherPrime();
+// Read once, so the content doesn't change while the modal is open
+const content = releaseWelcomeContent(t);
 
 // Same access as the registration page added by the rancher-prime extension
 const canRegister = computed(() => isPrime && isAdminUser(store.getters) && !!store.getters['features/get'](SCC));
@@ -104,9 +106,18 @@ const close = () => emit('close');
         {{ t('releaseWelcome.subtitleCommunity', { vendor, version }, true) }}
       </p>
 
-      <WhatsNewCard :version="version" />
-      <PrimeRegistrationCard v-if="canRegister" />
-      <PrimePromoCard v-else-if="!isPrime" />
+      <WhatsNewCard
+        :version="version"
+        :features="content.whatsNew"
+      />
+      <PrimeRegistrationCard
+        v-if="canRegister"
+        :registration="content.registration"
+      />
+      <PrimePromoCard
+        v-else-if="!isPrime"
+        :prime="content.prime"
+      />
     </div>
 
     <footer class="release-welcome__footer">

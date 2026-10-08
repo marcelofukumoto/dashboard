@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { PropType } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
-import { WHATS_NEW_FEATURES } from '@shell/config/release-welcome';
+import { ReleaseWelcomeFeature } from '@shell/config/release-welcome';
 
 defineProps({
   /**
@@ -9,6 +10,14 @@ defineProps({
    */
   version: {
     type:     String,
+    required: true
+  },
+
+  /**
+   * Features to list, the card is hidden when empty
+   */
+  features: {
+    type:     Array as PropType<ReleaseWelcomeFeature[]>,
     required: true
   }
 });
@@ -21,7 +30,7 @@ const releaseNotesUrl = store.getters['releaseNotesUrl'];
 
 <template>
   <section
-    v-if="WHATS_NEW_FEATURES.length"
+    v-if="features.length"
     class="whats-new"
     aria-labelledby="release-welcome-whats-new-title"
     data-testid="release-welcome-whats-new"
@@ -49,12 +58,12 @@ const releaseNotesUrl = store.getters['releaseNotesUrl'];
     </div>
     <ul class="whats-new__features">
       <li
-        v-for="feature in WHATS_NEW_FEATURES"
+        v-for="feature in features"
         :key="feature.id"
         :data-testid="`release-welcome-feature-${ feature.id }`"
       >
-        <span class="whats-new__feature-title">{{ t(feature.titleKey, {}, true) }}</span>
-        <span class="whats-new__feature-description">{{ t(feature.descriptionKey, {}, true) }}</span>
+        <span class="whats-new__feature-title">{{ feature.title }}</span>
+        <span class="whats-new__feature-description">{{ feature.description }}</span>
       </li>
     </ul>
   </section>

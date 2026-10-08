@@ -2,6 +2,12 @@ import { defineAsyncComponent } from 'vue';
 import semver from 'semver';
 import { getVersionData } from '@shell/config/version';
 import { READ_RELEASE_WELCOME } from '@shell/store/prefs';
+import { defaultReleaseWelcomeContent, ReleaseWelcomeContent } from '@shell/config/release-welcome';
+import { getReleaseWelcomeContent } from '@shell/utils/dynamic-content/release-welcome';
+
+// Longest wait for dynamic content after login. It is fetched once a day, 3 seconds after login, and can take longer
+// or never arrive (e.g. air-gapped). Past this the modal opens with the bundled content
+const DYNAMIC_CONTENT_WAIT = 5000;
 
 /**
  * Minor version of the running Rancher (e.g. '2.16'), or undefined when the version can't be parsed (e.g. dev builds)
@@ -29,6 +35,16 @@ export function shouldShowReleaseWelcome(getters: any): boolean {
 }
 
 /**
+ * Content of the welcome modal: the sections from dynamic content for the running version, the bundled ones otherwise
+ */
+export function releaseWelcomeContent(t: (key: string, args?: unknown, raw?: boolean) => string): ReleaseWelcomeContent {
+  return {
+    ...defaultReleaseWelcomeContent(t),
+    ...getReleaseWelcomeContent(),
+  };
+}
+
+/**
  * Open the welcome modal and mark it as read, it can be reopened from the user menu
  */
 export async function openReleaseWelcome(commit: any, dispatch: any) {
@@ -51,8 +67,18 @@ export async function openReleaseWelcome(commit: any, dispatch: any) {
   }
 }
 
-export async function showReleaseWelcomeIfNew(commit: any, dispatch: any, getters: any) {
-  if (shouldShowReleaseWelcome(getters)) {
-    await openReleaseWelcome(commit, dispatch);
+/**
+ * Open the welcome modal if the user has not read it for this minor version.
+ * Waits for dynamic content first (up to DYNAMIC_CONTENT_WAIT), so the modal opens with its content
+ */
+export async function showReleaseWelcomeIfNew(commit: any, dispatch: any, getters: any, dynamicContent?: Promise<unknown>) {
+  if (!shouldShowReleaseWelcome(getters)) {
+    return;
   }
+
+  if (dynamicContent) {
+    await Promise.race([dynamicContent, new Promise((resolve) => setTimeout(resolve, DYNAMIC_CONTENT_WAIT))]);
+  }
+
+  await openReleaseWelcome(commit, dispatch);
 }

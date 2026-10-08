@@ -16,6 +16,7 @@ import { createLogger, LOCAL_STORAGE_CONTENT_DEBUG_LOG } from './util';
 import { getConfig } from './config';
 import { SystemInfoProvider } from './info';
 import { processAnnouncements } from './announcement';
+import { processReleaseWelcome } from './release-welcome';
 
 const FETCH_DELAY = 3 * 1000; // Short delay to let UI settle before we fetch the updates document
 const FETCH_REQUEST_TIMEOUT = 15000; // Time out the request after 15 seconds
@@ -116,6 +117,9 @@ export async function fetchAndProcessDynamicContent(dispatch: Function, getters:
 
     // Announcements - processed for all users
     processAnnouncements(context, content.announcements, versionInfo);
+
+    // Release welcome modal content - processed for all users
+    processReleaseWelcome(context, content.releaseWelcome, versionInfo);
   } catch (e) {
     logger.error('Error reading or processing dynamic content', e);
   }

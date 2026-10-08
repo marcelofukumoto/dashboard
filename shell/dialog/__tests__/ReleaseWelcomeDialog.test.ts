@@ -67,7 +67,19 @@ describe('component: ReleaseWelcomeDialog', () => {
     expect(wrapper.findComponent(WhatsNewCard).props('version')).toStrictEqual('2.16');
   });
 
+  it('should pass the features to the what\'s new card', () => {
+    const wrapper = createWrapper();
+
+    expect(wrapper.findComponent(WhatsNewCard).props('features')[0].title).toStrictEqual('releaseWelcome.whatsNew.features.navigation.title');
+  });
+
   describe('community', () => {
+    it('should pass the Prime promotion to its card', () => {
+      const wrapper = createWrapper();
+
+      expect(wrapper.findComponent(PrimePromoCard).props('prime').title).toStrictEqual('releaseWelcome.prime.title');
+    });
+
     it('should promote Prime', () => {
       const wrapper = createWrapper();
 
@@ -92,6 +104,12 @@ describe('component: ReleaseWelcomeDialog', () => {
       const wrapper = createWrapper({ prime: true });
 
       expect(wrapper.findComponent(PrimePromoCard).exists()).toStrictEqual(false);
+    });
+
+    it('should pass the registration to its card', () => {
+      const wrapper = createWrapper({ prime: true });
+
+      expect(wrapper.findComponent(PrimeRegistrationCard).props('registration').title).toStrictEqual('releaseWelcome.registration.title');
     });
 
     it('should show the registration card to admins', () => {

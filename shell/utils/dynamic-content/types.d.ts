@@ -3,6 +3,7 @@
  */
 
 import { SemVer } from 'semver';
+import type { ReleaseWelcomeContent } from '@shell/config/release-welcome';
 
 /**
  * Logger interface for dynamic content
@@ -142,6 +143,15 @@ export type AnnouncementNotificationData = {
 };
 
 /**
+ * Content of the release welcome modal for the versions matching `version`
+ *
+ * Each section is optional, the modal shows its bundled content for the sections left out
+ */
+export type ReleaseWelcomeInfo = Partial<ReleaseWelcomeContent> & {
+  version: string; // Semver expression for the versions this content is for (e.g. '>=2.16.0 <2.17.0')
+};
+
+/**
  * Main type for the metadata that is retrieved from the dynamic content endpoint
  */
 export type DynamicContent = {
@@ -149,5 +159,6 @@ export type DynamicContent = {
   releases: ReleaseInfo[],
   support: SupportInfo,
   announcements: Announcement[],
+  releaseWelcome?: ReleaseWelcomeInfo[],
   settings?: Partial<SettingsInfo>,
 };

@@ -53,17 +53,19 @@ const sourceLocation = computed<RouteLocationRaw | undefined>(() => {
     color="info"
     data-testid="fleet-managed-banner"
   >
-    <t
-      k="resourceDetail.masthead.fleetManaged"
-      :raw="true"
-    />
-    <router-link
-      v-if="sourceLocation"
-      :to="sourceLocation"
-      class="ml-5"
-      data-testid="fleet-managed-banner-link"
-    >
-      {{ t('resourceDetail.masthead.fleetManagedLink') }}
-    </router-link>
+    <span>
+      <t
+        k="resourceDetail.masthead.fleetManaged"
+        :raw="true"
+      />
+      <router-link
+        v-if="sourceLocation"
+        :to="sourceLocation"
+        class="ml-5"
+        data-testid="fleet-managed-banner-link"
+      >
+        {{ t('resourceDetail.masthead.fleetManagedLink') }}
+      </router-link>
+    </span>
   </Banner>
 </template>

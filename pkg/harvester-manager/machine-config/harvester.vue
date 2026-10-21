@@ -1624,7 +1624,7 @@ export default {
             :key="i"
             data-testid="storage-performance-disk"
           >
-            <h4>
+            <h4 class="mt-10">
               {{ t('cluster.credential.harvester.storageOptions.diskTitle', { index: i + 1, type: headerFor(disk) }) }}
             </h4>
             <DiskStorageOptions
@@ -1635,7 +1635,7 @@ export default {
             />
           </div>
 
-          <h4>
+          <h4 class="mt-20">
             {{ t('cluster.credential.harvester.vmStorageOptions.title') }}
           </h4>
           <p class="text-muted mb-10">

@@ -1945,14 +1945,12 @@ cluster:
         addVMImage: Add VM Image
         storageClass: Storage Class
       storageOptions:
-        title: Storage Options
         profile:
           label: Performance Profile
           tip: '"High Performance" disables the host cache, uses native AIO and gives the disk a dedicated I/O thread. Choose "Custom" to set each option yourself.'
           default: Default
           highPerformance: High Performance
           custom: Custom
-        highPerformanceTip: This disk will use no host cache, native AIO and a dedicated I/O thread.
         cache:
           label: Cache Mode
           tip: 'How the host caches disk I/O. "None" is best for high-throughput guests on block storage, "WriteBack" favors performance and "WriteThrough" favors durability.'
@@ -1966,12 +1964,11 @@ cluster:
           default: Default (hypervisor)
           native: Native (AIO)
           threads: Threads
-          nativeTip: Native I/O mode needs the host cache disabled, so cache mode is set to None.
         dedicatedIOThread:
           label: Dedicated I/O Thread
           tip: Give this disk its own I/O thread instead of sharing one. Useful for disks with heavy I/O.
       vmStorageOptions:
-        title: Storage Options (I/O Threads and Multi-Queue)
+        title: I/O Threads and Multi-Queue
         description: These options apply to all volumes of the virtual machine.
         blockMultiQueue:
           label: Virtio Block Multi-Queue
@@ -1987,7 +1984,7 @@ cluster:
         ioThreadCount:
           label: I/O Thread Count
           tip: Number of I/O threads in the supplemental pool.
-          invalid: I/O Thread Count must be at least 1 with the "Supplemental Pool" policy.
+          invalid: I/O Thread Count must be a whole number of at least 1 with the "Supplemental Pool" policy.
       reservedMemory: Reserved Memory
       sshUser: SSH User
       userData:

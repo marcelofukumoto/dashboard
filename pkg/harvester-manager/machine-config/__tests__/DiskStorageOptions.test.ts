@@ -1,12 +1,21 @@
 import { shallowMount } from '@vue/test-utils';
-import DiskStorageOptions, { PROFILE, applyPerformanceOptions, detectProfile, hasPerformanceOptions } from '@pkg/harvester-manager/machine-config/DiskStorageOptions.vue';
+import DiskStorageOptions, {
+  Disk, PROFILE, applyPerformanceOptions, detectProfile, hasPerformanceOptions
+} from '@pkg/harvester-manager/machine-config/DiskStorageOptions.vue';
 
 const HIGH_PERFORMANCE = {
   cache: 'none', io: 'native', dedicatedIOThread: true
 };
 
+interface DiskStorageOptionsVm {
+  profile: string;
+  cacheOptions: { value: string, disabled: boolean }[];
+  setProfile: (profile: string) => void;
+}
+
 describe('component: DiskStorageOptions', () => {
-  const createWrapper = (value = {}, mode = 'create') => shallowMount(DiskStorageOptions, { props: { value, mode } });
+  const createWrapper = (value: Disk = {}, mode = 'create') => shallowMount(DiskStorageOptions, { props: { value, mode } });
+  const vmOf = (wrapper: ReturnType<typeof createWrapper>) => wrapper.vm as unknown as DiskStorageOptionsVm;
 
   describe('hasPerformanceOptions', () => {
     it.each([
@@ -55,36 +64,25 @@ describe('component: DiskStorageOptions', () => {
     });
   });
 
-  it('should be collapsed when the disk has no options', () => {
+  it('should always show the profile, and the individual fields only for the custom profile', () => {
     const wrapper = createWrapper({ size: 40 });
 
-    expect(wrapper.find('[data-testid="disk-storage-options-profile"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="disk-storage-options-profile"]').exists()).toStrictEqual(true);
+    expect(wrapper.find('[data-testid="disk-storage-options-cache"]').exists()).toStrictEqual(false);
   });
 
-  it('should be expanded when the disk has options', () => {
-    const wrapper = createWrapper({ size: 40, ...HIGH_PERFORMANCE });
+  it('should show the individual fields for a disk with custom options', () => {
+    const wrapper = createWrapper({ size: 40, cache: 'writeback' });
 
-    expect(wrapper.find('[data-testid="disk-storage-options-profile"]').exists()).toBe(true);
-  });
-
-  it('should expand when the toggle is clicked', async() => {
-    const wrapper = createWrapper({ size: 40 });
-
-    await wrapper.find('[data-testid="disk-storage-options-toggle"]').trigger('click');
-
-    expect(wrapper.find('[data-testid="disk-storage-options-profile"]').exists()).toBe(true);
-  });
-
-  it('should be hidden in view mode when the disk has no options', () => {
-    const wrapper = createWrapper({ size: 40 }, 'view');
-
-    expect(wrapper.find('.disk-storage-options').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="disk-storage-options-cache"]').exists()).toStrictEqual(true);
+    expect(wrapper.find('[data-testid="disk-storage-options-io"]').exists()).toStrictEqual(true);
+    expect(wrapper.find('[data-testid="disk-storage-options-dedicated-iothread"]').exists()).toStrictEqual(true);
   });
 
   it('should emit the high performance options when that profile is picked', () => {
     const wrapper = createWrapper({ size: 40 });
 
-    (wrapper.vm as any).setProfile(PROFILE.HIGH);
+    vmOf(wrapper).setProfile(PROFILE.HIGH);
 
     expect(wrapper.emitted('update:value')).toStrictEqual([[{ size: 40, ...HIGH_PERFORMANCE }]]);
   });
@@ -92,30 +90,51 @@ describe('component: DiskStorageOptions', () => {
   it('should emit a disk without options when the default profile is picked', () => {
     const wrapper = createWrapper({ size: 40, ...HIGH_PERFORMANCE });
 
-    (wrapper.vm as any).setProfile(PROFILE.DEFAULT);
+    vmOf(wrapper).setProfile(PROFILE.DEFAULT);
 
     expect(wrapper.emitted('update:value')).toStrictEqual([[{ size: 40 }]]);
   });
 
-  it('should show the individual fields only for the custom profile', async() => {
-    const wrapper = createWrapper({ size: 40, ...HIGH_PERFORMANCE });
+  it('should show the individual fields when custom is picked, before any of them is changed', async() => {
+    const wrapper = createWrapper({ size: 40 });
 
-    expect(wrapper.find('[data-testid="disk-storage-options-cache"]').exists()).toBe(false);
-
-    (wrapper.vm as any).setProfile(PROFILE.CUSTOM);
+    vmOf(wrapper).setProfile(PROFILE.CUSTOM);
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find('[data-testid="disk-storage-options-cache"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="disk-storage-options-io"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="disk-storage-options-dedicated-iothread"]').exists()).toBe(true);
+    expect(vmOf(wrapper).profile).toStrictEqual(PROFILE.CUSTOM);
+    expect(wrapper.find('[data-testid="disk-storage-options-cache"]').exists()).toStrictEqual(true);
     expect(wrapper.emitted('update:value')).toBeUndefined();
+  });
+
+  it('should keep the custom choice with its disk when another disk takes its place', async() => {
+    const customDisk = { size: 40 };
+    const otherDisk = { size: 10 };
+    const wrapper = createWrapper(customDisk);
+
+    vmOf(wrapper).setProfile(PROFILE.CUSTOM);
+    await wrapper.setProps({ value: otherDisk });
+
+    expect(vmOf(wrapper).profile).toStrictEqual(PROFILE.DEFAULT);
+    expect(wrapper.find('[data-testid="disk-storage-options-cache"]').exists()).toStrictEqual(false);
+
+    await wrapper.setProps({ value: customDisk });
+
+    expect(vmOf(wrapper).profile).toStrictEqual(PROFILE.CUSTOM);
+  });
+
+  it('should show the saved profile of a disk that takes another disk\'s place', async() => {
+    const wrapper = createWrapper({ size: 10 });
+
+    await wrapper.setProps({ value: { size: 40, ...HIGH_PERFORMANCE } });
+
+    expect(vmOf(wrapper).profile).toStrictEqual(PROFILE.HIGH);
   });
 
   it('should only allow cache mode none while io mode is native', () => {
     const wrapper = createWrapper({
       size: 40, cache: 'none', io: 'native'
     });
-    const enabled = (wrapper.vm as any).cacheOptions.filter((o: any) => !o.disabled).map((o: any) => o.value);
+    const enabled = vmOf(wrapper).cacheOptions.filter((o) => !o.disabled).map((o) => o.value);
 
     expect(enabled).toStrictEqual(['none']);
   });

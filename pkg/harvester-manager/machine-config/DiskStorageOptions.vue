@@ -1,9 +1,7 @@
 <script lang="ts">
-import { defineComponent, PropType } from 'vue';
+import { defineComponent, PropType, reactive, toRaw } from 'vue';
 import LabeledSelect from '@shell/components/form/LabeledSelect';
 import { Checkbox } from '@components/Form/Checkbox';
-import { Banner } from '@components/Banner';
-import { _VIEW } from '@shell/config/query-params';
 
 export const DISK_CACHE_MODES = ['', 'none', 'writeback', 'writethrough'];
 export const DISK_IO_MODES = ['', 'native', 'threads'];
@@ -20,14 +18,24 @@ export interface Disk {
   cache?: string;
   io?: string;
   dedicatedIOThread?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
+
+/**
+ * Disks set to "Custom" before any option was changed. Keyed by the disk object rather than by position, so the
+ * choice follows the disk when volumes are moved or removed.
+ */
+const customRequested = reactive(new WeakSet<Disk>());
 
 export function hasPerformanceOptions(disk: Disk): boolean {
   return !!(disk.cache || disk.io || disk.dedicatedIOThread);
 }
 
 export function detectProfile(disk: Disk): string {
+  if (customRequested.has(toRaw(disk))) {
+    return PROFILE.CUSTOM;
+  }
+
   if (!hasPerformanceOptions(disk)) {
     return PROFILE.DEFAULT;
   }
@@ -63,9 +71,7 @@ export function applyPerformanceOptions(disk: Disk, options: Disk): Disk {
 export default defineComponent({
   name: 'DiskStorageOptions',
 
-  components: {
-    LabeledSelect, Checkbox, Banner
-  },
+  components: { LabeledSelect, Checkbox },
 
   emits: ['update:value'],
 
@@ -86,18 +92,9 @@ export default defineComponent({
     },
   },
 
-  data() {
-    return {
-      PROFILE,
-      expanded: hasPerformanceOptions(this.value),
-      // Kept separately so that picking "Custom" shows the fields before any of them is changed
-      profile:  detectProfile(this.value),
-    };
-  },
-
   computed: {
-    isView(): boolean {
-      return this.mode === _VIEW;
+    profile(): string {
+      return detectProfile(this.value);
     },
 
     isCustom(): boolean {
@@ -127,22 +124,19 @@ export default defineComponent({
     },
   },
 
-  watch: {
-    // Follow disks that are replaced from outside, such as on reorder, but keep "Custom" while its fields are edited
-    value(neu: Disk) {
-      if (!this.isCustom) {
-        this.profile = detectProfile(neu);
-      }
-    },
-  },
-
   methods: {
     set(options: Disk) {
       this.$emit('update:value', applyPerformanceOptions(this.value, options));
     },
 
     setProfile(profile: string) {
-      this.profile = profile;
+      if (profile === PROFILE.CUSTOM) {
+        customRequested.add(toRaw(this.value));
+
+        return;
+      }
+
+      customRequested.delete(toRaw(this.value));
 
       if (profile === PROFILE.DEFAULT) {
         this.set({
@@ -159,115 +153,60 @@ export default defineComponent({
 </script>
 
 <template>
-  <div
-    v-if="!isView || expanded"
-    class="disk-storage-options"
-  >
-    <button
-      v-if="!isView"
-      type="button"
-      class="btn btn-sm role-link expand-toggle"
-      data-testid="disk-storage-options-toggle"
-      :aria-expanded="expanded"
-      @click.prevent="expanded = !expanded"
-    >
-      <i
-        class="icon"
-        :class="expanded ? 'icon-chevron-down' : 'icon-chevron-right'"
-      />
-      {{ t('cluster.credential.harvester.storageOptions.title') }}
-    </button>
-    <h4 v-else>
-      {{ t('cluster.credential.harvester.storageOptions.title') }}
-    </h4>
+  <div>
+    <div class="row mb-10">
+      <div class="col span-6">
+        <LabeledSelect
+          :value="profile"
+          data-testid="disk-storage-options-profile"
+          :label="t('cluster.credential.harvester.storageOptions.profile.label')"
+          :tooltip="t('cluster.credential.harvester.storageOptions.profile.tip')"
+          :options="profileOptions"
+          :mode="mode"
+          :disabled="disabled"
+          @update:value="setProfile"
+        />
+      </div>
+    </div>
 
-    <div
-      v-if="expanded"
-      class="mt-10"
-    >
+    <template v-if="isCustom">
       <div class="row mb-10">
         <div class="col span-6">
           <LabeledSelect
-            :value="profile"
-            data-testid="disk-storage-options-profile"
-            :label="t('cluster.credential.harvester.storageOptions.profile.label')"
-            :tooltip="t('cluster.credential.harvester.storageOptions.profile.tip')"
-            :options="profileOptions"
+            :value="value.cache || ''"
+            data-testid="disk-storage-options-cache"
+            :label="t('cluster.credential.harvester.storageOptions.cache.label')"
+            :tooltip="t('cluster.credential.harvester.storageOptions.cache.tip')"
+            :options="cacheOptions"
             :mode="mode"
             :disabled="disabled"
-            @update:value="setProfile"
+            @update:value="set({ cache: $event })"
+          />
+        </div>
+        <div class="col span-6">
+          <LabeledSelect
+            :value="value.io || ''"
+            data-testid="disk-storage-options-io"
+            :label="t('cluster.credential.harvester.storageOptions.io.label')"
+            :tooltip="t('cluster.credential.harvester.storageOptions.io.tip')"
+            :options="ioOptions"
+            :mode="mode"
+            :disabled="disabled"
+            @update:value="set({ io: $event })"
           />
         </div>
       </div>
 
-      <Banner
-        v-if="profile === PROFILE.HIGH"
-        color="info"
-        :label="t('cluster.credential.harvester.storageOptions.highPerformanceTip')"
+      <Checkbox
+        :value="!!value.dedicatedIOThread"
+        data-testid="disk-storage-options-dedicated-iothread"
+        class="mb-10"
+        :label="t('cluster.credential.harvester.storageOptions.dedicatedIOThread.label')"
+        :tooltip="t('cluster.credential.harvester.storageOptions.dedicatedIOThread.tip')"
+        :mode="mode"
+        :disabled="disabled"
+        @update:value="set({ dedicatedIOThread: $event })"
       />
-
-      <template v-if="isCustom">
-        <div class="row mb-10">
-          <div class="col span-6">
-            <LabeledSelect
-              :value="value.cache || ''"
-              data-testid="disk-storage-options-cache"
-              :label="t('cluster.credential.harvester.storageOptions.cache.label')"
-              :tooltip="t('cluster.credential.harvester.storageOptions.cache.tip')"
-              :options="cacheOptions"
-              :mode="mode"
-              :disabled="disabled"
-              @update:value="set({ cache: $event })"
-            />
-          </div>
-          <div class="col span-6">
-            <LabeledSelect
-              :value="value.io || ''"
-              data-testid="disk-storage-options-io"
-              :label="t('cluster.credential.harvester.storageOptions.io.label')"
-              :tooltip="t('cluster.credential.harvester.storageOptions.io.tip')"
-              :options="ioOptions"
-              :mode="mode"
-              :disabled="disabled"
-              @update:value="set({ io: $event })"
-            />
-          </div>
-        </div>
-
-        <Checkbox
-          :value="!!value.dedicatedIOThread"
-          data-testid="disk-storage-options-dedicated-iothread"
-          class="mb-10"
-          :label="t('cluster.credential.harvester.storageOptions.dedicatedIOThread.label')"
-          :tooltip="t('cluster.credential.harvester.storageOptions.dedicatedIOThread.tip')"
-          :mode="mode"
-          :disabled="disabled"
-          @update:value="set({ dedicatedIOThread: $event })"
-        />
-
-        <Banner
-          v-if="value.io === 'native'"
-          color="info"
-          :label="t('cluster.credential.harvester.storageOptions.io.nativeTip')"
-        />
-      </template>
-    </div>
+    </template>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.disk-storage-options {
-  border-top: 1px solid var(--border);
-  margin-bottom: 10px;
-  padding-top: 10px;
-
-  .expand-toggle {
-    padding: 0;
-    font-weight: 600;
-
-    .icon {
-      margin-right: 4px;
-    }
-  }
-}
-</style>

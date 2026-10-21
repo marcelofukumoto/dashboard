@@ -769,7 +769,9 @@ export default {
         }
       });
 
-      if (this.value.ioThreadsPolicy === 'supplementalPool' && !(Number(this.value.ioThreadCount) >= 1)) {
+      const ioThreadCount = Number(this.value.ioThreadCount);
+
+      if (this.value.ioThreadsPolicy === 'supplementalPool' && !(Number.isInteger(ioThreadCount) && ioThreadCount >= 1)) {
         errors.push(this.t('cluster.credential.harvester.vmStorageOptions.ioThreadCount.invalid'));
       }
 
@@ -1006,7 +1008,15 @@ export default {
     },
 
     updateDisk(idx, disk) {
-      this.disks.splice(idx, 1, disk);
+      // Update in place, so a disk keeps its identity (and its "Custom" profile) when volumes are moved
+      const target = this.disks[idx];
+
+      Object.keys(target).forEach((key) => {
+        if (!(key in disk)) {
+          delete target[key];
+        }
+      });
+      Object.assign(target, disk);
       this.update();
     },
 
@@ -1521,15 +1531,6 @@ export default {
         </button>
       </div>
 
-      <VmStorageOptions
-        v-if="hasStorageOptions"
-        v-model:block-multi-queue="value.blockMultiQueue"
-        v-model:io-threads-policy="value.ioThreadsPolicy"
-        v-model:io-thread-count="value.ioThreadCount"
-        :has-dedicated-io-thread="hasDedicatedIoThread"
-        :mode="mode"
-        :disabled="disabled"
-      />
 
       <RcSeparator class="mt-10 mb-10" />
 
@@ -1621,6 +1622,23 @@ export default {
             @update:value="updateVGpu"
           />
         </div>
+
+        <template v-if="hasStorageOptions">
+          <h3 class="mt-20">
+            {{ t('cluster.credential.harvester.vmStorageOptions.title') }}
+          </h3>
+          <p class="text-muted mb-10">
+            {{ t('cluster.credential.harvester.vmStorageOptions.description') }}
+          </p>
+          <VmStorageOptions
+            v-model:block-multi-queue="value.blockMultiQueue"
+            v-model:io-threads-policy="value.ioThreadsPolicy"
+            v-model:io-thread-count="value.ioThreadCount"
+            :has-dedicated-io-thread="hasDedicatedIoThread"
+            :mode="mode"
+            :disabled="disabled"
+          />
+        </template>
 
         <h3 class="mt-20">
           {{ t("cluster.credential.harvester.userData.title") }}

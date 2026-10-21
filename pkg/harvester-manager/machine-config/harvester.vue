@@ -1475,14 +1475,6 @@ export default {
                 </div>
               </div>
 
-              <DiskStorageOptions
-                v-if="hasStorageOptions"
-                :value="disk"
-                :mode="mode"
-                :disabled="disabled"
-                @update:value="updateDisk(i, $event)"
-              />
-
               <div class="bootOrder">
                 <div
                   class="mr-15"
@@ -1625,8 +1617,27 @@ export default {
 
         <template v-if="hasStorageOptions">
           <h3 class="mt-20">
-            {{ t('cluster.credential.harvester.vmStorageOptions.title') }}
+            {{ t('cluster.credential.harvester.storageOptions.title') }}
           </h3>
+          <div
+            v-for="(disk, i) in disks"
+            :key="i"
+            data-testid="storage-performance-disk"
+          >
+            <h4>
+              {{ t('cluster.credential.harvester.storageOptions.diskTitle', { index: i + 1, type: headerFor(disk) }) }}
+            </h4>
+            <DiskStorageOptions
+              :value="disk"
+              :mode="mode"
+              :disabled="disabled"
+              @update:value="updateDisk(i, $event)"
+            />
+          </div>
+
+          <h4>
+            {{ t('cluster.credential.harvester.vmStorageOptions.title') }}
+          </h4>
           <p class="text-muted mb-10">
             {{ t('cluster.credential.harvester.vmStorageOptions.description') }}
           </p>

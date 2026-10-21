@@ -1945,6 +1945,8 @@ cluster:
         addVMImage: Add VM Image
         storageClass: Storage Class
       storageOptions:
+        title: Storage Performance
+        diskTitle: 'Disk {index} · {type}'
         profile:
           label: Performance Profile
           tip: '"High Performance" disables the host cache, uses native AIO and gives the disk a dedicated I/O thread. Choose "Custom" to set each option yourself.'

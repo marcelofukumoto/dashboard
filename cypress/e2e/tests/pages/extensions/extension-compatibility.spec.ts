@@ -372,11 +372,7 @@ describe('Extension Compatibility', { tags: ['@extensionsCompatibility', '@admin
     }));
 
     qase(50503, conditionalIt('2.3 Tab RESOURCE_EDIT_PAGE', () => {
-      const table = goToServicesList();
-
-      // By index rather than by name - the list is already filtered to this one service, and the
-      // name is not selectable on every host (see `noRowNameAssert`). Same helper 3.1 uses.
-      openRowActionMenu(table).getMenuItem('Edit Config').click();
+      cy.visit(`/c/${ CLUSTER_ID }/explorer/service/${ NS }/${ svcName }?mode=edit`);
       clickDemoTabAndAssert('edit-page-id');
     }));
 

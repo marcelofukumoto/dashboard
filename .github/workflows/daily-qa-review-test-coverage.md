@@ -3,284 +3,224 @@ on:
   schedule: daily
   workflow_dispatch:
 
-if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'
+if: (github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true') && vars.DISABLE_AW_QA_REVIEW != 'true'
 
 permissions:
   contents: read
-  issues: write
+  issues: read
   pull-requests: read
-  repository-projects: write
+  copilot-requests: write
 
 engine: copilot
 timeout-minutes: 30
 description: "AI-assisted daily QA review of issue automation sufficiency and manual test needs"
 
 tools:
+  # Explicit since gh-aw requires shell access to be declared when
+  # `github.min-integrity` is `none`. `true` preserves the unrestricted
+  # shell these workflows have always run with.
+  bash: true
   github:
     toolsets:
       - default
     min-integrity: none
 
+# Picks the issues to look at from the UI Project Board (scripts/qa-review.js queue).
+# Selection is by where each issue is now, not by a time window, and an issue is skipped
+# when nothing changed since its last review, so a missed run loses nothing.
+jobs:
+  qa_queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read   # checkout
+      issues: read     # comments and linked PRs
+      pull-requests: read
+      id-token: write  # Vault
+    outputs:
+      count: ${{ steps.queue.outputs.count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .nvmrc
+            .github/workflows/scripts
+      - name: Use Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+      - name: Read project token from Vault
+        uses: rancher-eio/read-vault-secrets@dfae8acd43a9e170fca5f90168da22f814fe4e9a # v3
+        with:
+          secrets: |
+            github/token/rancher--organization_projects--write token | GH_PROJECT_TOKEN
+      - name: Build the QA review queue
+        id: queue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          QA_REVIEW_MAX_ISSUES: ${{ vars.QA_REVIEW_MAX_ISSUES || '15' }}
+          QA_REVIEW_QUEUE: /tmp/qa-review/qa-review-queue.json
+        run: node .github/workflows/scripts/qa-review.js queue
+      - name: Upload the QA review queue
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: qa-review-queue
+          path: /tmp/qa-review/qa-review-queue.json
+          retention-days: 7
+
+  # Nothing changed anywhere: no agent, no inference cost.
+  agent:
+    needs: [qa_queue]
+    if: needs.qa_queue.outputs.count != '0'
+
+steps:
+  - name: Download the QA review queue
+    uses: actions/download-artifact@v8.0.1
+    with:
+      name: qa-review-queue
+      path: /tmp/gh-aw/agent/
+
+# The agent only judges; scripts/qa-review.js apply maps each decision to labels, a comment
+# and a board move through a fixed table.
 safe-outputs:
-  add-comment:
-    max: 100
-    hide-older-comments: true
-    discussions: false
-    target: "*"
-  add-labels:
-    allowed:
-      - bot/qa-reviewed
-      - bot/test-automation-sufficient
-      - bot/needs-more-test-automation
-      - bot/needs-manual-test
-      - bot/no-manual-test-needed
-      - bot/not-automatable
-      - bot/manual-qa-review-required
-    max: 100
-    target: "*"
-  remove-labels:
-    allowed:
-      - bot/qa-reviewed
-      - bot/test-automation-sufficient
-      - bot/needs-more-test-automation
-      - bot/needs-manual-test
-      - bot/no-manual-test-needed
-      - bot/not-automatable
-      - bot/manual-qa-review-required
-    max: 100
-    target: "*"
-  close-issue:
-    max: 100
+  jobs:
+    apply-qa-decision:
+      description: "Record the QA review decision for one issue from /tmp/gh-aw/agent/qa-review-queue.json. Call exactly once per issue in that file."
+      runs-on: ubuntu-latest
+      # Same gate as the built-in safe outputs: nothing is written unless threat detection passed.
+      if: needs.detection.result == 'success'
+      output: "Decision recorded."
+      permissions:
+        contents: read   # checkout
+        issues: write    # comment, labels, close
+        id-token: write  # Vault
+      inputs:
+        issue_number:
+          description: "Issue number, as listed in the queue file"
+          required: true
+          type: string
+        is_automatable:
+          description: "review / re-review: whether meaningful automated coverage is a reasonable expectation"
+          required: false
+          type: boolean
+        automation_sufficient:
+          description: "review / re-review: whether the linked PRs' tests are sufficient (ignored when not automatable)"
+          required: false
+          type: boolean
+        manual_test:
+          description: "review / re-review: whether a manual QA pass is still recommended"
+          required: false
+          type: boolean
+        major_change:
+          description: "re-review only: a major feature, design or implementation change since the last review"
+          required: false
+          type: boolean
+        manual_test_result:
+          description: "manual-check only: what the new comments report"
+          required: false
+          type: choice
+          options: ["none", "pass", "fail"]
+        analysis_markdown:
+          description: "Comment body, following the Comment Requirements for the issue's mode"
+          required: false
+          type: string
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v7.0.1
+          with:
+            persist-credentials: false
+            sparse-checkout: |
+              .nvmrc
+              .github/workflows/scripts
+        - name: Use Node.js
+          uses: actions/setup-node@v7.0.0
+          with:
+            node-version-file: '.nvmrc'
+        - name: Read project token from Vault
+          uses: rancher-eio/read-vault-secrets@dfae8acd43a9e170fca5f90168da22f814fe4e9a # v3
+          with:
+            secrets: |
+              github/token/rancher--organization_projects--write token | GH_PROJECT_TOKEN
+        - name: Download the QA review queue
+          uses: actions/download-artifact@v8.0.1
+          with:
+            name: qa-review-queue
+            path: /tmp/qa-review/
+        - name: Apply decisions
+          env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            GITHUB_REPOSITORY: ${{ github.repository }}
+            QA_REVIEW_QUEUE: /tmp/qa-review/qa-review-queue.json
+            # Off by default: Done outcomes keep their labels and wait for the QA team.
+            QA_REVIEW_AUTO_CLOSE: ${{ vars.QA_REVIEW_AUTO_CLOSE }}
+          run: node .github/workflows/scripts/qa-review.js apply
 
 ---
 
 You are an experienced QA automation lead helping review GitHub issues for a development team.
-Run the two queues below in order. For every issue you process, use the QA Review Decision Model
-defined at the bottom of these instructions.
 
----
+## Your input
 
-## Exclusion Rules — Skip without QA review
+`/tmp/gh-aw/agent/qa-review-queue.json` lists the issues to look at in this run. The issues were
+already picked, filtered for exclusions and capped. Do not look for other issues, and do not skip
+any issue in the file.
 
-Before applying the QA Review Decision Model to any issue, check whether it falls into an
-exclusion category. If it does, **skip it immediately — take no action, post no comment, apply no
-labels, do not close it, and do not move it on the board** — and log it as described below.
+Each entry has:
 
-### Excluded label check
+- `number`, `title`, `url`, `labels`, `status`
+- `mode`: `review`, `re-review` or `manual-check` (see below)
+- `reason`: why the issue is in this run
+- `round`: how many rounds of automation suggestions were posted already
+- `last_review_at` / `last_review_id`: when the previous bot review was posted (null on a first review)
+- `prs`: every PR linked to the issue, with `merged`, `mergedAt` and, for merged PRs, `files`
+  (each file has `test: true` when it is a unit or e2e test file)
 
-Skip the issue if it carries **any** of the following labels:
+For **every** entry, gather evidence with the GitHub tools, then call `apply_qa_decision` **exactly
+once** with that entry's `issue_number`. That call is your only output. Labels, the comment frame,
+the board move and closing are all derived from it by a script, so do not try to do any of that
+yourself, and do not call `apply_qa_decision` for an issue that is not in the file.
 
-- `bot/skip-qa-review`
-- `QA/none` without `QA/dev-automation`
+### Mode `review`
 
-### Backport and bot-authored issue check
+First QA review of an issue in the QA Review column. Apply the **QA Review Decision Model** below
+and call `apply_qa_decision` with `is_automatable`, `automation_sufficient`, `manual_test` and
+`analysis_markdown`.
 
-Skip the issue if **any** of the following conditions are true:
+### Mode `re-review`
 
-- The issue title matches the pattern `[backport ...]`.
-- The issue was authored by `rancher-ui-project-bot`.
+The issue was reviewed before and is back in QA Review with something new (`reason` says what).
 
----
+1. Read the previous bot review (the comment with id `last_review_id`). Its suggestions are the
+   automation gaps the team was asked to close.
+2. Compare the PRs merged after `last_review_at` against those suggestions, the PRs used in the
+   previous review and the current implementation and design.
+3. Check whether older unit or e2e tests look deprecated, stale or no longer aligned with the
+   current implementation and should be removed or updated.
+4. Set `major_change: true` when there is a major feature, design or implementation/refactor
+   change that calls for a fresh review instead of a follow-up.
+5. Apply the **QA Review Decision Model** to the issue as it is now and call `apply_qa_decision`
+   with `is_automatable`, `automation_sufficient`, `manual_test`, `major_change` and
+   `analysis_markdown`.
 
-### Logging skipped issues
+### Mode `manual-check`
 
-Whenever an issue is skipped due to an exclusion rule, output a single line to the workflow log in
-this format so skipped issues are traceable:
+The issue is waiting on manual tests and has new comments since the last check. Read the comments
+posted after `last_review_at` and look for manual test reports, especially comments that:
 
-```
-[skip] #{issue_number} — {reason}
-```
+- mention a Rancher version
+- start with `validated in`, `verified in`, `tests pass` or `tests fail`
+- include screenshots or screen recordings
+- explicitly say the expected behavior was or was not accomplished
 
-Where `{reason}` is one of:
+Call `apply_qa_decision` with `manual_test_result`:
 
-- `excluded label: {label_name}`
-- `backport issue`
-- `bot-authored issue`
-
----
-
-## Queue A — New issues to QA review
-
-1. List all open issues in this repository that were **moved to the QA Review column/state of this
-   repository in the last 24 hours**.
-2. Skip any entry that is a pull request.
-3. Skip any issue that matches the **Exclusion Rules** above; log each skipped issue.
-4. Skip any issue that already carries the label `bot/qa-reviewed`.
-5. For each remaining issue, evaluate it against the **QA Review Decision Model** below.
-
-   - If `is_automatable` is **false**:
-     - Post a comment using this exact format:
-       ```
-       <details>
-       <summary>
-
-       ### 🤖 QA review analysis
-
-       </summary>
-
-       This issue is not currently a good candidate for automated coverage.
-
-       {analysis_markdown}
-
-       _This analysis was generated automatically based on the repository's QA review decision model._
-       </details>
-       ```
-     - Apply the labels `bot/qa-reviewed`, `bot/not-automatable`
-     - If `manual_test` is **true** , add label `bot/needs-manual-test`.
-
-   - If `automation_sufficient` is **true** and `manual_test` is **true**:
-     - Post a comment using this exact format:
-       ```
-       <details>
-       <summary>
-
-       ### 🤖 QA review analysis
-
-       </summary>
-
-       Automated tests appear sufficient for this issue. A round of manual tests is still required.
-
-       {analysis_markdown}
-
-       _This analysis was generated automatically based on unit and e2e evidence linked to this issue._
-       </details>
-       ```
-     - Apply the labels `bot/qa-reviewed`, `bot/test-automation-sufficient`, and `bot/needs-manual-test`.
-
-   - If `automation_sufficient` is **true** and `manual_test` is **false**:
-     - Post a comment using this exact format:
-       ```
-       <details>
-       <summary>
-
-       ### 🤖 QA review analysis
-
-       </summary>
-
-       Automated tests appear sufficient for this issue. No manual tests required.
-
-       {analysis_markdown}
-
-       _This analysis was generated automatically based on unit and e2e evidence linked to this issue._
-       </details>
-       ```
-     - Apply the labels `bot/qa-reviewed`, `bot/test-automation-sufficient`, and `bot/no-manual-test-needed`.
-
-   - If `automation_sufficient` is **false** and `manual_test` is **true**:
-     - Post a comment using this exact format:
-       ```
-       <details open>
-       <summary>
-
-       ### 🤖 QA review analysis
-
-       </summary>
-
-       A round of manual tests is required. 
-       Automated tests are not yet sufficient for this issue. 
-
-       Please address the feedback from the QA Review Decision Model: 
-
-       {suggestions_markdown}
-
-       _This comment was generated automatically to highlight missing automated coverage and suggest next tests to add._
-       </details>
-       ```
-     - Apply the labels `bot/qa-reviewed`, `bot/needs-more-test-automation`, and `bot/needs-manual-test`.
-
-  - If `automation_sufficient` is **false** and `manual_test` is **false**:
-     - Post a comment using this exact format:
-       ```
-       <details open>
-       <summary>
-
-       ### 🤖 QA review analysis
-
-       </summary>
-
-       No manual tests required. 
-       Automated tests are not yet sufficient for this issue. 
-       Please address the feedback from the QA Review Decision Model:
-
-       {suggestions_markdown}
-
-       _This comment was generated automatically to highlight missing automated coverage and suggest next tests to add._
-       </details>
-       ```
-     - Apply the labels `bot/qa-reviewed`, `bot/needs-more-test-automation`, and `bot/no-manual-test-needed`..
-     - Move the issue to **Reopened**
-
-Keep track of every issue number you process in Queue A so Queue B can skip them.
-
----
-
-## Queue B — Re-evaluate previously QA-reviewed issues
-
-1. List all open issues in this repository that are labeled `bot/qa-reviewed` and were **moved to the 
-    QA Review column/state of this repository in the last 24 hours**.
-2. Skip any entry that is a pull request.
-3. Skip any issue that matches the **Exclusion Rules** above; log each skipped issue.
-4. Skip any issue whose number was already processed in Queue A during this run.
-5. For each remaining issue, retrieve its full comment list and find the **last comment posted by
-   the bot** (`github-actions[bot]`).
-6. If the issue has label `bot/needs-more-test-automation`:
-   - Treat the content of the last bot `suggestions_markdown` comment as the previous requested
-     automation gaps.
-   - Compare newly linked or newly merged PRs since that comment against:
-     - the previous suggestions
-     - the earlier linked PRs used in the last QA review
-     - the latest implementation/design state
-   - Check whether old unit or e2e tests appear deprecated, stale, or no longer aligned with the
-     current implementation and should be removed or updated.
-   - If there is a major feature change, design change, or implementation/refactor change that
-     requires a fresh first-pass QA review:
-     - Remove label `bot/qa-reviewed`.
-     - Add label `bot/major-change-detected`
-     - Post a comment using this exact format:
-       ```
-       <details open>
-       <summary>
-
-       ### 🤖 QA review analysis
-
-       </summary>
-
-       Major change or code refactor detected. Please, re-evaluate against the QA Decision Model.
-
-       {feature_change_markdown}
-
-       _This comment was generated automatically to summarize why a major change was detected._
-       </details>
-       ```   
-   - Else, count the total number of prior bot `suggestions_markdown` comments on the issue.      
-     - If new test additions fully address the previous suggestions and no major change is found:
-       - Remove label `bot/needs-more-test-automation`.
-       - Apply label `bot/test-automation-sufficient`.
-       - Re-evaluate `manual_test` using the same criteria as the QA Review Decision Model.
-         - If `manual_test` is **false**:
-           - Apply label `bot/no-manual-test-needed`.
-         - If `manual_test` is **true**:
-           - Apply label `bot/needs-manual-test`
-     - If there is still automation coverage to add and the issue does not have
-       `bot/major-change-detected`:
-       - Post a new `suggestions_markdown` comment.
-       - Leave label `bot/needs-more-test-automation` in place.
-       - If the `suggestions_markdown` count is greater than 3, add label `bot/manual-qa-review-required`
-7. If the issue has label `bot/needs-manual-test`:
-   - Inspect issue comments for manual QA evidence, especially comments that:
-     - mention a Rancher version
-     - start with `validated in` or `verified in` or `tests pass` or `tests fail`
-     - include screenshots or screen recordings
-     - explicitly say expected behavior was or was not accomplished
-   - If there are no manual test reports:
-     - Add label `bot/manual-test-pending`.
-   - If manual test reports show failures and there is still automation coverage to add:
-     - Post a new `suggestions_markdown` comment unless `bot/manual-qa-review-required` is already present.
-     - Keep label `bot/needs-more-test-automation`
-   - If manual test reports show the feature works as expected, and the issue no longer has label
-     `bot/needs-more-test-automation`:
-     - Remove label `bot/needs-manual-test`
-     - Add label `bot/manual-test-pass`.
+- `pass`: a report shows the expected behavior was accomplished
+- `fail`: a report shows a failure; put what failed and any automation that would have caught it
+  in `analysis_markdown`
+- `none`: no manual test report yet (no `analysis_markdown` needed)
 
 ## QA Review Decision Model
 
@@ -293,11 +233,9 @@ An issue review produces three decisions:
 ### Evidence Collection
 
 1. Read issue title, body, labels, linked items, project status, and recent comments.
-2. Identify linked pull requests by:
+2. Start from the linked pull requests in the queue entry (`prs`). Also look for:
    - explicit references (`Fixes #`, `Closes #`, `Refs #`)
-   - timeline cross-links
    - branch/commit references from development activity
-   - linked pull requests
 3. For each linked PR that is merged or ready for QA review, inspect changed files and treat test
    file inspection as the PRIMARY evidence source.
 4. Prioritize direct inspection of test files in linked PRs, including:
@@ -381,7 +319,10 @@ use manual testing where it materially reduces residual risk.
 
 ## Comment Requirements
 
-`analysis_markdown` must include:
+`analysis_markdown` is the body of the bot comment. The script adds the collapsible frame, the
+one-line verdict and the footer, so write only the body.
+
+When `automation_sufficient` is **true** or `is_automatable` is **false**, it must include:
 
 - brief rationale for the decision
 - whether the issue is automatable
@@ -390,18 +331,18 @@ use manual testing where it materially reduces residual risk.
 - specific test evidence found, including files, suites, or PR references when applicable
 - any residual risk to monitor
 
-`suggestions_markdown` must include:
+When `automation_sufficient` is **false** (and the issue is automatable), it must include:
 
 - at least 1 concrete automated test suggestion
 - explicit indication of whether each suggestion is `unit` or `e2e`
 - expected behavior each test should assert
-- identification of previous suggestions already addressed, when re-evaluating in Queue B
+- in `re-review`, which previous suggestions are already addressed
 
-`feature_change_markdown` must include:
+When `major_change` is **true**, start with a `#### Major change detected` section that has:
 
 - brief rationale for the decision
 - specific code evidence found, including files, suites, or PR references when applicable
-- reference explicit comments mentioning a code refactor or change in acceptance criteria
+- references to explicit comments mentioning a code refactor or change in acceptance criteria
 
 Do not ask the reporter questions in this workflow. Provide actionable suggestions directly.
 
@@ -409,8 +350,8 @@ Do not ask the reporter questions in this workflow. Provide actionable suggestio
 
 ## Output and Logging
 
-For each processed issue, log one concise line:
+For each issue, log one concise line:
 
 ```
-[processed] #{issue_number} — automatable={true|false} automation_sufficient={true|false} manual_test={true|false}
+[processed] #{issue_number} — mode={mode} automatable={true|false} automation_sufficient={true|false} manual_test={true|false} manual_test_result={none|pass|fail}
 ```

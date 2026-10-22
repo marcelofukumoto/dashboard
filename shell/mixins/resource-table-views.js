@@ -214,9 +214,6 @@ export default {
        */
       settledQuery: linkedQuery || defaultView?.query || '',
 
-      /** Counts the views the tabs put on the table, so the search box starts its undo afresh on each */
-      tabViewChanges: 0,
-
       debouncedSettleQuery: debounce(function(query) {
         this.settledQuery = query;
       }, SEARCH_DEBOUNCE),
@@ -1418,7 +1415,6 @@ export default {
       this.debouncedSettleQuery.cancel();
       this.settledQuery = view?.query || '';
       this.view = view;
-      this.tabViewChanges += 1;
     },
 
 

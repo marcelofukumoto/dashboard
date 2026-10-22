@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * The table views filter box: `field:value` terms and free text, suggesting fields and then values
- * in use. It edits its own rendered tokens, so a value badge's spacing is ordinary layout and the
- * caret stays true
+ * in use. The query stays one run of text the browser edits itself, so its own undo, redo and caret
+ * work; the terms are painted over it with the CSS Custom Highlight API
  */
 import {
   computed, nextTick, onBeforeUnmount, onMounted, ref, watch
@@ -15,8 +15,6 @@ import { LABEL_FIELD_PREFIX, dateBuckets, valuesInUse } from '@shell/utils/table
 import {
   CONNECTIVES, NEGATORS, highlightQuery, isNegator, quoteIfNeeded, replaceToken, scanQuery, tokenAt
 } from '@shell/utils/table-views/query';
-import { changeOf, createQueryHistory } from '@shell/utils/table-views/query-history';
-import { isMac } from '@shell/utils/platform';
 import type { TableViewField, TableViewRow } from '@shell/types/table-views';
 
 const MENU_VIEWPORT_MARGIN = 20;
@@ -62,10 +60,7 @@ const props = withDefaults(defineProps<{
   pendingFields?: string[],
   /** Ids of the fields whose values for suggesting are being asked for */
   loadingValues?: string[],
-  /** Changes as another view is put on the table: its query starts the undo history afresh */
-  historyKey?: number,
 }>(), {
-  historyKey:    0,
   value:         '',
   fields:        () => [],
   filterFields:  null,
@@ -106,7 +101,6 @@ const focused = ref(false);
 /** Escape hides the list without taking the caret out of the box */
 const dismissed = ref(false);
 const activeIndex = ref(0);
-const pendingCaret = ref<number | null>(null);
 const composing = ref(false);
 /** Viewport coordinates: the menu hangs off <body> */
 const menuPos = ref({
@@ -122,15 +116,6 @@ const menuOutOfView = ref(false);
  */
 const menuPlaced = ref(false);
 let placeFrame = 0;
-/**
- * The box is ahead of the query between a keystroke and the re-render; redrawing then drops what
- * was typed
- */
-const domAhead = ref(false);
-
-/** Undo and redo of the box's own: the browser's can't follow contents rebuilt as they are highlighted */
-const queryHistory = createQueryHistory(props.value || '');
-
 const instanceId = `${ uid++ }`;
 
 /** Per instance, as a page can hold more than one box */
@@ -439,39 +424,159 @@ const keepCaretInView = (range: Range) => {
   }
 };
 
-/** Rebuild the box from the query, browser inserted nodes included */
-const syncDom = () => {
+/** Where `start` to `end` of the query falls in the box, whose text the browser may split into several nodes */
+const rangeOf = (el: HTMLElement, start: number, end: number): Range => {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const range = document.createRange();
+  let seen = 0;
+  let placedStart = false;
+
+  range.selectNodeContents(el);
+  range.collapse(true);
+
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = (node.textContent || '').length;
+
+    if (!placedStart && start <= seen + length) {
+      range.setStart(node, start - seen);
+      placedStart = true;
+    }
+
+    if (placedStart && end <= seen + length) {
+      range.setEnd(node, end - seen);
+      break;
+    }
+
+    seen += length;
+  }
+
+  return range;
+};
+
+const HIGHLIGHTED_KINDS = ['field', 'value', 'value-unknown', 'connective'];
+
+/**
+ * The page's highlights: a map of them, each a set of ranges, which the DOM types in use leave out.
+ * None in a browser without the API, which shows the query unstyled
+ */
+const highlights = () => (typeof CSS !== 'undefined' && CSS.highlights ? CSS.highlights as unknown as Map<string, Set<Range>> : null);
+
+/** This box's ranges, in highlights that every box on the page shares */
+let painted: { name: string, range: Range }[] = [];
+
+const unpaint = () => {
+  painted.forEach(({ name, range }) => highlights()?.get(name)?.delete(range));
+  painted = [];
+};
+
+/** Paints each term's parts over the text */
+const paint = () => {
+  const el = input.value;
+  const registry = highlights();
+
+  if (!registry) {
+    return;
+  }
+
+  unpaint();
+
+  if (!el || holding.value) {
+    return;
+  }
+
+  let at = 0;
+
+  segments.value.forEach((segment) => {
+    const start = at;
+
+    at += segment.text.length;
+
+    if (!HIGHLIGHTED_KINDS.includes(segment.kind)) {
+      return;
+    }
+
+    const name = `table-view-query-${ segment.kind }`;
+    let highlight = registry.get(name);
+
+    if (!highlight) {
+      highlight = new Highlight() as unknown as Set<Range>;
+      registry.set(name, highlight);
+    }
+
+    const range = rangeOf(el, start, at);
+
+    highlight.add(range);
+    painted.push({ name, range });
+  });
+};
+
+/** A query from outside, eg another tab's, replaces the text; one typed is already there */
+const syncText = () => {
   const el = input.value;
 
   if (!el || composing.value) {
     return;
   }
 
-  // A keystroke still on its way back; leave what the user sees alone
-  if (domAhead.value && el.textContent !== (props.value || '')) {
+  const value = props.value || '';
+
+  if (el.textContent !== value) {
+    el.textContent = value;
+
+    // Not `focused`, which trails a blur by 150ms
+    if (document.activeElement === el) {
+      applyCaret(value.length);
+    }
+  }
+
+  paint();
+};
+
+/**
+ * Writes `next` as an edit of the browser's own, so its undo and redo take it back and forth: only
+ * what differs from the text is replaced. Its input event emits the query
+ */
+const writeQuery = (next: string, caretAfter?: number) => {
+  const el = input.value;
+  const text = el?.textContent ?? '';
+
+  if (!el) {
     return;
   }
 
-  domAhead.value = false;
+  let start = 0;
 
-  while (el.firstChild) {
-    el.removeChild(el.firstChild);
+  while (start < text.length && start < next.length && text[start] === next[start]) {
+    start++;
   }
 
-  segments.value.forEach((segment) => {
-    const span = document.createElement('span');
+  let end = 0;
 
-    span.className = `segment-${ segment.kind }`;
-    span.textContent = segment.text;
-    el.appendChild(span);
-  });
-
-  // Not `focused`, which trails a blur by 150ms
-  if (document.activeElement === el) {
-    applyCaret(pendingCaret.value ?? caret.value);
+  while (end < text.length - start && end < next.length - start && text[text.length - 1 - end] === next[next.length - 1 - end]) {
+    end++;
   }
 
-  pendingCaret.value = null;
+  const inserted = next.slice(start, next.length - end);
+
+  el.focus();
+
+  if (next !== text) {
+    const selection = window.getSelection();
+
+    selection?.removeAllRanges();
+    selection?.addRange(rangeOf(el, start, text.length - end));
+
+    // Deprecated, but the only way to make an edit the browser's undo takes back
+    const done = document.execCommand(inserted ? 'insertText' : 'delete', false, inserted);
+
+    // Without execCommand, eg in a test, the text is set straight and the undo is lost
+    if (!done || el.textContent !== next) {
+      el.textContent = next;
+      emit('update:value', next);
+    }
+  }
+
+  applyCaret(caretAfter ?? start + inserted.length);
 };
 
 /**
@@ -584,10 +689,7 @@ const syncCaret = () => {
   }
 };
 
-const focus = () => input.value?.focus();
-
-/** No event when a composition ends, which commits letters typed */
-const onInput = (event?: Event) => {
+const onInput = () => {
   if (composing.value) {
     return;
   }
@@ -597,9 +699,6 @@ const onInput = (event?: Event) => {
   const text = input.value?.textContent ?? '';
 
   caret.value = readCaret() ?? text.length;
-  pendingCaret.value = caret.value;
-  domAhead.value = true;
-  queryHistory.record(text, event ? changeOf((event as InputEvent).inputType) : 'insert');
   emit('update:value', text);
 };
 
@@ -636,13 +735,7 @@ const onPaste = (event: ClipboardEvent) => {
     end = start + range.toString().length;
   }
 
-  const next = `${ current.substring(0, start) }${ flat }${ current.substring(end) }`;
-
-  pendingCaret.value = start + flat.length;
-  // Written by us, so the box is the stale one
-  domAhead.value = false;
-  queryHistory.record(next, 'other');
-  emit('update:value', next);
+  writeQuery(`${ current.substring(0, start) }${ flat }${ current.substring(end) }`, start + flat.length);
 };
 
 const onFocus = () => {
@@ -693,14 +786,7 @@ const onBlur = () => {
 };
 
 /** `dismissed` is left alone: Escape already closed the list, and the button never did */
-const clear = () => {
-  pendingCaret.value = 0;
-  // Written by us, so the box is the stale one
-  domAhead.value = false;
-  queryHistory.record('', 'other');
-  emit('update:value', '');
-  focus();
-};
+const clear = () => writeQuery('', 0);
 
 /** Nothing is written around the pick, and a repeated term is allowed */
 const pick = (suggestion?: Suggestion) => {
@@ -712,12 +798,7 @@ const pick = (suggestion?: Suggestion) => {
   const value = props.value || '';
   const next = replaceToken(value, token, suggestion.insert, caret.value);
 
-  pendingCaret.value = token ? token.start + suggestion.insert.length : caret.value + (next.length - value.length);
-  // Written by us, so the box is the stale one
-  domAhead.value = false;
-  queryHistory.record(next, 'other');
-  emit('update:value', next);
-  focus();
+  writeQuery(next, token ? token.start + suggestion.insert.length : caret.value + (next.length - value.length));
 };
 
 /** Arrowing scrolls the list under a still pointer, whose `mouseenter` would take the highlight back */
@@ -761,54 +842,7 @@ const onSuggestionHover = (index: number) => {
   activeIndex.value = index;
 };
 
-/** Steps the query back or on through the box's history */
-const travel = (back: boolean) => {
-  const entry = back ? queryHistory.undo() : queryHistory.redo();
-
-  if (!entry) {
-    return;
-  }
-
-  pendingCaret.value = entry.caret;
-  // Written by us, so the box is the stale one
-  domAhead.value = false;
-  emit('update:value', entry.text);
-};
-
-/** Cmd+Z / Cmd+Shift+Z on a Mac, Ctrl+Z / Ctrl+Shift+Z or Ctrl+Y elsewhere */
-const historyStep = (event: KeyboardEvent): 'undo' | 'redo' | null => {
-  const mod = isMac ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
-  const key = event.key.toLowerCase();
-
-  if (!mod || event.altKey || composing.value) {
-    return null;
-  }
-
-  if (key === 'z') {
-    return event.shiftKey ? 'redo' : 'undo';
-  }
-
-  return !isMac && key === 'y' && !event.shiftKey ? 'redo' : null;
-};
-
-/** The Edit menu's Undo and Redo, which reach the box as input rather than keys */
-const onBeforeInput = (event: InputEvent) => {
-  if (event.inputType === 'historyUndo' || event.inputType === 'historyRedo') {
-    event.preventDefault();
-    travel(event.inputType === 'historyUndo');
-  }
-};
-
 const onKeyDown = (event: KeyboardEvent) => {
-  const step = historyStep(event);
-
-  if (step) {
-    event.preventDefault();
-    travel(step === 'undo');
-
-    return;
-  }
-
   if (event.key === 'Enter') {
     event.preventDefault();
   }
@@ -908,26 +942,21 @@ watch(showSuggestions, (open) => {
   }
 });
 
-/** `segments` is rebuilt on every row update; redrawing then would yank the caret */
-watch(segmentsKey, () => syncDom());
+/** `segments` is rebuilt on every row update; only a change in what is painted repaints */
+watch(segmentsKey, () => paint());
 
-// Another tab's query, a reset or a link: what came before it isn't this box's to undo back to
-watch(() => props.value || '', (value) => {
-  if (value !== queryHistory.current()) {
-    queryHistory.reset(value);
-  }
-});
+watch(() => props.value, () => syncText());
 
-// Another view put on the table, even one with the same query
-watch(() => props.historyKey, () => queryHistory.reset(props.value || ''));
+watch(holding, () => paint());
 
 onMounted(() => {
-  syncDom();
+  syncText();
   // Capture, so it is seen before the browser decides what the press means
   document.addEventListener('mousedown', onOutsideMouseDown, true);
 });
 
 onBeforeUnmount(() => {
+  unpaint();
   cancelAnimationFrame(placeFrame);
   document.removeEventListener('mousedown', onOutsideMouseDown, true);
   window.removeEventListener('scroll', updateMenuPos, true);
@@ -941,8 +970,8 @@ onBeforeUnmount(() => {
     class="table-view-query"
     :class="{ focused, 'list-open': showSuggestions }"
   >
-    <!-- Filled by syncDom, not a v-for: the browser inserts its own nodes while typing, which Vue
-         won't remove -->
+    <!-- Filled by syncText, not interpolated: the browser edits this text itself, and a redraw by Vue
+         would drop its undo -->
     <div
       ref="input"
       class="query-input"
@@ -958,7 +987,6 @@ onBeforeUnmount(() => {
       data-testid="table-views-query"
       :data-placeholder="t('tableViews.query.placeholder')"
       :aria-label="t('tableViews.query.placeholder')"
-      @beforeinput="onBeforeInput"
       @input="onInput"
       @paste.prevent="onPaste"
       @compositionstart="composing = true"
@@ -1220,34 +1248,25 @@ $query-height: 32px;
 }
 </style>
 
-<!-- Not scoped: syncDom builds these spans, so they carry no scope attribute -->
+<!-- Not scoped: a scoped selector can't reach the highlight pseudo-elements -->
 <style lang="scss">
-.table-view-query {
-  .segment-field {
+.table-view-query .query-input {
+  &::highlight(table-view-query-field),
+  &::highlight(table-view-query-value-unknown),
+  &::highlight(table-view-query-connective) {
     color: var(--input-text);
   }
 
-  .segment-value {
-    margin-left: 4px;
-    padding: 0 4px;
-    border-radius: 4px;
+  &::highlight(table-view-query-value) {
     // Mixed from a live token: the compiled tints stay Rancher blue on a Prime install
-    background: color-mix(in srgb, var(--active, var(--primary)) 12%, transparent);
+    background-color: color-mix(in srgb, var(--active, var(--primary)) 12%, transparent);
     // `--link` keeps its blue in dark on Prime; `--active` follows the brand
     color: var(--active, var(--primary));
   }
 
-  .segment-value-unknown {
-    color: var(--input-text);
-  }
-
-  .query-input.holding > span {
-    visibility: hidden;
-  }
-
-  .segment-connective {
-    color: var(--input-text);
-    font-style: italic;
+  // Painted once the values it names have landed
+  &.holding {
+    color: transparent;
   }
 }
 </style>

@@ -48,10 +48,7 @@ const props = withDefaults(defineProps<{
   loadingValues?: string[],
   /** All rows, before the view's query is applied */
   rows?: TableViewRow[],
-  /** Changes as the tabs put another view on the table, for the search box to start its undo afresh */
-  historyKey?: number,
 }>(), {
-  historyKey:        0,
   coreColumns:       () => [],
   defaultColumns:    () => [],
   unsupportedFields: () => [],
@@ -381,7 +378,6 @@ watch(groupPanel, (panel) => {
           :field-values="fieldValues"
           :pending-fields="pendingFields"
           :loading-values="loadingValues"
-          :history-key="historyKey"
           @update:value="update({ query: $event })"
           @update:focused="queryFocused = $event"
           @request-values="$emit('request-values', $event)"

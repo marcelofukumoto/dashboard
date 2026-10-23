@@ -28,7 +28,7 @@ tools:
       - projects
     min-integrity: none
     # The QA Review column lives on an org project, which GITHUB_TOKEN cannot read.
-    github-token: ${{ secrets.QA_TEST_READ_PROJECT_TOKEN }}
+    github-token: ${{ secrets.PROJECT_READ_TOKEN }}
 
 safe-outputs:
   # Fork test only: preview every write in the job summary instead of making it.

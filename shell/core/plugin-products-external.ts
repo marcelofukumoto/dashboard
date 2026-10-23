@@ -330,7 +330,7 @@ export interface IExtensionProducts {
    * Register a top-level product as a flag on the plugin
    * @internal - DO NOT USE - Internal API only
    */
-  _registerTopLevelProduct(): void;
+  _registerTopLevelProduct(productName?: string): void;
 
   /**
    *

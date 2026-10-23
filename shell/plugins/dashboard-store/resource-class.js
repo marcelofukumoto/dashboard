@@ -21,6 +21,7 @@ import { clone, get } from '@shell/utils/object';
 import { eachLimit } from '@shell/utils/promise';
 import { sortableNumericSuffix } from '@shell/utils/sort';
 import { escapeHtml, ucFirst } from '@shell/utils/string';
+import { isExtensionProductPrefixedTopLevel } from '@shell/utils/extension-product-routing';
 import {
   validateChars,
   validateDnsLikeTypes,
@@ -1418,17 +1419,9 @@ export default class Resource {
     // this is the logic to determine if the resource is top level product or not
     // changes c-cluster-product-resource to product-c-cluster-resource
     // this is for the new extension product registration model
-    let currPluginName = '';
-    const plugins = this.$extension.getPlugins();
-
-    Object.keys(plugins).forEach((key) => {
-      if (plugins[key].productNames.includes(this.$rootGetters['productId'])) {
-        currPluginName = key;
-      }
-    });
-
-    // the flag "topLevelProduct" only exists in the V2 product registration model
-    return plugins[currPluginName]?.topLevelProduct || false;
+    // Resolved per product: a plugin that extends `explorer` and also adds a top-level product of
+    // its own must not move explorer's resources onto the top-level product routes.
+    return isExtensionProductPrefixedTopLevel(this.$extension.getPlugins(), this.$rootGetters['productId']);
   }
 
   get listLocation() {

@@ -126,6 +126,7 @@ describe('pluginProduct', () => {
       new PluginProduct(mockPlugin, productMetadata, []);
 
       expect(mockPlugin._registerTopLevelProduct).toHaveBeenCalledTimes(1);
+      expect(mockPlugin._registerTopLevelProduct).toHaveBeenCalledWith('testproductname');
     });
 
     it('should create default empty page config when no config provided', () => {

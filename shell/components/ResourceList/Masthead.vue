@@ -5,6 +5,7 @@ import TypeDescription from '@shell/components/TypeDescription';
 import { RcButton } from '@components/RcButton';
 import { get } from '@shell/utils/object';
 import { AS, _YAML } from '@shell/config/query-params';
+import { isExtensionProductPrefixedTopLevel } from '@shell/utils/extension-product-routing';
 import ResourceLoadingIndicator from './ResourceLoadingIndicator';
 import TabTitle from '@shell/components/TabTitle';
 
@@ -96,18 +97,10 @@ export default {
     // use that for the formRoute instead of the current route's product.
     // This allows resources from extensions (new product registration) to use the correct route for creation,
     // which may be different from the route of the resource list.
-    let currPluginName = '';
     let formRoute;
     let overrideCreateLocationByExtension = false;
-    const plugins = this.$extension.getPlugins();
 
-    Object.keys(plugins).forEach((key) => {
-      if (plugins[key].productNames.includes(this.$store.getters['productId'])) {
-        currPluginName = key;
-      }
-    });
-
-    if (currPluginName && plugins[currPluginName]?.topLevelProduct) {
+    if (isExtensionProductPrefixedTopLevel(this.$extension.getPlugins(), this.$store.getters['productId'])) {
       // override create route for extension resource lists
       formRoute = { name: `${ this.$route.name }-create`, params: { ...params, product: this.$store.getters['productId'] } };
       overrideCreateLocationByExtension = true;

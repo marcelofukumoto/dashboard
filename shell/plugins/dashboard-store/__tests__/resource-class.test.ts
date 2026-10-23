@@ -2,6 +2,7 @@ import jsyaml from 'js-yaml';
 import Resource from '@shell/plugins/dashboard-store/resource-class.js';
 import { resourceClassJunkObject } from '@shell/plugins/dashboard-store/__tests__/utils/store-mocks';
 import { EVENT } from '@shell/config/types';
+import { Plugin } from '@shell/core/plugin';
 
 jest.mock('@shell/config/version', () => ({ getVersionData: () => ({ Version: 'v2.13.0' }) }));
 jest.mock('@shell/config/uiplugins', () => ({ parseRancherVersion: (v: string) => v }));
@@ -820,6 +821,59 @@ describe('class: Resource', () => {
       const result = requiredRule(null);
 
       expect(result).toStrictEqual(JSON.stringify({ message: 'validation.required', key: 'Value' }));
+    });
+  });
+
+  describe('getter: isProdRegistrationV2TopLevelProductResoure', () => {
+    // Adds its own top-level product and extends explorer
+    const createPlugin = () => {
+      const plugin = new Plugin('my-extension');
+
+      plugin.addProduct('my-top');
+      plugin.extendProduct('explorer', [{
+        name: 'my-page', label: 'My Page', component: { name: 'MyPage' }
+      }]);
+      // What applying the products does when the extension loads
+      plugin.productNames.push('mytop', 'explorer');
+
+      return plugin;
+    };
+
+    const createResource = (productId: string, plugins: Record<string, any>) => new Resource({
+      id:       'default/my-service',
+      type:     'service',
+      metadata: { name: 'my-service', namespace: 'default' },
+    }, {
+      getters:     { schemaFor: () => ({ attributes: { namespaced: true }, linkFor: jest.fn() }) },
+      dispatch:    jest.fn(),
+      rootState:   { $extension: { getPlugins: () => plugins } },
+      rootGetters: {
+        'i18n/t':  jest.fn(),
+        productId,
+        clusterId: 'local',
+      },
+    });
+
+    it('should be false for a built-in product the extension only extends', () => {
+      const resource = createResource('explorer', { 'my-extension': createPlugin() });
+
+      expect(resource.isProdRegistrationV2TopLevelProductResoure).toBe(false);
+      expect(resource.detailLocation.name).toBe('c-cluster-product-resource-namespace-id');
+      expect(resource.listLocation.name).toBe('c-cluster-product-resource');
+    });
+
+    it('should be true for the extension\'s own top-level product', () => {
+      const resource = createResource('mytop', { 'my-extension': createPlugin() });
+
+      expect(resource.isProdRegistrationV2TopLevelProductResoure).toBe(true);
+      expect(resource.detailLocation.name).toBe('mytop-c-cluster-resource-namespace-id');
+      expect(resource.listLocation.name).toBe('mytop-c-cluster-resource');
+    });
+
+    it('should be false when no extension touches the current product', () => {
+      const resource = createResource('explorer', {});
+
+      expect(resource.isProdRegistrationV2TopLevelProductResoure).toBe(false);
     });
   });
 });

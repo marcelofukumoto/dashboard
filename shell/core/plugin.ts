@@ -49,7 +49,8 @@ export type ProductFunction = (plugin: IPlugin, store: any) => void;
 export class Plugin implements IPlugin {
   public id: string;
   public name: string;
-  public topLevelProduct = false;
+  public topLevelProducts: Set<string> = new Set();
+  public startRouteWithProductByProduct: Record<string, boolean> = {};
   public types: ExtensionManagerTypes = {};
   public l10n: { [key: string]: Function[] } = {};
   public modelExtensions: { [key: string]: Function[] } = {};
@@ -119,8 +120,24 @@ export class Plugin implements IPlugin {
     this._validators = vals;
   }
 
-  _registerTopLevelProduct() {
-    this.topLevelProduct = true;
+  /**
+   * @deprecated Use {@link topLevelProducts} and {@link startRouteWithProductByProduct}.
+   *
+   * Extensions built against earlier 2.15 releases bundle copies of `Masthead.vue` and
+   * `resource-class.js` that read this straight off the host's `Plugin` instance, so it keeps
+   * the old plugin-wide meaning for them.
+   */
+  get topLevelProduct(): boolean {
+    return this.topLevelProducts.size > 0;
+  }
+
+  _registerTopLevelProduct(productName?: string) {
+    if (productName) {
+      this.topLevelProducts.add(productName);
+      // Every top-level product on this release gets `<product>/c/:cluster/...` routes. Recorded
+      // per product so extensions built against a newer shell read the shape they expect.
+      this.startRouteWithProductByProduct[productName] = true;
+    }
   }
 
   _setStartRouteWithProduct(_value: boolean): void {

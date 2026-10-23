@@ -1,9 +1,11 @@
 ---
+# Fork test only: runs on pushes to this branch while QA_REVIEW_FORK_TEST is 'true'.
 on:
-  schedule: daily
-  workflow_dispatch:
+  push:
+    branches:
+      - qa-review-fork-test
 
-if: (github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true') && vars.DISABLE_AW_QA_REVIEW != 'true'
+if: (github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true') && vars.DISABLE_AW_QA_REVIEW != 'true' && vars.QA_REVIEW_FORK_TEST == 'true'
 
 permissions:
   contents: read
@@ -26,9 +28,11 @@ tools:
       - projects
     min-integrity: none
     # The QA Review column lives on an org project, which GITHUB_TOKEN cannot read.
-    github-token: ${{ secrets.GH_AW_READ_PROJECT_TOKEN }}
+    github-token: ${{ secrets.QA_TEST_READ_PROJECT_TOKEN }}
 
 safe-outputs:
+  # Fork test only: preview every write in the job summary instead of making it.
+  staged: true
   add-comment:
     max: 100
     hide-older-comments: true
@@ -58,9 +62,9 @@ safe-outputs:
     target: "*"
   # Moves issues to Reopened; needs a token with org Projects write access.
   update-project:
-    project: "https://github.com/orgs/rancher/projects/57"
+    project: "https://github.com/users/marcelofukumoto/projects/2"
     max: 100
-    github-token: ${{ secrets.GH_AW_WRITE_PROJECT_TOKEN }}
+    github-token: ${{ secrets.QA_TEST_WRITE_PROJECT_TOKEN }}
 ---
 
 You are an experienced QA automation lead helping review GitHub issues for a development team.

@@ -3,23 +3,30 @@ on:
   schedule: daily
   workflow_dispatch:
 
-if: github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true'
+if: (github.repository_owner == 'rancher' || vars.ENABLE_AGENTIC_WORKFLOWS == 'true') && vars.DISABLE_AW_QA_REVIEW != 'true'
 
 permissions:
   contents: read
-  issues: write
+  issues: read
   pull-requests: read
-  repository-projects: write
+  copilot-requests: write
 
 engine: copilot
 timeout-minutes: 30
 description: "AI-assisted daily QA review of issue automation sufficiency and manual test needs"
 
 tools:
+  # Explicit since gh-aw requires shell access to be declared when
+  # `github.min-integrity` is `none`. `true` preserves the unrestricted
+  # shell these workflows have always run with.
+  bash: true
   github:
     toolsets:
       - default
+      - projects
     min-integrity: none
+    # The QA Review column lives on an org project, which GITHUB_TOKEN cannot read.
+    github-token: ${{ secrets.GH_AW_READ_PROJECT_TOKEN }}
 
 safe-outputs:
   add-comment:
@@ -49,9 +56,11 @@ safe-outputs:
       - bot/manual-qa-review-required
     max: 100
     target: "*"
-  close-issue:
+  # Moves issues to Reopened; needs a token with org Projects write access.
+  update-project:
+    project: "https://github.com/orgs/rancher/projects/57"
     max: 100
-
+    github-token: ${{ secrets.GH_AW_WRITE_PROJECT_TOKEN }}
 ---
 
 You are an experienced QA automation lead helping review GitHub issues for a development team.

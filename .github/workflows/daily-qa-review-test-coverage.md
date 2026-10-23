@@ -56,11 +56,6 @@ safe-outputs:
       - bot/manual-qa-review-required
     max: 100
     target: "*"
-  # Moves issues to Reopened; needs a token with org Projects write access.
-  update-project:
-    project: "https://github.com/orgs/rancher/projects/57"
-    max: 100
-    github-token: ${{ secrets.GH_AW_WRITE_PROJECT_TOKEN }}
 ---
 
 You are an experienced QA automation lead helping review GitHub issues for a development team.

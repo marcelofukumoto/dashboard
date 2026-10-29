@@ -26,6 +26,7 @@ env:
   # Build the dashboard to use in tests. When set to false it will grab `latest` from CDN (useful for running e2e tests quickly)
   BUILD_DASHBOARD: true
 
+  E2E_STALL_MINUTES: 4
   E2E_RANCHER_LOG: rancher.log
   E2E_BUILD_DIST_NAME: dist
   E2E_BUILD_DIST_DIR: dist
@@ -106,21 +107,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        role: [
-          { username: 'admin', tag: '@adminUser' }, 
-          { username: 'standard_user', tag: '@standardUser' }
-        ]
-        features:  [
-          ['@navigation', '@extensions'],
-          ['@charts'],
-          ['@explorer'],
-          ['@explorer2'],
-          ['@virtualizationMgmt', '@fleet'],
-          ['@generic', '@globalSettings'],
-          ['@manager'],
-          ['@userMenu', '@usersAndAuths'],
-          ['@components'],
-        ]
+        include:
+          - role: { username: 'admin', tag: '@adminUser' }
+            features: ['@userMenu', '@usersAndAuths']
+            inject: setup
+          - role: { username: 'standard_user', tag: '@standardUser' }
+            features: ['@explorer']
+            inject: midrun
     runs-on: ubuntu-latest
     # Backstop for a hang scripts/e2e-stall-watchdog does not catch; a job normally takes under 45 minutes
     timeout-minutes: 150
@@ -152,7 +145,10 @@ jobs:
       
       - name: Run Rancher
         run: yarn e2e:k3s
-      
+
+      - name: Start the Chrome freeze
+        run: nohup ./.github/watchdog-test/freeze-chrome.sh ${{ matrix.inject }} > freeze.log 2>&1 &
+
       - name: Setup Rancher and user
         run: |
           yarn e2e:prod
@@ -177,6 +173,10 @@ jobs:
           TEST_SKIP: setup
           GREP_TAGS: ${{ matrix.role.tag }}+${{ matrix.features[0] }} --@jenkins${{ steps.detect-prime.outputs.is-prime == 'true' && ' --@noPrime' || '' }} ${{ matrix.role.tag }}+${{ matrix.features[1] || matrix.features[0] }} --@jenkins${{ steps.detect-prime.outputs.is-prime == 'true' && ' --@noPrime' || '' }}
           TEST_USERNAME: ${{ matrix.role.username }}
+
+      - name: Show the Chrome freeze log
+        if: ${{ always() }}
+        run: cat freeze.log || true
 
       - name: Fetch Rancher Logs
         if: ${{ failure() }}

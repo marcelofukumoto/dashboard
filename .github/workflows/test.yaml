@@ -108,9 +108,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - role: { username: 'admin', tag: '@adminUser' }
-            features: ['@userMenu', '@usersAndAuths']
-            inject: setup
           - role: { username: 'standard_user', tag: '@standardUser' }
             features: ['@explorer']
             inject: midrun

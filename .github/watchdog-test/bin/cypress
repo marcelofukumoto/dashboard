@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Fake cypress for exercising scripts/e2e-stall-watchdog. FAKE_MODE picks the scenario.
+calls=$(( $(cat "$FAKE_STATE" 2>/dev/null || echo 0) + 1 ))
+echo "$calls" > "$FAKE_STATE"
+echo "fake cypress call $calls args: $*" >> "$FAKE_STATE.args"
+
+# The retry must hand Cypress one --config whose value is valid JSON
+if [ "$calls" -gt 1 ]; then
+  n=0
+  while [ $# -gt 0 ]; do
+    if [ "$1" = --config ]; then
+      n=$((n + 1))
+      echo "$2" | jq -e . > /dev/null || echo "BAD_JSON $2" >> "$FAKE_STATE.args"
+      echo "$2" | jq -c . >> "$FAKE_STATE.config"
+    fi
+    shift
+  done
+  [ "$n" = 1 ] || echo "BAD_CONFIG_COUNT $n" >> "$FAKE_STATE.args"
+fi
+
+TOTAL=3
+header() {
+cat <<'H'
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:        15.19.0                                                                        │
+  │ Browser:        Chrome 155 (headless)                                                          │
+  │ Specs:          3 found (apps/index.spec.ts, dashboard/certificates.spec.ts, service-discovery │
+  │                 /horizontal-pod-autoscalers.spec.ts)                                           │
+  │ Searched:       cypress/e2e/tests/pages/explorer/apps/index.spec.ts, cypress/e2e/tests/pages/e │
+  │                 xplorer/dashboard/certificates.spec.ts, cypress/e2e/tests/pages/explorer/servi │
+  │                 ce-discovery/horizontal-pod-autoscalers.spec.ts                                │
+  │ Experiments:    experimentalMemoryManagement=true                                              │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+H
+}
+# What @cypress/grep's fallback to every spec looks like
+glob_header() {
+TOTAL=154
+cat <<'H'
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:        15.19.0                                                                        │
+  │ Specs:          153 found (oidc-provider-setup.spec.ts, code-mirror-shortcuts.spec.ts, yaml-ed │
+  │ Searched:       cypress/e2e/tests/priority/**/*.spec.ts, cypress/e2e/tests/components/**/*.spe │
+  │                 c.ts, cypress/e2e/tests/pages/**/*.spec.ts                                     │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+H
+}
+spec() { # name n failing
+  echo "  Running:  $1                                                              ($2 of $TOTAL)"
+  echo "    ✓ a test"
+  echo "  (Results)"
+  echo "  │ Tests:        1                                                                                │"
+  echo "  │ Failing:      $3                                                                                │"
+  echo "  │ Spec Ran:     $1                                                            │"
+}
+hang() {
+  echo "  Running:  $1                                                              ($2 of $TOTAL)"
+  # a child that looks like Chrome, to check the watchdog cleans it up
+  bash -c 'exec -a "fake-chrome --remote-debugging-port=59222" sleep 9999' &
+  sleep 9999
+}
+
+# Cypress colours its output in CI: grey box borders and labels, coloured values
+colour() { sed -u -E $'s/│/\e[90m│\e[39m/g; s/(Searched|Specs|Tests|Spec Ran):/\e[90m\\1:\e[39m/; s/Failing: +([0-9]+)/\e[90mFailing:\e[39m      \e[32m\\1\e[39m/; s/Running:  ([^ ]+)/Running:  \e[90m\\1\e[39m/' ; }
+exec > >(colour)
+
+case "$FAKE_MODE:$calls" in
+  normal:*)          header; spec apps/index.spec.ts 1 0; exit 3 ;;
+  # Cypress exits with its failed-test count, so 124 failures is a normal finish
+  exit124:*)         header; spec apps/index.spec.ts 1 124; exit 124 ;;
+  midrun:1)          header; spec apps/index.spec.ts 1 0; hang dashboard/certificates.spec.ts 2 ;;
+  midrun-fail:1)     header; spec apps/index.spec.ts 1 2; hang dashboard/certificates.spec.ts 2 ;;
+  # Cypress cuts long paths short in the Running: line
+  truncated:1)       header; spec apps/index.spec.ts 1 0; spec more-resources/api/custom-resource-definitions.spec.t 2 0; hang dashboard/certificates.spec.ts 3 ;;
+  glob:1)            glob_header; spec priority/oidc-provider-setup.spec.ts 1 0; spec components/code-mirror-shortcuts.spec.ts 2 0; hang components/yaml-editor.spec.ts 3 ;;
+  first:1|twice:*)   header; hang apps/index.spec.ts 1 ;;
+  *:2)               echo "retry run"; exit 0 ;;
+esac

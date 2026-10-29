@@ -1,0 +1,24 @@
+name: Watchdog test
+on:
+  push:
+    branches: [ 'e2e-stall-watchdog-test' ]
+jobs:
+  scenarios:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { mode: normal,      rc: 3,   calls: 1, config: '-' }
+          - { mode: exit124,     rc: 124, calls: 1, config: '-' }
+          - { mode: midrun,      rc: 0,   calls: 2, config: '{"trashAssetsBeforeRuns":false,"excludeSpecPattern":["cypress/e2e/tests/pages/explorer/apps/index.spec.ts"]}' }
+          - { mode: midrun-fail, rc: 1,   calls: 2, config: '{"trashAssetsBeforeRuns":false,"excludeSpecPattern":["cypress/e2e/tests/pages/explorer/apps/index.spec.ts"]}' }
+          - { mode: truncated,   rc: 0,   calls: 2, config: '{"trashAssetsBeforeRuns":false,"excludeSpecPattern":["cypress/e2e/tests/pages/explorer/apps/index.spec.ts","cypress/e2e/tests/pages/explorer/more-resources/api/custom-resource-definitions.spec.ts"]}' }
+          - { mode: glob,        rc: 0,   calls: 2, config: '{"trashAssetsBeforeRuns":false,"excludeSpecPattern":["cypress/e2e/tests/priority/oidc-provider-setup.spec.ts","cypress/e2e/tests/components/code-mirror-shortcuts.spec.ts"]}' }
+          - { mode: first,       rc: 0,   calls: 2, config: '{"trashAssetsBeforeRuns":false}' }
+          - { mode: twice,       rc: 1,   calls: 2, config: '{"trashAssetsBeforeRuns":false}' }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - run: |
+          ./.github/watchdog-test/run.sh '${{ matrix.mode }}' '${{ matrix.rc }}' '${{ matrix.calls }}' '${{ matrix.config }}' | tee result.log
+          grep -q '^PASS ' result.log

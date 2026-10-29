@@ -103,15 +103,19 @@ run_attempt "$COMMAND" "$FIRST_LOG"
 rc=$?
 [ "$rc" -ne 124 ] && exit "$rc"
 
+# Cypress colours its output in CI, so parse a copy without the colour codes
+PLAIN_LOG="$LOG_DIR/attempt-1.plain.log"
+sed -E 's/\x1b\[[0-9;]*m//g' "$FIRST_LOG" > "$PLAIN_LOG"
+
 # Every spec Cypress started except the last one finished
-mapfile -t started < <(grep -oE 'Running: +[^ ]+ +\([0-9]+ of [0-9]+\)' "$FIRST_LOG" | awk '{ print $2 }')
+mapfile -t started < <(grep -oE 'Running: +[^ ]+ +\([0-9]+ of [0-9]+\)' "$PLAIN_LOG" | awk '{ print $2 }')
 finished=()
 [ "${#started[@]}" -gt 1 ] && finished=("${started[@]:0:${#started[@]}-1}")
-failed_before=$(grep -oE 'Failing: +[0-9]+' "$FIRST_LOG" | awk '{ s += $2 } END { print s + 0 }')
+failed_before=$(grep -oE 'Failing: +[0-9]+' "$PLAIN_LOG" | awk '{ s += $2 } END { print s + 0 }')
 
 retry_cmd="$COMMAND"
-spec_count=$(grep -oE 'Specs: +[0-9]+ found' "$FIRST_LOG" | head -n 1 | awk '{ print $2 }')
-IFS=',' read -r -a all_specs <<< "$(searched_specs "$FIRST_LOG")"
+spec_count=$(grep -oE 'Specs: +[0-9]+ found' "$PLAIN_LOG" | head -n 1 | awk '{ print $2 }')
+IFS=',' read -r -a all_specs <<< "$(searched_specs "$PLAIN_LOG")"
 
 if [ "${#finished[@]}" -gt 0 ] && [ "${#all_specs[@]}" = "$spec_count" ] && [[ "${all_specs[*]}" != *'*'* ]]; then
   remaining=()

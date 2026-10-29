@@ -131,6 +131,9 @@ if [ "${#finished[@]}" -gt 0 ] && [ "${#all_specs[@]}" = "$spec_count" ] && [[ "
   echo "[watchdog] ${#finished[@]} of $spec_count specs finished before the stall ($failed_before failing tests)"
 fi
 
+# Keep the first attempt's videos and screenshots, which Cypress otherwise deletes when the retry starts
+retry_cmd="$retry_cmd --config trashAssetsBeforeRuns=false"
+
 # The mochawesome reporter clears its folder when a run starts, so keep the first attempt's reports
 [ -d "$REPORT_DIR" ] && mv "$REPORT_DIR" "$LOG_DIR/reports-attempt-1"
 
@@ -138,9 +141,10 @@ echo "[watchdog] Retrying once: $retry_cmd"
 run_attempt "$retry_cmd" "$LOG_DIR/attempt-2.log"
 rc=$?
 
-if [ -d "$LOG_DIR/reports-attempt-1" ]; then
-  mkdir -p "$REPORT_DIR"
-  mv "$LOG_DIR/reports-attempt-1" "$REPORT_DIR/attempt-1"
+# Its per-spec reports are in a hidden folder, which the artifact upload skips
+if ls "$LOG_DIR"/reports-attempt-1/.jsons/*.json >/dev/null 2>&1; then
+  mkdir -p "$REPORT_DIR/attempt-1"
+  mv "$LOG_DIR"/reports-attempt-1/.jsons/*.json "$REPORT_DIR/attempt-1/"
 fi
 
 if [ "$rc" -eq 124 ]; then

@@ -7,7 +7,7 @@ import LabeledSelect from '@shell/components/form/LabeledSelect';
 import SelectOrCreateAuthSecret from '@shell/components/form/SelectOrCreateAuthSecret';
 import Checkbox from '@components/Form/Checkbox/Checkbox.vue';
 import UnitInput from '@shell/components/form/UnitInput';
-import FleetOCIStorageSecret from '@shell/components/fleet/FleetOCIStorageSecret.vue';
+import GitRepoStorageSection from '@shell/components/fleet/FleetOCIStorage/GitRepoStorageSection.vue';
 
 defineProps({
   value: {
@@ -226,16 +226,12 @@ const validatePollingInterval = () => {
     <h2>
       {{ t('fleet.gitRepo.ociStorageSecret.title') }}
     </h2>
-    <div class="row mt-20">
-      <div class="col span-6">
-        <FleetOCIStorageSecret
-          :secret="value.spec.ociRegistrySecret"
-          :workspace="workspace"
-          :mode="mode"
-          @update:value="value.spec.ociRegistrySecret=$event"
-        />
-      </div>
-    </div>
+    <GitRepoStorageSection
+      :secret="value.spec.ociRegistrySecret"
+      :workspace="workspace"
+      :mode="mode"
+      @update:value="value.spec.ociRegistrySecret=$event"
+    />
     <div class="spacer" />
 
     <h2>

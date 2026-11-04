@@ -304,6 +304,7 @@ export const FLEET = {
   DASHBOARD:                'fleet.cattle.io.dashboard',
   GIT_REPO:                 'fleet.cattle.io.gitrepo',
   HELM_OP:                  'fleet.cattle.io.helmop',
+  OCI_STORAGE:              'fleet.cattle.io.ocistorage',
   SUSE_APP_COLLECTION:      'suse-application-collection',
   WORKSPACE:                'management.cattle.io.fleetworkspace',
   TOKEN:                    'fleet.cattle.io.clusterregistrationtoken',

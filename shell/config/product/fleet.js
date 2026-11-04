@@ -67,6 +67,19 @@ export function init(store) {
     exact: false,
   });
 
+  virtualType({
+    labelKey:   'fleet.ociStorage.menuLabel',
+    group:      'resources',
+    namespaced: false,
+    name:       FLEET.OCI_STORAGE,
+    weight:     106,
+    route:      {
+      name:   'c-cluster-fleet-oci-storage',
+      params: { cluster: BLANK_CLUSTER }
+    },
+    exact: false,
+  });
+
   configureType(FLEET.APPLICATION, {
     subTypes: [
       FLEET.GIT_REPO,
@@ -145,6 +158,7 @@ export function init(store) {
     FLEET.GIT_REPO,
     FLEET.HELM_OP,
     FLEET.BUNDLE,
+    FLEET.OCI_STORAGE,
     FLEET.TOKEN,
     FLEET.BUNDLE_NAMESPACE_MAPPING,
     FLEET.GIT_REPO_RESTRICTION,

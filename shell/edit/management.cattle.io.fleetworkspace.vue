@@ -15,6 +15,7 @@ import { NAME as FLEET_NAME } from '@shell/config/product/fleet';
 // import KeyValue from '@shell/components/form/KeyValue.vue';
 import { mapState } from 'vuex';
 import { LAST_NAMESPACE, WORKSPACE } from '@shell/store/prefs';
+import { BLANK_CLUSTER } from '@shell/store/store-types.js';
 import { exceptionToErrorsArray } from '@shell/utils/error';
 import Banner from '@components/Banner/Banner.vue';
 import ArrayList from '@shell/components/form/ArrayList.vue';
@@ -135,6 +136,11 @@ export default {
 
     updateDefaultOCIStorageSecret(secretName) {
       this.value.metadata.annotations[FLEET_ANNOTATIONS.OCI_STORAGE_SECRET_DEFAULT] = secretName;
+    },
+
+    openOCIStorage() {
+      this.$store.commit('updateWorkspace', { value: this.value.metadata.name, getters: this.$store.getters });
+      this.$router.push({ name: 'c-cluster-fleet-oci-storage', params: { cluster: BLANK_CLUSTER } });
     }
   },
 
@@ -279,6 +285,18 @@ export default {
           :allow-default="false"
           @update:value="updateDefaultOCIStorageSecret"
         />
+        <Banner
+          color="info"
+          data-testid="fleet-workspace-oci-storage-link"
+        >
+          <div>
+            {{ t('fleet.ociStorage.workspace.manage') }}
+            <a
+              href="#"
+              @click.prevent="openOCIStorage"
+            >{{ t('fleet.ociStorage.workspace.open') }}</a>
+          </div>
+        </Banner>
       </Tab>
       <Tab
         name="labels"

@@ -3,6 +3,7 @@ import Loading from '@shell/components/Loading';
 import ResourcesSummary from '@shell/components/fleet/ResourcesSummary';
 import FleetApplications from '@shell/components/fleet/FleetApplications';
 import ResourceTabs from '@shell/components/form/ResourceTabs';
+import ClusterStorageTab from '@shell/components/fleet/FleetOCIStorage/ClusterStorageTab.vue';
 import Tab from '@shell/components/Tabbed/Tab';
 import { MANAGEMENT, FLEET, SCHEMA } from '@shell/config/types';
 import { FLEET as FLEET_LABELS } from '@shell/config/labels-annotations';
@@ -19,6 +20,7 @@ export default {
     FleetApplications,
     ResourceTabs,
     Tab,
+    ClusterStorageTab,
   },
 
   props: {
@@ -113,6 +115,13 @@ export default {
           :paging="true"
           paging-label="sortableTable.paging.resource"
         />
+      </Tab>
+      <Tab
+        :label="t('fleet.ociStorage.title')"
+        name="oci-storage"
+        :weight="18"
+      >
+        <ClusterStorageTab :cluster="value" />
       </Tab>
     </ResourceTabs>
   </div>

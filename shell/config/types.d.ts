@@ -234,6 +234,7 @@ export const FLEET: {
     DASHBOARD: string;
     GIT_REPO: string;
     HELM_OP: string;
+    OCI_STORAGE: string;
     SUSE_APP_COLLECTION: string;
     WORKSPACE: string;
     TOKEN: string;

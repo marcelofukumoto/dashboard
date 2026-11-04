@@ -231,6 +231,26 @@ export default [
           doneOverride:   'c-cluster-fleet',
         },
       }, {
+        path:      '/c/:cluster/fleet/oci-storage',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/fleet/oci-storage/index.vue')),
+        name:      'c-cluster-fleet-oci-storage',
+      }, {
+        path:      '/c/:cluster/fleet/oci-storage/registry/create',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/fleet/oci-storage/registry.vue')),
+        name:      'c-cluster-fleet-oci-storage-registry-create',
+      }, {
+        path:      '/c/:cluster/fleet/oci-storage/registry/:id',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/fleet/oci-storage/registry.vue')),
+        name:      'c-cluster-fleet-oci-storage-registry-id',
+      }, {
+        path:      '/c/:cluster/fleet/oci-storage/route/create',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/fleet/oci-storage/route.vue')),
+        name:      'c-cluster-fleet-oci-storage-route-create',
+      }, {
+        path:      '/c/:cluster/fleet/oci-storage/route/:id',
+        component: () => interopDefault(import('@shell/pages/c/_cluster/fleet/oci-storage/route.vue')),
+        name:      'c-cluster-fleet-oci-storage-route-id',
+      }, {
         path:      '/c/:cluster/fleet/application',
         component: () => interopDefault(import('@shell/pages/c/_cluster/fleet/application/index.vue')),
         name:      'c-cluster-fleet-application',

@@ -3934,6 +3934,330 @@ fleet:
           =1 {Matches 1 of {total, number} existing clusters: "{sample}"}
           other {Matches {matched, number} of {total, number} existing clusters, including "{sample}"}
         }
+  ociStorage:
+    menuLabel: OCI Storage
+    title: OCI Storage
+    subtitle: Keep bundle contents in OCI registries instead of etcd. Choose where Fleet pushes bundles and which registry each cluster pulls them from.
+    prototype:
+      label: "Prototype: everything here is mock data kept in your browser. Fleet does not support multiple registries yet."
+      notes: Design notes
+      reset: Reset mock data
+      sample: "See the sample data in {workspace}"
+    actions:
+      addRegistry: Add Registry
+      addRoute: Add Route
+      edit: Edit
+      delete: Delete
+      setSource: Set as Source
+      moveUp: Move Up
+      moveDown: Move Down
+      viewDetails: View Details
+      forceUpdate: Force Update
+      forceUpdateAll: Force Update All
+      showClusters: Show clusters
+    empty:
+      title: This workspace stores bundles in etcd
+      description: Add a registry to keep bundle contents in OCI storage. One registry is enough. Add more when some clusters can't reach it.
+    summary:
+      clusters: Clusters
+      artifacts: Artifacts
+    banners:
+      failing: |-
+        {count, plural,
+        one {# cluster can't pull from any registry in its route. Fleet never falls back to etcd, so new bundles won't deploy there.}
+        other {# clusters can't pull from any registry in their route. Fleet never falls back to etcd, so new bundles won't deploy there.}
+        }
+      updatePending: |-
+        {count, plural,
+        one {# cluster still uses its previous registry. Routing changes apply on the next Git update or a force update.}
+        other {# clusters still use their previous registry. Routing changes apply on the next Git update or a force update.}
+        }
+    tabs:
+      registries: Registries
+      routing: Cluster Routing
+      clusters: Clusters
+      artifacts: Artifacts
+    age:
+      never: Never
+      now: Just now
+      minutes: "{n} min ago"
+      hours: "{n} h ago"
+      days: "{n} d ago"
+    role:
+      source: Source
+      mirror: Mirror
+    tls:
+      system: System CAs
+      customCA: Custom CA
+      skipVerify: Verification off
+      basicHTTP: Plain HTTP
+    reason:
+      unreachable: "dial tcp: i/o timeout"
+      auth: 401 Unauthorized with the agent credentials
+      tls: "x509: certificate signed by unknown authority"
+      notReplicated: artifact not replicated within the wait
+    registries:
+      headers:
+        reference: Registry and Namespace
+        role: Role
+        access: Agent Access
+        clusters: Clusters
+        artifacts: Artifacts
+        activity: Last Activity
+      anonymous: Anonymous
+      pushUser: "push: {user}"
+      noAgentCredentials: Agents receive the push credentials. Add a read-only user.
+      anonymousTooltip: Agents connect without credentials.
+      tlsWarning: Agents accept any certificate from this registry.
+      clusterCount: "{active} of {routed}"
+      clusterTooltip: Clusters pulling from it now, out of the clusters routed to it
+      artifactCount: "{count} ({size})"
+      pushed: "Pushed {age}"
+      pulled: "Pulled {age}"
+      state:
+        active: Active
+        replicating: Replicating
+        degraded: Degraded
+        error: Error
+        unused: Unused
+      message:
+        degraded: "{failing} of {total} clusters can't use it: {clusters}"
+        error: "No cluster routed here can use it: {clusters}"
+        replicating: |-
+          {count, plural,
+          one {# artifact hasn't arrived yet: {names}}
+          other {# artifacts haven't arrived yet: {names}}
+          }
+        unused: No route lists this registry yet.
+      delete:
+        title: Delete registry {name}?
+        body: Removes the registry from Fleet. The registry itself and its artifacts are not touched.
+        bodyUsed: "These routes will stop using it: {routes}. A route left without a registry can't deploy OCI bundles."
+      setSource:
+        title: Make {name} the source?
+        body: Fleet pushes new bundles to this registry from now on. Your replication must flow from it to the mirrors. Existing artifacts stay where they are.
+    routing:
+      intro: Routes are checked from the top and a cluster uses the first one it matches. Agents try a route's registries in order.
+      singleRegistry: Every cluster pulls from the default route. Add a route when some clusters need a different registry, namespace or credentials.
+      headers:
+        order: Order
+        match: Matches
+        registries: Pull Order
+        clusters: Clusters
+      allOther: All other clusters
+      defaultRoute: Default route
+      defaultDescription: Used when no route above matches
+      noRegistry: No registry
+      group: "group: {name}"
+      cluster: "cluster: {name}"
+      clusterCount: |-
+        {count, plural,
+        =0 {No clusters}
+        one {# cluster}
+        other {# clusters}
+        }
+      healthPending: "{count} update pending"
+      healthWaiting: "{count} waiting"
+      healthFailover: "{count} on failover"
+      healthError: "{count} failing"
+      delete:
+        title: Delete route {name}?
+        body: Its clusters fall through to the next matching route or the default route.
+    clusters:
+      headers:
+        route: Route
+        pullingFrom: Pulling From
+        credentials: Agent Credentials
+        bundles: Bundles
+        lastPull: Last Pull
+      group:
+        none: Flat list
+        registry: Group by registry
+        route: Group by route
+      attentionOnly: Only clusters that need attention
+      failoverTag: failover
+      noRegistry: No registry
+      state:
+        pulled: Ready
+        failover: Failover
+        waiting: Waiting
+        updatePending: Update Pending
+        authFailed: Auth Failed
+        tlsError: TLS Error
+        unreachable: Unreachable
+        noRoute: No Route
+      message:
+        failover: "{failed} failed ({reason}). Pulling from failover {target}."
+        waiting: "{bundle} isn't on {registry} yet. Attempt {attempt}, next retry in {next} min."
+        waitingNext: "Moves on to {next} after {wait} min."
+        updatePending: "The route now starts at {target}. Keeps using {current} until the next Git update or a force update."
+        failed: "{registry}: {reason}. No other registry left in the route."
+        noRoute: "No route matches and the default route has no registry. OCI bundles can't deploy here."
+    panel:
+      title: "{name}: OCI storage"
+      effective: Effective Configuration
+      route: Route
+      registry: Pulling from
+      trying: Trying
+      namespace: Registry and namespace
+      user: Agent credentials
+      tls: TLS
+      secret: Credentials secret
+      pullOrder: Pull Order
+      bundles: Bundles
+      hint:
+        failover: "Bundles keep deploying. Fix {failed} to move back, or change the route."
+        waiting: "This clears on its own once replication reaches {registry}. If it doesn't, check the replication rule."
+        updatePending: Force update to switch now.
+        authFailed: "Check the agent credentials on {registry}. If this cluster needs its own account, give it a separate registry entry."
+        tlsError: "Add the issuing CA to the CA bundle on {registry}."
+        unreachable: Check the network path from this cluster, or add a failover registry to its route.
+        noRoute: Add a route that matches this cluster, or give the default route a registry.
+      attempt:
+        active: In use
+        waiting: In use, waiting for replication
+        failed: Failed
+        standby: Standby
+      headers:
+        bundle: Bundle
+        registry: Registry
+        pulled: Pulled
+        duration: Took
+      pull:
+        pulled: Pulled
+        waiting: Waiting
+        failed: Failed
+        behind: In progress
+    artifacts:
+      intro: Availability is what agents report. Fleet doesn't replicate, so it can't see inside a mirror until an agent asks for the artifact.
+      headers:
+        bundle: Bundle
+        artifact: Artifact
+        size: Size
+        pushed: Pushed
+        registries: Registries
+        clusters: Clusters
+      pinned: "pinned to {registry}"
+      state:
+        available: Available
+        replicating: Replicating
+        failed: Failed
+      availability:
+        pushed: Pushed here by Fleet
+        available: "Pulled by {pulled} of {total} clusters"
+        pending: "Not here yet, {minutes} min after the push"
+        unknown: No agent has asked for it here yet
+      pendingShort: "{minutes} min"
+    registryForm:
+      addTitle: Add Registry
+      editTitle: "Edit {name}"
+      name: Name
+      description: Description
+      workspace: Workspace
+      endpoint: Endpoint
+      host: Registry host
+      hostPlaceholder: e.g. harbor.example.com or 10.0.0.5:5000
+      hostSchemeError: Enter the host only, without oci:// or https://
+      nameError: Use lowercase letters, numbers and dashes
+      nameTaken: A registry with this name already exists
+      namespace: Namespace
+      namespacePlaceholder: e.g. fleet/bundles
+      namespaceTooltip: Path inside the registry. It can differ from one registry to the next.
+      resolvesTo: "Artifacts resolve to oci://{reference}/ARTIFACT_ID:latest"
+      role: Role
+      roleSource: "Source: Fleet pushes bundles here, and agents can pull from it"
+      roleMirror: "Mirror: agents only pull from it"
+      mirrorInfo: "Fleet doesn't copy artifacts between registries. Replicate from {source} to this registry with your registry's own tooling (for example Harbor replication). Agents retry until the artifact arrives."
+      sourceChange: "{current} is the source today. Saving makes this registry the source instead."
+      sourceLocked: This registry is the source. To change that, set another registry as the source.
+      credentials: Credentials
+      pushUser: Push username
+      pushPassword: Push password
+      agentUser: Agent username
+      agentPassword: Agent password
+      passwordUnchanged: Leave empty to keep the current value
+      agentUserTooltip: Read-only account the downstream agents use
+      agentWarning: Without a read-only agent user, every downstream cluster receives the push credentials.
+      mirrorAnonymous: Without an agent user, agents connect anonymously.
+      perClusterHint: Clusters that need other credentials or another namespace on the same registry get their own entry here, with the same host.
+      tls: TLS
+      tlsSystem: Verify with the system CAs
+      tlsCustom: Verify with a custom CA bundle
+      tlsSkip: Skip verification
+      caBundle: CA bundle (PEM)
+      readFromFile: Read from File
+      skipWarning: Anyone between the agents and this registry could serve them content. Fleet still rejects artifacts whose content doesn't match their ID.
+      basicHTTP: Connect over plain HTTP
+      basicHTTPWarning: Credentials and artifacts travel unencrypted.
+      test: Test Connection
+      testFrom: Test from
+      testController: Fleet controller
+      testRun: Run Test
+      testIntro: The controller often can't reach a mirror that only its clusters can. Test from a cluster to check what its agent sees.
+      check:
+        connect: "Reach {host} from {from}"
+        tls: Certificate is valid
+        tlsSkipped: Certificate not checked
+        agentAuth: "Sign in as {user}"
+        anonymous: Connect without credentials
+        agentReadOnly: Agent user is read-only
+        agentHasPush: Agents would receive the push credentials
+        pushAuth: "{user} can push"
+        namespace: "Namespace {namespace} is accessible"
+      yaml: Resulting Secret
+      changesInfo: Changes reach clusters on the next Git update or a force update.
+    routeForm:
+      addTitle: Add Route
+      editTitle: "Edit {name}"
+      editDefault: Edit Default Route
+      name: Name
+      description: Description
+      nameError: Use lowercase letters, numbers and dashes
+      nameTaken: A route with this name already exists
+      matchTitle: Clusters
+      matchIntro: Pick clusters by name, cluster group or label. Labels and groups keep working as clusters join.
+      groupsLabel: Cluster groups
+      groupsPlaceholder: Select cluster groups
+      registriesTitle: Pull Order
+      registriesIntro: Agents use the first registry that works. They move to the next one straight away on an authentication, TLS or connection error.
+      primary: Primary
+      failover: "Failover {n}"
+      addFailover: Add Failover Registry
+      noMoreRegistries: Every registry is already in this route.
+      addRegistryLink: Add another registry
+      waitLabel: Replication wait
+      waitSuffix: min
+      waitTooltip: How long agents keep retrying with back-off when an artifact hasn't reached a registry yet, before they move to the next one.
+      previewTitle: Effect on Clusters
+      previewEmpty: No cluster matches this route yet.
+      headers:
+        cluster: Cluster
+        now: Now
+        after: After Saving
+        state: Expected State
+      shadowed: "Matched first by {route}"
+      shadowedInfo: |-
+        {count, plural,
+        one {# matching cluster keeps its current route because a route above this one matches it first. Move this route up in Cluster Routing to change that.}
+        other {# matching clusters keep their current route because a route above this one matches them first. Move this route up in Cluster Routing to change that.}
+        }
+      forceUpdate: Force update affected bundles after saving
+      forceUpdateHint: Otherwise clusters switch on the next Git update.
+      yaml: Resulting Routing
+    gitRepo:
+      routing: Follow workspace routing
+      routingDescription: "Fleet pushes to {source}. Each cluster pulls from the registry its route selects."
+      pinned: Pin to one registry
+      pinnedDescription: Every target cluster pulls from this registry, whatever its route says. Each one needs direct access to it.
+      registry: Registry
+      registryPlaceholder: Select a registry
+      viewRouting: View routing
+      routeColumn: Route
+      pullOrderColumn: Pull order
+      mockNote: "Prototype: this selection isn't saved with the GitRepo."
+    workspace:
+      manage: Registries and per-cluster routing for this workspace live in OCI Storage.
+      open: Open OCI Storage
   fdc:
     id: ID
     type: Type

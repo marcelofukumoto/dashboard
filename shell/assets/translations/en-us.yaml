@@ -4066,7 +4066,7 @@ fleet:
     clusters:
       headers:
         route: Route
-        pullingFrom: Pulling From
+        registry: Registry
         credentials: Agent Credentials
         bundles: Bundles
         lastPull: Last Pull
@@ -4195,11 +4195,14 @@ fleet:
       testRun: Run Test
       testIntro: The controller often can't reach a mirror that only its clusters can. Test from a cluster to check what its agent sees.
       check:
-        connect: "Reach {host} from {from}"
+        connect: "Reached {host} from {from}"
+        connectFailed: "Can't reach {host} from {from}. If only downstream clusters can reach it, test from one of them."
         tls: Certificate is valid
+        tlsFailed: "Certificate isn't trusted (x509: certificate signed by unknown authority). Check the CA bundle."
         tlsSkipped: Certificate not checked
-        agentAuth: "Sign in as {user}"
-        anonymous: Connect without credentials
+        agentAuth: "Signed in as {user}"
+        agentAuthFailed: "{user} was rejected (401 Unauthorized). Check the agent credentials."
+        anonymous: Connected without credentials
         agentReadOnly: Agent user is read-only
         agentHasPush: Agents would receive the push credentials
         pushAuth: "{user} can push"

@@ -55,7 +55,7 @@ const headers = [
     name: 'route', labelKey: `${ ROOT }.headers.route`, value: 'routeName', sort: ['routeName', 'name']
   },
   {
-    name: 'pullingFrom', labelKey: `${ ROOT }.headers.pullingFrom`, value: 'pullingFrom', sort: ['pullingFrom', 'name']
+    name: 'registry', labelKey: `${ ROOT }.headers.registry`, value: 'registryName', sort: ['registryName', 'name']
   },
   { name: 'credentials', labelKey: `${ ROOT }.headers.credentials` },
   {
@@ -71,7 +71,9 @@ const defaultRouteLabel = computed(() => t('fleet.ociStorage.routing.defaultRout
 const rows = computed(() => statuses.value
   .filter((status) => !attentionOnly.value || needsAttention(status.state))
   .map((status) => {
-    const registry = data.value.registries.find((r) => r.name === status.pullingFrom) || null;
+    // A failing cluster still has a registry: the one it keeps trying is what the admin needs to see
+    const registryName = status.pullingFrom || status.failedRegistry;
+    const registry = data.value.registries.find((r) => r.name === registryName) || null;
     const noRegistry = t(`${ ROOT }.noRegistry`);
 
     return {
@@ -88,13 +90,13 @@ const rows = computed(() => statuses.value
       },
       registryLocation: {
         name:   'c-cluster-fleet-oci-storage-registry-id',
-        params: { cluster: BLANK_CLUSTER, id: status.pullingFrom || '' },
+        params: { cluster: BLANK_CLUSTER, id: registryName || '' },
       },
       routeGroup:       status.route?.name || defaultRouteLabel.value,
-      pullingFrom:      status.pullingFrom || '',
-      registryGroup:    status.pullingFrom || noRegistry,
+      registryName:     registryName || '',
+      registryGroup:    registryName || noRegistry,
       reference:        registry ? reference(registry) : '',
-      agentUser:        registry?.agentUsername || registry?.username || '',
+      agentUser:        registry ? (registry.agentUsername || registry.username || t('fleet.ociStorage.registries.anonymous')) : '',
       isFailover:       status.state === 'failover',
       pulledCount:      status.pulledCount,
       total:            status.pulls.length,
@@ -161,10 +163,10 @@ const groupBy = computed(() => (group.value === 'none' ? null : group.value));
       </router-link>
     </template>
 
-    <template #cell:pullingFrom="{ row }">
-      <template v-if="row.pullingFrom">
+    <template #cell:registry="{ row }">
+      <template v-if="row.registryName">
         <span class="pulling-from">
-          <router-link :to="row.registryLocation">{{ row.pullingFrom }}</router-link>
+          <router-link :to="row.registryLocation">{{ row.registryName }}</router-link>
           <RcTag
             v-if="row.isFailover"
             type="inactive"

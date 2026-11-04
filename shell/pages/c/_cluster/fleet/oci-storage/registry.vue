@@ -173,9 +173,8 @@ async function runTest() {
   await new Promise((resolve) => setTimeout(resolve, 600));
 
   const from = testFrom.value === CONTROLLER ? t(`${ ROOT }.testController`) : testFrom.value;
-  const access = testFrom.value === CONTROLLER ? from : testFrom.value;
 
-  checks.value = testConnection({ ...draft }, access);
+  checks.value = testConnection({ ...draft }, from);
   testing.value = false;
 }
 
@@ -468,7 +467,7 @@ function readCaBundle(value: string) {
                 :class="CHECK_ICON[check.outcome]"
                 aria-hidden="true"
               />
-              {{ t(`${ ROOT }.check.${ check.key }`, check.params) }}
+              {{ t(`${ ROOT }.check.${ check.key }${ check.outcome === 'error' ? 'Failed' : '' }`, check.params) }}
             </li>
           </ul>
         </RcSection>

@@ -202,7 +202,14 @@ const rows = computed(() => registryStatuses.value.map((status) => {
     </template>
 
     <template #cell:artifacts="{ row }">
-      <span class="no-wrap">{{ t(`${ ROOT }.artifactCount`, { count: row.status.artifactCount, size: size(row.status.sizeBytes) }) }}</span>
+      <span
+        v-if="row.status.artifactCount"
+        class="no-wrap"
+      >{{ t(`${ ROOT }.artifactCount`, { count: row.status.artifactCount, size: size(row.status.sizeBytes) }) }}</span>
+      <span
+        v-else
+        class="text-muted"
+      >&mdash;</span>
     </template>
 
     <template #cell:activity="{ row }">

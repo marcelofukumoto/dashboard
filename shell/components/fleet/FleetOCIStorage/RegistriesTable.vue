@@ -2,11 +2,12 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
-import SortableTable from '@shell/components/SortableTable';
+import ResourceTable from '@shell/components/ResourceTable';
 import { RcTag } from '@components/Pill';
-import { NAME as NAME_HEADER, STATE } from '@shell/config/table-headers';
+import { STATE } from '@shell/config/table-headers';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
 import { REGISTRY_STATE_COLORS, reference } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { OCI_TABLE_SCHEMAS } from '@shell/components/fleet/FleetOCIStorage/tableConfig';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 
@@ -21,25 +22,33 @@ const {
   data, registryStatuses, deleteRegistry, setSource
 } = useFleetOCIStorage();
 
+const STATE_SORT = {
+  error: 0, degraded: 1, replicating: 2, unused: 3, active: 4
+};
+
 const headers = [
   STATE,
   {
-    name: NAME_HEADER.name, labelKey: NAME_HEADER.labelKey, value: 'name', sort: ['name'], width: 190
+    name: 'name', labelKey: 'tableHeaders.name', value: 'name', sort: ['name'], width: 190
   },
   {
     name: 'reference', labelKey: `${ ROOT }.headers.reference`, value: 'reference', sort: ['reference']
   },
   {
-    name: 'role', labelKey: `${ ROOT }.headers.role`, value: 'role', sort: ['roleSort', 'name']
-  },
-  { name: 'access', labelKey: `${ ROOT }.headers.access` },
-  {
-    name: 'clusters', labelKey: `${ ROOT }.headers.clusters`, value: 'activeCount', sort: ['activeCount'], align: 'right'
+    name: 'role', labelKey: `${ ROOT }.headers.role`, value: 'roleLabel', sort: ['roleSort', 'name']
   },
   {
-    name: 'artifacts', labelKey: `${ ROOT }.headers.artifacts`, value: 'artifactCount', sort: ['artifactCount'], align: 'right'
+    name: 'access', labelKey: `${ ROOT }.headers.access`, value: 'agentAccess', sort: ['agentAccess']
   },
-  { name: 'activity', labelKey: `${ ROOT }.headers.activity` },
+  {
+    name: 'clusters', labelKey: `${ ROOT }.headers.clusters`, value: 'clustersLabel', sort: ['activeCount'], align: 'right'
+  },
+  {
+    name: 'artifacts', labelKey: `${ ROOT }.headers.artifacts`, value: 'artifactsLabel', sort: ['artifactCount'], align: 'right'
+  },
+  {
+    name: 'activity', labelKey: `${ ROOT }.headers.activity`, value: 'activityLabel', sort: ['lastPull']
+  },
 ];
 
 function confirmDelete(name: string) {
@@ -80,12 +89,30 @@ const rows = computed(() => registryStatuses.value.map((status) => {
   const isSource = registry.role === 'source';
 
   return {
-    key:              registry.name,
-    name:             registry.name,
-    description:      registry.description,
-    reference:        reference(registry),
-    role:             registry.role,
-    roleSort:         isSource ? 0 : 1,
+    key:           registry.name,
+    name:          registry.name,
+    nameSort:      registry.name,
+    state:         status.state,
+    stateSort:     STATE_SORT[status.state],
+    description:   registry.description,
+    reference:     reference(registry),
+    host:          registry.host,
+    namespace:     registry.namespace,
+    role:          registry.role,
+    roleLabel:     t(`fleet.ociStorage.role.${ registry.role }`),
+    roleSort:      isSource ? 0 : 1,
+    agentAccess:   registry.agentUsername || (isSource && registry.username) || t(`${ ROOT }.anonymous`),
+    pushUser:      registry.username,
+    tlsLabel:      registry.basicHTTP ? t('fleet.ociStorage.tls.basicHTTP') : t(`fleet.ociStorage.tls.${ registry.tlsMode }`),
+    routesLabel:   data.value.routes.filter((r) => r.registries.includes(registry.name)).map((r) => r.name).join(', '),
+    failingLabel:  status.failingClusters.map((c) => c.name).join(', '),
+    lastPull:      status.lastPullMinutesAgo ?? Number.MAX_SAFE_INTEGER,
+    activityLabel: [
+      registry.lastPushMinutesAgo === null ? '' : t(`${ ROOT }.pushed`, { age: age(registry.lastPushMinutesAgo) }),
+      status.lastPullMinutesAgo === null ? '' : t(`${ ROOT }.pulled`, { age: age(status.lastPullMinutesAgo) }),
+    ].filter(Boolean).join(', '),
+    clustersLabel:    t(`${ ROOT }.clusterCount`, { active: status.activeClusters.length, routed: status.routedClusters.length }),
+    artifactsLabel:   status.artifactCount ? t(`${ ROOT }.artifactCount`, { count: status.artifactCount, size: size(status.sizeBytes) }) : '',
     isSource,
     registry,
     status,
@@ -122,11 +149,12 @@ const rows = computed(() => registryStatuses.value.map((status) => {
 </script>
 
 <template>
-  <SortableTable
+  <ResourceTable
+    :schema="OCI_TABLE_SCHEMAS.registry"
     :headers="headers"
     :rows="rows"
+    :namespaced="false"
     :table-actions="false"
-    :paging="false"
     key-field="key"
     default-sort-by="role"
     data-testid="fleet-oci-registries-table"
@@ -197,15 +225,15 @@ const rows = computed(() => registryStatuses.value.map((status) => {
 
     <template #cell:clusters="{ row }">
       <span v-clean-tooltip="t(`${ ROOT }.clusterTooltip`)">
-        {{ t(`${ ROOT }.clusterCount`, { active: row.status.activeClusters.length, routed: row.status.routedClusters.length }) }}
+        {{ row.clustersLabel }}
       </span>
     </template>
 
     <template #cell:artifacts="{ row }">
       <span
-        v-if="row.status.artifactCount"
+        v-if="row.artifactsLabel"
         class="no-wrap"
-      >{{ t(`${ ROOT }.artifactCount`, { count: row.status.artifactCount, size: size(row.status.sizeBytes) }) }}</span>
+      >{{ row.artifactsLabel }}</span>
       <span
         v-else
         class="text-muted"
@@ -230,7 +258,7 @@ const rows = computed(() => registryStatuses.value.map((status) => {
         class="text-muted"
       >&mdash;</span>
     </template>
-  </SortableTable>
+  </ResourceTable>
 </template>
 
 <style lang="scss" scoped>

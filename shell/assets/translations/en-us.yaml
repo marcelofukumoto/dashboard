@@ -4011,6 +4011,14 @@ fleet:
       tlsWarning: Agents accept any certificate from this registry.
       clusterCount: "{active} of {routed}"
       clusterTooltip: Clusters pulling from it now, out of the clusters routed to it
+      optional:
+        description: Description
+        host: Registry Host
+        namespace: Namespace
+        tls: TLS
+        pushUser: Push User
+        routes: Routes
+        failingClusters: Failing Clusters
       artifactCount: "{count} ({size})"
       pushed: "Pushed {age}"
       pulled: "Pulled {age}"
@@ -4070,12 +4078,20 @@ fleet:
         credentials: Agent Credentials
         bundles: Bundles
         lastPull: Last Pull
-      group:
-        none: Flat list
-        registry: Group by registry
-        route: Group by route
-      attentionOnly: Only clusters that need attention
       failoverTag: failover
+      nextRetry: "in {minutes} min"
+      replicationWait: "{minutes} min"
+      optional:
+        namespace: Namespace
+        tls: TLS
+        secret: Credentials Secret
+        pullOrder: Pull Order
+        failedRegistry: Failed Registry
+        failure: Failure
+        waitingOn: Waiting On
+        attempt: Attempt
+        nextRetry: Next Retry
+        replicationWait: Replication Wait
       noRegistry: No registry
       state:
         pulled: Ready
@@ -4148,6 +4164,12 @@ fleet:
         pending: "Not here yet, {minutes} min after the push"
         unknown: No agent has asked for it here yet
       pendingShort: "{minutes} min"
+      optional:
+        source: Source
+        fullId: Artifact ID
+        pinned: Pinned To
+        waiting: Clusters Waiting
+        failed: Clusters Failed
     registryForm:
       addTitle: Add Registry
       editTitle: "Edit {name}"
@@ -9279,6 +9301,21 @@ typeDescription:
   auditlog.cattle.io.auditpolicy: Define rules that determine which Rancher API events are logged and the level of detail they contain.
 
 typeLabel:
+  fleet.cattle.io.ocistorage.registry: |-
+    {count, plural,
+      one { Registry }
+      other { Registries }
+    }
+  fleet.cattle.io.ocistorage.cluster: |-
+    {count, plural,
+      one { Cluster }
+      other { Clusters }
+    }
+  fleet.cattle.io.ocistorage.artifact: |-
+    {count, plural,
+      one { Artifact }
+      other { Artifacts }
+    }
   management.cattle.io.oidcclient: |-
     {count, plural,
       one { OIDC App }

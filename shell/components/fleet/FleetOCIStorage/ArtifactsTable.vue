@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import ResourceTable from '@shell/components/ResourceTable';
 import SortableTable from '@shell/components/SortableTable';
 import { RcButton } from '@components/RcButton';
 import { RcStatusBadge } from '@components/Pill';
 import { copyTextToClipboard } from '@shell/utils/clipboard';
 import { STATE } from '@shell/config/table-headers';
 import { ARTIFACT_STATE_COLORS } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { OCI_TABLE_SCHEMAS } from '@shell/components/fleet/FleetOCIStorage/tableConfig';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 import { ArtifactAvailability, ArtifactRegistryStatus } from '@shell/components/fleet/FleetOCIStorage/types';
@@ -23,23 +25,29 @@ const AVAILABILITY_STATUS: Record<ArtifactAvailability, 'success' | 'info' | 'no
 const { t, age, size } = useFleetOCIStorageLabels();
 const { artifactStatuses } = useFleetOCIStorage();
 
+const STATE_SORT = {
+  failed: 0, replicating: 1, available: 2
+};
+
 const headers = [
   STATE,
   {
-    name: 'bundle', labelKey: `${ ROOT }.headers.bundle`, value: 'bundle', sort: ['bundle'], width: 240
+    name: 'name', labelKey: `${ ROOT }.headers.bundle`, value: 'bundle', sort: ['bundle'], width: 240
   },
   {
-    name: 'artifact', labelKey: `${ ROOT }.headers.artifact`, width: 170
+    name: 'artifact', labelKey: `${ ROOT }.headers.artifact`, value: 'artifactId', sort: ['artifactId'], width: 170
   },
   {
-    name: 'size', labelKey: `${ ROOT }.headers.size`, value: 'sizeBytes', sort: ['sizeBytes'], align: 'right', width: 90
+    name: 'size', labelKey: `${ ROOT }.headers.size`, value: 'sizeLabel', sort: ['sizeBytes'], align: 'right', width: 90
   },
   {
-    name: 'pushed', labelKey: `${ ROOT }.headers.pushed`, value: 'pushed', sort: ['pushed'], width: 110
+    name: 'pushed', labelKey: `${ ROOT }.headers.pushed`, value: 'pushedLabel', sort: ['pushed'], width: 110
   },
-  { name: 'registries', labelKey: `${ ROOT }.headers.registries` },
   {
-    name: 'clusters', labelKey: `${ ROOT }.headers.clusters`, value: 'pulledCount', sort: ['pulledCount'], align: 'right', width: 90
+    name: 'registries', labelKey: `${ ROOT }.headers.registries`, value: 'registriesLabel', sort: false
+  },
+  {
+    name: 'clusters', labelKey: `${ ROOT }.headers.clusters`, value: 'clustersLabel', sort: ['pulledCount'], align: 'right', width: 90
   },
 ];
 
@@ -68,12 +76,22 @@ function availabilityTooltip(registry: ArtifactRegistryStatus): string {
 const rows = computed(() => artifactStatuses.value.map((status) => ({
   key:             status.artifact.bundle,
   bundle:          status.artifact.bundle,
+  nameSort:        status.artifact.bundle,
+  state:           status.state,
+  stateSort:       STATE_SORT[status.state],
   status,
   source:          `${ status.artifact.sourceKind } ${ status.artifact.source }`,
+  artifactId:      status.artifact.id,
+  pinnedLabel:     status.artifact.pinnedRegistry || '',
+  registriesLabel: status.registries.map((r) => r.registry).join(', '),
+  waitingCount:    status.pulls.filter((p) => p.state === 'waiting').length,
+  failedCount:     status.pulls.filter((p) => p.state === 'failed').length,
   sizeBytes:       status.artifact.sizeBytes,
+  sizeLabel:       size(status.artifact.sizeBytes),
   pushed:          status.artifact.pushedMinutesAgo,
+  pushedLabel:     age(status.artifact.pushedMinutesAgo),
   pulledCount:     status.pulledCount,
-  total:           status.pulls.length,
+  clustersLabel:   `${ status.pulledCount }/${ status.pulls.length }`,
   shortId:         `${ status.artifact.id.slice(0, 12) }...`,
   stateDisplay:    t(`${ ROOT }.state.${ status.state }`),
   stateBackground: ARTIFACT_STATE_COLORS[status.state],
@@ -102,12 +120,13 @@ function pullBadge(state: string): 'success' | 'info' | 'error' {
     <p class="text-deemphasized mmb-4">
       {{ t(`${ ROOT }.intro`) }}
     </p>
-    <SortableTable
+    <ResourceTable
+      :schema="OCI_TABLE_SCHEMAS.artifact"
       :headers="headers"
       :rows="rows"
+      :namespaced="false"
       :table-actions="false"
       :row-actions="false"
-      :paging="false"
       :sub-rows="true"
       :sub-expandable="true"
       :sub-expand-column="true"
@@ -115,7 +134,7 @@ function pullBadge(state: string): 'success' | 'info' | 'error' {
       default-sort-by="pushed"
       data-testid="fleet-oci-artifacts-table"
     >
-      <template #cell:bundle="{ row }">
+      <template #cell:name="{ row }">
         {{ row.bundle }}
         <div class="text-muted cell-description">
           {{ row.source }}
@@ -142,14 +161,6 @@ function pullBadge(state: string): 'success' | 'info' | 'error' {
         </span>
       </template>
 
-      <template #cell:size="{ row }">
-        {{ size(row.sizeBytes) }}
-      </template>
-
-      <template #cell:pushed="{ row }">
-        {{ age(row.pushed) }}
-      </template>
-
       <template #cell:registries="{ row }">
         <span class="registries">
           <RcStatusBadge
@@ -165,10 +176,6 @@ function pullBadge(state: string): 'success' | 'info' | 'error' {
             >{{ t(`${ ROOT }.pendingShort`, { minutes: registry.pendingMinutes }) }}</span>
           </RcStatusBadge>
         </span>
-      </template>
-
-      <template #cell:clusters="{ row }">
-        {{ row.pulledCount }}/{{ row.total }}
       </template>
 
       <template #sub-row="{ row, fullColspan, onRowMouseEnter, onRowMouseLeave }">
@@ -203,7 +210,7 @@ function pullBadge(state: string): 'success' | 'info' | 'error' {
           </td>
         </tr>
       </template>
-    </SortableTable>
+    </ResourceTable>
   </div>
 </template>
 

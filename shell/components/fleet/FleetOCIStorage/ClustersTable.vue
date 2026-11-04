@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
-import SortableTable from '@shell/components/SortableTable';
-import ButtonGroup from '@shell/components/ButtonGroup';
-import { Checkbox } from '@components/Form/Checkbox';
+import ResourceTable from '@shell/components/ResourceTable';
 import { RcTag } from '@components/Pill';
 import { STATE } from '@shell/config/table-headers';
-import { DEFAULT_ROUTE, needsAttention, reference } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { queryFor } from '@shell/utils/table-views/query';
+import type { TableViewState } from '@shell/types/table-views';
+import { ATTENTION_STATES, DEFAULT_ROUTE, reference } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { backoff, useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
+import { OCI_TABLE_SCHEMAS } from '@shell/components/fleet/FleetOCIStorage/tableConfig';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
-import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 import { ClusterPullState, ClusterStatus } from '@shell/components/fleet/FleetOCIStorage/types';
 
 const ROOT = 'fleet.ociStorage.clusters';
@@ -24,27 +25,16 @@ const STATE_SORT: Record<ClusterPullState, number> = {
   pulled:        7,
 };
 
-const attentionOnly = defineModel<boolean>('attentionOnly', { default: false });
-
 const emit = defineEmits<{(e: 'open-cluster', status: ClusterStatus): void}>();
 
 const {
-  t, age, clusterStateDisplay, clusterMessage
+  t, age, reason, clusterStateDisplay, clusterMessage
 } = useFleetOCIStorageLabels();
-const { data, statuses, forceUpdate } = useFleetOCIStorage();
+const {
+  workspace, data, statuses, forceUpdate
+} = useFleetOCIStorage();
 
-const group = ref('none');
-const groupOptions = computed(() => [
-  {
-    tooltipKey: `${ ROOT }.group.none`, icon: 'icon-list-flat', value: 'none'
-  },
-  {
-    tooltipKey: `${ ROOT }.group.registry`, icon: 'icon-storage', value: 'registryGroup'
-  },
-  {
-    tooltipKey: `${ ROOT }.group.route`, icon: 'icon-folder', value: 'routeGroup'
-  },
-]);
+const table = useTemplateRef<{ view: TableViewState, openTabView:(view: TableViewState) => void }>('table');
 
 const headers = [
   STATE,
@@ -57,28 +47,32 @@ const headers = [
   {
     name: 'registry', labelKey: `${ ROOT }.headers.registry`, value: 'registryName', sort: ['registryName', 'name']
   },
-  { name: 'credentials', labelKey: `${ ROOT }.headers.credentials` },
   {
-    name: 'bundles', labelKey: `${ ROOT }.headers.bundles`, value: 'pulledCount', sort: ['pulledCount'], align: 'right', width: 90
+    name: 'credentials', labelKey: `${ ROOT }.headers.credentials`, value: 'agentUser', sort: ['agentUser']
   },
   {
-    name: 'lastPull', labelKey: `${ ROOT }.headers.lastPull`, value: 'lastPull', sort: ['lastPull']
+    name: 'bundles', labelKey: `${ ROOT }.headers.bundles`, value: 'bundlesLabel', sort: ['pulledCount'], align: 'right', width: 90
+  },
+  {
+    name: 'lastPull', labelKey: `${ ROOT }.headers.lastPull`, value: 'lastPullLabel', sort: ['lastPull']
   },
 ];
 
 const defaultRouteLabel = computed(() => t('fleet.ociStorage.routing.defaultRoute'));
 
 const rows = computed(() => statuses.value
-  .filter((status) => !attentionOnly.value || needsAttention(status.state))
   .map((status) => {
     // A failing cluster still has a registry: the one it keeps trying is what the admin needs to see
     const registryName = status.pullingFrom || status.failedRegistry;
     const registry = data.value.registries.find((r) => r.name === registryName) || null;
-    const noRegistry = t(`${ ROOT }.noRegistry`);
+    const pendingMinutes = status.waitingOn[0]?.pendingOn[status.targetRegistry as string];
+    const retry = pendingMinutes === undefined ? null : backoff(pendingMinutes);
 
     return {
       key:           status.cluster.name,
       name:          status.cluster.name,
+      metadata:      { labels: status.cluster.labels },
+      state:         status.state,
       status,
       registry,
       stateSort:     STATE_SORT[status.state],
@@ -92,18 +86,27 @@ const rows = computed(() => statuses.value
         name:   'c-cluster-fleet-oci-storage-registry-id',
         params: { cluster: BLANK_CLUSTER, id: registryName || '' },
       },
-      routeGroup:       status.route?.name || defaultRouteLabel.value,
-      registryName:     registryName || '',
-      registryGroup:    registryName || noRegistry,
-      reference:        registry ? reference(registry) : '',
-      agentUser:        registry ? (registry.agentUsername || registry.username || t('fleet.ociStorage.registries.anonymous')) : '',
-      isFailover:       status.state === 'failover',
-      pulledCount:      status.pulledCount,
-      total:            status.pulls.length,
-      lastPull:         status.cluster.lastPullMinutesAgo ?? Number.MAX_SAFE_INTEGER,
+      registryName:         registryName || '',
+      reference:            registry ? reference(registry) : '',
+      namespaceLabel:       registry?.namespace || '',
+      tlsLabel:             registry ? (registry.basicHTTP ? t('fleet.ociStorage.tls.basicHTTP') : t(`fleet.ociStorage.tls.${ registry.tlsMode }`)) : '',
+      secretRef:            registry ? `${ workspace.value }/${ registry.name }` : '',
+      chainLabel:           status.chain.join(', '),
+      failedRegistryName:   status.failedRegistry || '',
+      failureLabel:         reason(status.failedAccess),
+      waitingOnLabel:       status.waitingOn.map((a) => a.bundle).join(', '),
+      attempt:              retry?.attempt ?? '',
+      nextRetryLabel:       retry ? t(`${ ROOT }.nextRetry`, { minutes: retry.nextMinutes }) : '',
+      replicationWaitLabel: t(`${ ROOT }.replicationWait`, { minutes: status.replicationWaitMinutes }),
+      agentUser:            registry ? (registry.agentUsername || registry.username || t('fleet.ociStorage.registries.anonymous')) : '',
+      isFailover:           status.state === 'failover',
+      pulledCount:          status.pulledCount,
+      bundlesLabel:         `${ status.pulledCount }/${ status.pulls.length }`,
+      lastPull:             status.cluster.lastPullMinutesAgo ?? Number.MAX_SAFE_INTEGER,
+      lastPullLabel:        age(status.cluster.lastPullMinutesAgo),
       ...clusterStateDisplay(status.state),
-      stateDescription: clusterMessage(status),
-      availableActions: [
+      stateDescription:     clusterMessage(status),
+      availableActions:     [
         {
           action: 'view', label: t('fleet.ociStorage.actions.viewDetails'), icon: 'icon icon-info', enabled: true
         },
@@ -120,35 +123,30 @@ const rows = computed(() => statuses.value
     };
   }));
 
-const groupBy = computed(() => (group.value === 'none' ? null : group.value));
+function showAttention() {
+  const present = ATTENTION_STATES.filter((state) => statuses.value.some((status) => status.state === state));
+  const query = queryFor(present.map((state) => t(`${ ROOT }.state.${ state }`)));
+
+  if (table.value) {
+    table.value.openTabView({ ...table.value.view, query });
+  }
+}
+
+defineExpose({ showAttention });
 </script>
 
 <template>
-  <SortableTable
+  <ResourceTable
+    ref="table"
+    :schema="OCI_TABLE_SCHEMAS.cluster"
     :headers="headers"
     :rows="rows"
+    :namespaced="false"
     :table-actions="false"
-    :paging="false"
-    :group-by="groupBy"
     key-field="key"
     default-sort-by="state"
     data-testid="fleet-oci-clusters-table"
   >
-    <template #header-middle>
-      <div class="table-filters">
-        <ButtonGroup
-          v-model:value="group"
-          :options="groupOptions"
-          size="medium"
-        />
-        <Checkbox
-          v-model:value="attentionOnly"
-          :label="t(`${ ROOT }.attentionOnly`)"
-          data-testid="fleet-oci-clusters-attention"
-        />
-      </div>
-    </template>
-
     <template #cell:name="{ row }">
       <a
         href="#"
@@ -189,28 +187,15 @@ const groupBy = computed(() => (group.value === 'none' ? null : group.value));
         class="text-muted"
       >&mdash;</span>
     </template>
-
-    <template #cell:bundles="{ row }">
-      {{ row.pulledCount }}/{{ row.total }}
-    </template>
-
-    <template #cell:lastPull="{ row }">
-      {{ age(row.status.cluster.lastPullMinutesAgo) }}
-    </template>
-  </SortableTable>
+  </ResourceTable>
 </template>
 
 <style lang="scss" scoped>
-.table-filters {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 .pulling-from {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
 }
 
 .cell-description {

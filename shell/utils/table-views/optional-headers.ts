@@ -13,6 +13,7 @@ import {
 } from '@shell/config/pagination-table-headers';
 import { isAutoscalerFeatureFlagEnabled } from '@shell/utils/autoscaler-utils';
 import type { GetterSource } from '@shell/utils/table-views/feature';
+import { OCI_OPTIONAL_HEADERS } from '@shell/components/fleet/FleetOCIStorage/tableConfig';
 
 /**
  * Columns a type offers that not every list of it shows, eg the autoscaler column, so the column
@@ -72,6 +73,7 @@ const OPTIONAL_HEADERS: Record<string, OptionalHeader[]> = {
     // The commit deployed, which the list doesn't show
     { header: FLEET_GIT_REPO_COMMIT },
   ],
+  ...OCI_OPTIONAL_HEADERS,
 };
 
 DESCRIBED_TYPES.forEach((type) => {

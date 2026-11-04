@@ -52,8 +52,10 @@ export const ARTIFACT_STATE_COLORS = {
   failed:      'bg-error',
 };
 
+export const ATTENTION_STATES: ClusterPullState[] = ['authFailed', 'tlsError', 'unreachable', 'noRoute', 'failover'];
+
 export function needsAttention(state: ClusterPullState): boolean {
-  return ['authFailed', 'tlsError', 'unreachable', 'noRoute', 'failover'].includes(state);
+  return ATTENTION_STATES.includes(state);
 }
 
 export function isFailing(state: ClusterPullState): boolean {

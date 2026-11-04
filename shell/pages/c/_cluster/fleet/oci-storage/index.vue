@@ -31,7 +31,7 @@ const {
 
 const tabs = useTemplateRef<{ select:(name: string) => void }>('tabs');
 const activeTab = ref('registries');
-const attentionOnly = ref(false);
+const clustersTable = useTemplateRef<{ showAttention:() => void }>('clustersTable');
 
 const addRegistryLocation = { name: 'c-cluster-fleet-oci-storage-registry-create', params: { cluster: BLANK_CLUSTER } };
 const addRouteLocation = { name: 'c-cluster-fleet-oci-storage-route-create', params: { cluster: BLANK_CLUSTER } };
@@ -84,8 +84,8 @@ function showSampleData() {
 }
 
 function showFailingClusters() {
-  attentionOnly.value = true;
   tabs.value?.select('clusters');
+  clustersTable.value?.showAttention();
 }
 
 function openCluster(status: ClusterStatus) {
@@ -256,7 +256,7 @@ onMounted(() => {
           :display-alert-icon="attentionCount > 0"
         >
           <ClustersTable
-            v-model:attention-only="attentionOnly"
+            ref="clustersTable"
             @open-cluster="openCluster"
           />
         </Tab>

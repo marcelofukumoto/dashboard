@@ -1,4 +1,4 @@
-import { isArray, addObject, findBy } from '@shell/utils/array';
+import { isArray, addObject } from '@shell/utils/array';
 import { get } from '@shell/utils/object';
 
 const parseCache = {};
@@ -124,16 +124,12 @@ export function convertSelectorObj(obj) {
  * Optionally combining with an existing set of matchExpressions
  */
 export function convert(matchLabelsObj, matchExpressions) {
-  const keys = Object.keys(matchLabelsObj || {});
-  const out = matchExpressions || [];
+  const out = isArray(matchExpressions) ? [...matchExpressions] : [];
 
-  for ( const key of keys ) {
-    const value = matchLabelsObj[key];
-    const existing = findBy(out, { key, operator: 'In' });
+  for ( const [key, value] of Object.entries(matchLabelsObj || {}) ) {
+    const alreadyThere = out.some((e) => e.key === key && e.operator === 'In' && e.values?.length === 1 && e.values[0] === value);
 
-    if ( existing ) {
-      addObject(existing.values, value);
-    } else {
+    if ( !alreadyThere ) {
       out.push({
         key,
         operator: 'In',

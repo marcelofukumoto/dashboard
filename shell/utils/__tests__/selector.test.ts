@@ -223,6 +223,49 @@ describe('fx: convertSelectorObj', () => {
 });
 
 describe('fx: convert', () => {
+  it('should not change the expressions it is given', () => {
+    const matchExpressions = [{
+      key: 'aaa', operator: 'In', values: ['bbb']
+    }];
+
+    convert({ aaa: 'aaa', ccc: 'ccc' }, matchExpressions);
+
+    expect(matchExpressions).toStrictEqual([{
+      key: 'aaa', operator: 'In', values: ['bbb']
+    }]);
+  });
+
+  it('should keep a label as its own rule when an expression already uses the key', () => {
+    const result = convert({ aaa: 'aaa' }, [{
+      key: 'aaa', operator: 'In', values: ['bbb']
+    }]);
+
+    expect(result).toStrictEqual([
+      {
+        key: 'aaa', operator: 'In', values: ['bbb']
+      },
+      {
+        key: 'aaa', operator: 'In', values: ['aaa']
+      },
+    ]);
+  });
+
+  it('should not repeat a label that is already there as the same rule', () => {
+    const result = convert({ aaa: 'aaa' }, [{
+      key: 'aaa', operator: 'In', values: ['aaa']
+    }]);
+
+    expect(result).toStrictEqual([{
+      key: 'aaa', operator: 'In', values: ['aaa']
+    }]);
+  });
+
+  it.each([['a string'], [{ foo: 1 }], [3]])('should ignore expressions that are not an array: %p', (matchExpressions) => {
+    expect(convert({ aaa: 'aaa' }, matchExpressions as any)).toStrictEqual([{
+      key: 'aaa', operator: 'In', values: ['aaa']
+    }]);
+  });
+
   it('should convert labels to expression', () => {
     const matchLabelsObj = {
       foo: 'bar',

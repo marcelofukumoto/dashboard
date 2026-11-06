@@ -261,7 +261,7 @@ describe('fx: convert', () => {
   });
 
   it.each([['a string'], [{ foo: 1 }], [3]])('should ignore expressions that are not an array: %p', (matchExpressions) => {
-    expect(convert({ aaa: 'aaa' }, matchExpressions as any)).toStrictEqual([{
+    expect(convert({ aaa: 'aaa' }, matchExpressions)).toStrictEqual([{
       key: 'aaa', operator: 'In', values: ['aaa']
     }]);
   });

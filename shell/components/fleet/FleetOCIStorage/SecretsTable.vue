@@ -26,7 +26,7 @@ const STATE_SORT = {
 const headers = [
   STATE,
   {
-    name: 'name', labelKey: 'tableHeaders.name', value: 'name', sort: ['name'], width: 200
+    name: 'name', labelKey: 'tableHeaders.name', value: 'name', sort: ['name'], width: 200, canBeVariable: true
   },
   {
     name: 'push', labelKey: `${ ROOT }.headers.push`, value: 'pushReference', sort: ['pushReference'], width: 240

@@ -40,9 +40,6 @@ const headers = [
   {
     name: 'deployments', labelKey: `${ ROOT }.headers.deployments`, value: 'deploymentsLabel', sort: ['failing', 'name'], width: 150
   },
-  {
-    name: 'age', labelKey: 'tableHeaders.age', value: 'ageLabel', sort: ['ageMinutes'], width: 90
-  },
 ];
 
 function confirmDelete(name: string, gitRepos: string[]) {
@@ -84,6 +81,7 @@ const rows = computed(() => secretStatuses.value.map((status) => {
     isDefault:        status.isDefault,
     location,
     pushReference:    reference(secret.push),
+    hostParts:        secret.push.host.split('.'),
     pushUser:         secret.push.username,
     agentUser:        secret.push.agentUsername || t('fleet.ociStorage.anonymous'),
     agentGetsPush:    !!secret.push.username && !secret.push.agentUsername,
@@ -154,7 +152,11 @@ const rows = computed(() => secretStatuses.value.map((status) => {
       </template>
 
       <template #cell:push="{ row }">
-        <span class="reference">{{ row.secret.push.host }}</span>
+        <!-- A host wraps after a dot rather than mid-word -->
+        <span class="reference"><template
+          v-for="(part, i) in row.hostParts"
+          :key="i"
+        >{{ part }}<template v-if="i < row.hostParts.length - 1">.<wbr></template></template></span>
         <div class="text-muted cell-description reference">
           {{ row.secret.push.namespace }}
         </div>
@@ -246,7 +248,7 @@ const rows = computed(() => secretStatuses.value.map((status) => {
 }
 
 .reference {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .no-wrap {

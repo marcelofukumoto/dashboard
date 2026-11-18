@@ -24,6 +24,11 @@ export const OCI_OPTIONAL_HEADERS = {
     column('secrets', 'tls', 'tlsLabel'),
     column('secrets', 'setNames', 'setNames'),
     column('secrets', 'gitRepos', 'gitReposLabel'),
+    {
+      header: {
+        name: 'age', labelKey: 'tableHeaders.age', value: 'ageLabel', sort: ['ageMinutes']
+      }
+    },
   ],
   [OCI_TABLE_SCHEMAS.deployment.id]: [
     column('deployments', 'pullOrder', 'orderLabel'),

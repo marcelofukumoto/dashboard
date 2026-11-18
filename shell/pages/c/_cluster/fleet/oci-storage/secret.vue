@@ -255,6 +255,7 @@ function save(buttonDone: (success: boolean) => void) {
       :resource="resource"
       :subtypes="[]"
       :can-yaml="false"
+      :cancel-event="true"
       :validation-passed="isValid"
       :errors="errors"
       @error="(e) => errors = e"

@@ -73,6 +73,7 @@ const rows = computed(() => [
       <span
         v-else
         class="chips"
+        :data-testid="`fleet-oci-set-matches-${ row.key }`"
       >
         <RcTag
           v-for="chip in row.chips"

@@ -3943,6 +3943,7 @@ fleet:
       notes: Design notes
       reset: Reset mock data
       sample: "See the sample data in {workspace}"
+      guide: Take the guided tour
     actions:
       createSecret: Create OCI Storage Secret
       edit: Edit
@@ -4154,6 +4155,91 @@ fleet:
     workspace:
       manage: OCI storage secrets and their credential sets for this workspace live in OCI Storage.
       open: Open OCI Storage
+    guide:
+      steps:
+        intro:
+          title: "Guided tour: OCI storage, iteration 2"
+          body: This tour walks through the prototype and explains why each part works the way it does. It moves around the page for you. Use Next and Back or the arrow keys, and Esc to leave.
+          design: Built from the shell's own components (the standard table, form, cluster target fields and drawer), so it behaves like the rest of Rancher.
+          backend: Reworked after the Fleet backend feedback. Everything is mock data in your browser; nothing here talks to Fleet.
+        summary:
+          title: Two summaries
+          body: OCI storage secrets by state, and bundle deployments by state.
+          design: The same status cards as Fleet's other lists, in the colors the tables below use.
+          backend: Both are worked out in the UI. A secret's state comes from the bundle deployments that use it, so it needs no status field of its own.
+        failing:
+          title: Only blocking problems get a banner
+          body: It appears when a bundle deployment can't pull from any registry its cluster tries. Show them opens Bundle Deployments filtered to Failed.
+          design: "Fallback and Retrying stay out of the banner: the bundle deploys anyway, or will once the artifact arrives."
+          backend: Once a GitRepo has a secret, Fleet doesn't fall back to etcd, so a failed pull means the bundle doesn't deploy.
+        secrets:
+          title: The secrets in this workspace
+          body: Each row is a Secret of type fleet.cattle.io/bundle-oci-storage/v1alpha1 in the workspace's namespace. Expand a row to see the order its agents try.
+          design: A list of the object people already create, not a new concept. It's the standard table, so saved views, the query box, Group By, Columns and export work as on other lists.
+          backend: "Namespace-scoped, as the backend design proposes: the page lists secrets of this type in the workspace namespace and nothing else."
+        fallback:
+          title: The fallback secret
+          body: A GitRepo uses the secret named in spec.ociRegistrySecret, or else the one called ocistorage.
+          design: "Shown as a tag, not a setting, because it follows from the name. There's no \"set as default\": that would mean renaming the secret."
+          backend: This is how Fleet works today. The dashboard's ui-default-oci-registry annotation only preselects a secret in the GitRepo form, so the prototype doesn't use it.
+        push:
+          title: The push registry
+          body: "The keys the secret has today: where fleet apply pushes every bundle, with its credentials and TLS settings."
+          design: "Risks show in the list: a warning when agents would receive the push credentials, or when certificate checks are off."
+          backend: "There's no source or mirror role, because Fleet can't know it. Assumption to confirm: agents try the push registry last, after any credential set that matches."
+        sets:
+          title: Credential sets, in order
+          body: A cluster gets every set whose selector matches it, in this order, and then the push registry.
+          design: "A plain table with an order column and no sorting: here the order is the meaning, so it never changes with a click."
+          backend: "The backend's model: one secret holding several credential sets, each with a cluster selector, where the first match has the highest priority."
+        matches:
+          title: Which clusters a set applies to
+          body: Cluster names, cluster groups and label selectors. eu-staging-01 matches both EU sets, so it tries the staging namespace first, then the EU mirror, then the push registry.
+          design: Edited with the same fields as a GitRepo's targets, so the form feels familiar.
+          backend: Assumes the selector has the same shape as bundle targets (clusterName, clusterGroup, clusterSelector).
+        formPush:
+          title: "Editing a secret: the push registry"
+          body: Host and namespace, push credentials, agent credentials and TLS. The resulting reference shows under the host.
+          design: Push and agent credentials are separate fields, and a warning shows when agents would get the push credentials.
+          backend: These are today's keys (reference, username, password, agentUsername, agentPassword, insecureSkipTLS, basicHTTP, cacerts), so an existing secret keeps working.
+        formSet:
+          title: One card per credential set
+          body: Registry, namespace, agent credentials, TLS and the clusters it applies to. The arrows change the order, and the list on the right shows which clusters match right now.
+          design: Cards rather than a dense table, because a set has many fields. The order number stays visible on each card.
+          backend: "Open question: can a set leave fields empty and inherit them from the push registry, or does each set stand alone?"
+        formPreview:
+          title: Pull order per cluster
+          body: What every cluster's agent would try, now and after saving. "Only clusters whose order changes" narrows it to the effect of your edit.
+          design: "The review step: ordering mistakes are easy to make and hard to see in the cards alone."
+          backend: "Assumption: agents pick up a new order on their next pull, so there's no \"update pending\" state."
+        formYaml:
+          title: The resulting secret
+          body: The Secret that saving would write, with passwords masked.
+          design: Lets reviewers check the form against the object it produces.
+          backend: The credentialSets key is a guess until the backend design defines the format.
+        deployments:
+          title: Status per workload
+          body: "One row per bundle per cluster: Ready, Fallback, Retrying or Failed, with the reason under each row."
+          design: Replaces iteration 1's Clusters and Artifacts tabs. View > Group By > Cluster gives the per-cluster view.
+          backend: Read from BundleDeployment status, which is where the backend reports per workload.
+        retrying:
+          title: Artifact not found
+          body: The registry answered, but it doesn't have the artifact yet. The agent tries the next entry, and retries with back-off when no entry has it.
+          design: "Retrying is blue, not red: it usually clears on its own once replication catches up."
+          backend: "Fleet can only see \"reachable but not found\", not replication. Assumption to confirm: not found moves on to the next entry."
+        drawer:
+          title: Which entry worked, and why
+          body: Every entry the agent tried, in order, with the result. Entries after the one that worked weren't tried.
+          design: Each state says what happens next and what to do about it.
+          backend: "This needs two fields on BundleDeployment status: the entry used, and the error for each entry tried."
+        elsewhere:
+          title: Also in the prototype
+          body: A Fleet cluster's detail page has an OCI Storage tab with that cluster's pull order for each secret, and the GitRepo form's Advanced step shows the order of the secret it uses.
+          design: "Each answer sits where people already look: on the cluster, and on the GitRepo."
+          backend: The cluster tab is worked out from the secrets and the cluster's labels, so it needs nothing new from Fleet.
+        questions:
+          title: What the backend design needs to confirm
+          body: "The prototype assumes three things: the push registry is every cluster's last fallback, \"not found\" moves on to the next entry, and a new order applies on the next pull. Each one changes what the UI shows."
   fdc:
     id: ID
     type: Type
@@ -10628,3 +10714,12 @@ autoscaler:
 ext.cattle.io.kubeconfig:
   deleted: "{name} (deleted)"
   moreClusterCount: " + {remainingCount} more"
+
+prototypeGuide:
+  step: Step {current} of {total}
+  next: Next
+  back: Back
+  finish: Finish
+  close: Close the guide
+  design: Design
+  backend: Backend

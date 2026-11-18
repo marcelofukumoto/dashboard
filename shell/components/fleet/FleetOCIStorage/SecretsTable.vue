@@ -135,7 +135,10 @@ const rows = computed(() => secretStatuses.value.map((status) => {
     >
       <template #cell:name="{ row }">
         <span class="name">
-          <router-link :to="row.location">{{ row.name }}</router-link>
+          <router-link
+            :to="row.location"
+            :data-testid="`fleet-oci-secret-${ row.name }`"
+          >{{ row.name }}</router-link>
           <RcTag
             v-if="row.isDefault"
             v-clean-tooltip="t(`${ ROOT }.defaultTooltip`)"
@@ -152,35 +155,37 @@ const rows = computed(() => secretStatuses.value.map((status) => {
       </template>
 
       <template #cell:push="{ row }">
-        <!-- A host wraps after a dot rather than mid-word -->
-        <span class="reference"><template
-          v-for="(part, i) in row.hostParts"
-          :key="i"
-        >{{ part }}<template v-if="i < row.hostParts.length - 1">.<wbr></template></template></span>
-        <div class="text-muted cell-description reference">
-          {{ row.secret.push.namespace }}
-        </div>
-        <div
-          v-if="row.agentGetsPush"
-          v-clean-tooltip="t(`${ ROOT }.agentGetsPushTooltip`)"
-          class="cell-description text-warning"
-        >
-          <i
-            class="icon icon-warning"
-            aria-hidden="true"
-          />
-          {{ t(`${ ROOT }.agentGetsPush`) }}
-        </div>
-        <div
-          v-if="row.insecure"
-          v-clean-tooltip="t(`${ ROOT }.insecureTooltip`)"
-          class="cell-description text-warning"
-        >
-          <i
-            class="icon icon-warning"
-            aria-hidden="true"
-          />
-          {{ row.tlsLabel }}
+        <div :data-testid="`fleet-oci-push-${ row.name }`">
+          <!-- A host wraps after a dot rather than mid-word -->
+          <span class="reference"><template
+            v-for="(part, i) in row.hostParts"
+            :key="i"
+          >{{ part }}<template v-if="i < row.hostParts.length - 1">.<wbr></template></template></span>
+          <div class="text-muted cell-description reference">
+            {{ row.secret.push.namespace }}
+          </div>
+          <div
+            v-if="row.agentGetsPush"
+            v-clean-tooltip="t(`${ ROOT }.agentGetsPushTooltip`)"
+            class="cell-description text-warning"
+          >
+            <i
+              class="icon icon-warning"
+              aria-hidden="true"
+            />
+            {{ t(`${ ROOT }.agentGetsPush`) }}
+          </div>
+          <div
+            v-if="row.insecure"
+            v-clean-tooltip="t(`${ ROOT }.insecureTooltip`)"
+            class="cell-description text-warning"
+          >
+            <i
+              class="icon icon-warning"
+              aria-hidden="true"
+            />
+            {{ row.tlsLabel }}
+          </div>
         </div>
       </template>
 

@@ -299,6 +299,7 @@ function save(buttonDone: (success: boolean) => void) {
 
         <RcSection
           :title="t(`${ ROOT }.pushTitle`)"
+          data-testid="fleet-oci-form-push"
           type="primary"
           mode="with-header"
           :expandable="false"
@@ -347,6 +348,7 @@ function save(buttonDone: (success: boolean) => void) {
 
         <RcSection
           :title="t(`${ ROOT }.setsTitle`)"
+          data-testid="fleet-oci-form-sets"
           type="primary"
           mode="with-header"
           :expandable="false"
@@ -473,6 +475,7 @@ function save(buttonDone: (success: boolean) => void) {
 
         <RcSection
           :title="t(`${ ROOT }.previewTitle`)"
+          data-testid="fleet-oci-form-preview"
           type="primary"
           mode="with-header"
           :expandable="false"
@@ -514,6 +517,7 @@ function save(buttonDone: (success: boolean) => void) {
 
         <RcSection
           :title="t(`${ ROOT }.yaml`)"
+          data-testid="fleet-oci-form-yaml"
           type="primary"
           mode="with-header"
           :expandable="false"

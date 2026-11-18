@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { FLEET } from '@shell/config/types';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
@@ -14,6 +15,7 @@ import SecretsTable from '@shell/components/fleet/FleetOCIStorage/SecretsTable.v
 import DeploymentsTable from '@shell/components/fleet/FleetOCIStorage/DeploymentsTable.vue';
 import DeploymentDrawer from '@shell/components/fleet/FleetOCIStorage/DeploymentDrawer.vue';
 import { SCENARIO_WORKSPACE } from '@shell/components/fleet/FleetOCIStorage/mock';
+import { startOCIStorageGuide } from '@shell/components/fleet/FleetOCIStorage/guide';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 import { DeploymentStatus } from '@shell/components/fleet/FleetOCIStorage/types';
@@ -21,6 +23,8 @@ import { DeploymentStatus } from '@shell/components/fleet/FleetOCIStorage/types'
 const ROOT = 'fleet.ociStorage';
 
 const store = useStore();
+const route = useRoute();
+const router = useRouter();
 const { t } = useFleetOCIStorageLabels();
 const {
   workspace, data, deployments, secretStatuses
@@ -94,6 +98,11 @@ function openDeployment(status: DeploymentStatus) {
 
 onMounted(() => {
   store.dispatch('management/findAll', { type: FLEET.CLUSTER });
+
+  // ?guide (or ?guide=4 for a given step) opens the guided tour, so a link can be shared
+  if (route.query.guide !== undefined) {
+    startOCIStorageGuide(router, store, (Number(route.query.guide) || 1) - 1);
+  }
 });
 </script>
 

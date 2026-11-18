@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
 import { Banner } from '@components/Banner';
+import PrototypeGuide from '@shell/components/PrototypeGuide/PrototypeGuide.vue';
+import { startOCIStorageGuide } from '@shell/components/fleet/FleetOCIStorage/guide';
 import { resetMockData } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 
 const DESIGN_NOTES_URL = 'https://fleet-oci-design.mf-created-dashboard.ui.rancher.space/';
 
+const router = useRouter();
+const store = useStore();
 const { t } = useFleetOCIStorageLabels();
 </script>
 
@@ -15,6 +21,11 @@ const { t } = useFleetOCIStorageLabels();
   >
     <div class="prototype-banner">
       <span>{{ t('fleet.ociStorage.prototype.label') }}</span>
+      <a
+        href="#"
+        data-testid="fleet-oci-prototype-guide"
+        @click.prevent="startOCIStorageGuide(router, store)"
+      >{{ t('fleet.ociStorage.prototype.guide') }}</a>
       <a
         :href="DESIGN_NOTES_URL"
         target="_blank"
@@ -27,6 +38,8 @@ const { t } = useFleetOCIStorageLabels();
       >{{ t('fleet.ociStorage.prototype.reset') }}</a>
     </div>
   </Banner>
+  <!-- Every page with this banner hosts the guide, so a tour that moves between pages keeps going -->
+  <PrototypeGuide />
 </template>
 
 <style lang="scss" scoped>

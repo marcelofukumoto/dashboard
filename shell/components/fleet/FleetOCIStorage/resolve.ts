@@ -1,69 +1,43 @@
 import { convert, matches } from '@shell/utils/selector';
 import { Selector } from '@shell/types/fleet';
 import {
-  ArtifactPull,
-  ArtifactRegistryStatus,
-  ArtifactStatus,
-  ClusterPullState,
-  ClusterStatus,
-  ConnectionCheck,
-  OCIArtifact,
+  CredentialSet,
+  DeploymentState,
+  DeploymentStatus,
+  OCIBundle,
   OCICluster,
-  OCIRegistry,
-  OCIRoute,
+  OCIGitRepo,
   OCIStorageData,
-  RegistryAccess,
-  RegistryAttempt,
-  RegistryStatus,
+  OCIStorageSecret,
+  PullAttempt,
+  PullEntry,
+  PullResult,
+  RegistryEndpoint,
+  SecretState,
+  SecretStatus,
 } from '@shell/components/fleet/FleetOCIStorage/types';
 
-export const DEFAULT_ROUTE = 'default';
-export const DEFAULT_REPLICATION_WAIT_MINUTES = 10;
+// Key for the push registry in a cluster's reach map; a credential set can't be named this
+export const PUSH_ENTRY = 'push';
 
-const FAILED_STATE: Record<string, ClusterPullState> = {
-  auth:          'authFailed',
-  tls:           'tlsError',
-  unreachable:   'unreachable',
-  notReplicated: 'unreachable',
+// The secret Fleet uses for a GitRepo that names none
+export const FALLBACK_SECRET = 'ocistorage';
+
+export const DEPLOYMENT_STATE_COLORS: Record<DeploymentState, string> = {
+  ready:    'bg-success',
+  fallback: 'bg-warning',
+  retrying: 'bg-info',
+  failed:   'bg-error',
 };
 
-export const CLUSTER_STATE_COLORS: Record<ClusterPullState, string> = {
-  pulled:        'bg-success',
-  failover:      'bg-warning',
-  waiting:       'bg-info',
-  updatePending: 'bg-info',
-  authFailed:    'bg-error',
-  tlsError:      'bg-error',
-  unreachable:   'bg-error',
-  noRoute:       'bg-error',
+export const SECRET_STATE_COLORS: Record<SecretState, string> = {
+  active: 'bg-success',
+  error:  'bg-error',
+  unused: 'bg-darker',
 };
 
-export const REGISTRY_STATE_COLORS = {
-  active:      'bg-success',
-  replicating: 'bg-info',
-  degraded:    'bg-warning',
-  error:       'bg-error',
-  unused:      'bg-darker',
-};
-
-export const ARTIFACT_STATE_COLORS = {
-  available:   'bg-success',
-  replicating: 'bg-info',
-  failed:      'bg-error',
-};
-
-export const ATTENTION_STATES: ClusterPullState[] = ['authFailed', 'tlsError', 'unreachable', 'noRoute', 'failover'];
-
-export function needsAttention(state: ClusterPullState): boolean {
-  return ATTENTION_STATES.includes(state);
-}
-
-export function isFailing(state: ClusterPullState): boolean {
-  return ['authFailed', 'tlsError', 'unreachable', 'noRoute'].includes(state);
-}
-
-export function reference(registry: Pick<OCIRegistry, 'host' | 'namespace'>): string {
-  return [registry.host, registry.namespace].filter(Boolean).join('/');
+export function reference(endpoint: Pick<RegistryEndpoint, 'host' | 'namespace'>): string {
+  return [endpoint.host, endpoint.namespace].filter(Boolean).join('/');
 }
 
 function selectorMatches(selector: Selector, cluster: OCICluster): boolean {
@@ -73,275 +47,129 @@ function selectorMatches(selector: Selector, cluster: OCICluster): boolean {
   return !!rules.length && matches(cluster, rules, 'labels');
 }
 
-export function routeMatches(route: OCIRoute, cluster: OCICluster): boolean {
-  return route.clusterNames.includes(cluster.name) ||
-    route.clusterGroups.some((group) => cluster.groups.includes(group)) ||
-    route.selectors.some((selector) => selectorMatches(selector, cluster));
+export function setMatches(set: CredentialSet, cluster: OCICluster): boolean {
+  return set.clusterNames.includes(cluster.name) ||
+    set.clusterGroups.some((group) => cluster.groups.includes(group)) ||
+    set.selectors.some((selector) => selectorMatches(selector, cluster));
 }
 
-function accessFor(cluster: OCICluster, registry: string): RegistryAccess {
-  return cluster.access[registry] || cluster.defaultAccess;
-}
-
-function stableDuration(seed: string): number {
-  let hash = 0;
-
-  for (const char of seed) {
-    hash = (hash * 31 + char.charCodeAt(0)) % 1400;
-  }
-
-  return 180 + hash;
-}
-
-function pullFor(artifact: OCIArtifact, cluster: OCICluster, pullingFrom: string | null, targetRegistry: string | null, failedRegistry: string | null, failing: boolean): ArtifactPull {
-  const base = { artifact, cluster: cluster.name };
-  const lastPull = cluster.lastPullMinutesAgo;
-
-  if (lastPull !== null && lastPull <= artifact.pushedMinutesAgo) {
-    return {
-      ...base,
-      state:      'pulled',
-      registry:   artifact.pinnedRegistry || pullingFrom || cluster.appliedPrimary,
-      minutesAgo: Math.max(lastPull, artifact.pushedMinutesAgo - 1),
-      durationMs: stableDuration(`${ cluster.name }/${ artifact.bundle }`),
-    };
-  }
-
-  const waiting = !!targetRegistry && artifact.pendingOn[targetRegistry] !== undefined;
-
+export function pushEntry(secret: OCIStorageSecret): PullEntry {
   return {
-    ...base,
-    state:      waiting ? 'waiting' : (failing ? 'failed' : 'behind'),
-    registry:   artifact.pinnedRegistry || targetRegistry || failedRegistry,
-    minutesAgo: null,
-    durationMs: null,
+    name: PUSH_ENTRY, isPush: true, endpoint: secret.push
   };
 }
 
-export function resolveCluster(data: OCIStorageData, cluster: OCICluster): ClusterStatus {
-  const route = data.routes.find((r) => routeMatches(r, cluster)) || null;
-  const chain = route ? route.registries : data.defaultRegistries;
-  const wait = route ? route.replicationWaitMinutes : DEFAULT_REPLICATION_WAIT_MINUTES;
-  const targeted = data.artifacts.filter((a) => a.clusters.includes(cluster.name));
+// Every set that matches, in the order the secret lists them, then the push registry
+export function pullOrder(secret: OCIStorageSecret, cluster: OCICluster): PullEntry[] {
+  const sets = secret.credentialSets
+    .filter((set) => setMatches(set, cluster))
+    .map((set) => ({
+      name: set.name, isPush: false, endpoint: set
+    }));
 
-  const attempts: RegistryAttempt[] = [];
-  let targetRegistry: string | null = null;
-  let failedRegistry: string | null = null;
-  let failedAccess: RegistryAccess | null = null;
-  let waitingOn: OCIArtifact[] = [];
+  return [...sets, pushEntry(secret)];
+}
 
-  for (let index = 0; index < chain.length; index++) {
-    const name = chain[index];
+export function secretFor(data: OCIStorageData, gitRepo: OCIGitRepo): OCIStorageSecret | null {
+  const name = gitRepo.secret || FALLBACK_SECRET;
 
-    if (targetRegistry) {
-      attempts.push({
-        registry: name, outcome: 'standby', access: null
-      });
-      continue;
-    }
+  return data.secrets.find((s) => s.name === name) || null;
+}
 
-    const access = accessFor(cluster, name);
+function resultFor(cluster: OCICluster, entry: PullEntry, bundle: OCIBundle): PullResult {
+  const reached = cluster.reach[entry.name] || cluster.reach[entry.endpoint.host] || cluster.defaultReach;
 
-    if (access !== 'ok') {
-      failedRegistry = name;
-      failedAccess = access;
-      attempts.push({
-        registry: name, outcome: 'failed', access
-      });
-      continue;
-    }
-
-    const pendingHere = targeted.filter((a) => !a.pinnedRegistry && a.pendingOn[name] !== undefined);
-    const expired = pendingHere.some((a) => a.pendingOn[name] >= wait);
-
-    // A missing artifact only moves the agent on once the replication wait is over and there is somewhere else to try
-    if (expired && index < chain.length - 1) {
-      failedRegistry = name;
-      failedAccess = 'notReplicated';
-      attempts.push({
-        registry: name, outcome: 'failed', access: 'notReplicated'
-      });
-      continue;
-    }
-
-    targetRegistry = name;
-    waitingOn = pendingHere.filter((a) => cluster.lastPullMinutesAgo === null || cluster.lastPullMinutesAgo > a.pushedMinutesAgo);
-    attempts.push({
-      registry: name, outcome: waitingOn.length ? 'waiting' : 'active', access: 'ok'
-    });
+  if (reached === 'ok' && !entry.isPush && bundle.missingOn[entry.endpoint.host] !== undefined) {
+    return 'notFound';
   }
 
-  let state: ClusterPullState = 'pulled';
+  return reached;
+}
 
-  if (!chain.length) {
-    state = 'noRoute';
-  } else if (!targetRegistry) {
-    state = FAILED_STATE[failedAccess || 'unreachable'];
-  } else if (waitingOn.length) {
-    state = 'waiting';
-  } else if (cluster.appliedPrimary && cluster.appliedPrimary !== chain[0]) {
-    state = 'updatePending';
-  } else if (targetRegistry !== chain[0]) {
-    state = 'failover';
+// Agents back off from 30 seconds and double each time
+export function backoff(missingMinutes: number): { attempt: number, nextMinutes: number } {
+  const attempt = Math.max(1, Math.floor(Math.log2(missingMinutes / 0.5 + 1)));
+  const nextMinutes = Math.max(1, Math.ceil(0.5 * (2 ** (attempt + 1) - 1) - missingMinutes));
+
+  return { attempt, nextMinutes };
+}
+
+export function resolveDeployment(data: OCIStorageData, gitRepo: OCIGitRepo, bundle: OCIBundle, cluster: OCICluster): DeploymentStatus | null {
+  const secret = secretFor(data, gitRepo);
+
+  // Without a secret the bundle stays in etcd, which this page doesn't cover
+  if (!secret) {
+    return null;
   }
 
-  const pullingFrom = state === 'updatePending' ? cluster.appliedPrimary : targetRegistry;
-  const pulls = targeted.map((a) => pullFor(a, cluster, pullingFrom, targetRegistry, failedRegistry, isFailing(state)));
+  const attempts: PullAttempt[] = [];
+  let pulledFrom: PullEntry | null = null;
+
+  for (const entry of pullOrder(secret, cluster)) {
+    if (pulledFrom) {
+      attempts.push({ entry, result: null });
+      continue;
+    }
+
+    const result = resultFor(cluster, entry, bundle);
+
+    attempts.push({ entry, result });
+    if (result === 'ok') {
+      pulledFrom = entry;
+    }
+  }
+
+  const tried = attempts.filter((a) => a.result !== null);
+  const missing = tried.filter((a) => a.result === 'notFound').map((a) => bundle.missingOn[a.entry.endpoint.host]);
+  let state: DeploymentState = 'failed';
+
+  if (pulledFrom) {
+    state = attempts[0].entry === pulledFrom ? 'ready' : 'fallback';
+  } else if (missing.length) {
+    state = 'retrying';
+  }
 
   return {
+    key:          `${ gitRepo.name }/${ bundle.name }/${ cluster.name }`,
+    gitRepo,
+    bundle,
     cluster,
-    route,
-    chain,
+    secret,
     attempts,
     state,
-    targetRegistry,
-    pullingFrom,
-    failedRegistry,
-    failedAccess,
-    waitingOn,
-    replicationWaitMinutes: wait,
-    pulls,
-    pulledCount:            pulls.filter((p) => p.state === 'pulled').length,
+    pulledFrom,
+    firstFailure: tried.find((a) => a.result !== 'ok') || null,
+    retry:        state === 'retrying' ? backoff(Math.min(...missing)) : null,
   };
 }
 
-export function resolveRegistry(data: OCIStorageData, statuses: ClusterStatus[], registry: OCIRegistry): RegistryStatus {
-  const name = registry.name;
-  const routed = statuses.filter((s) => s.chain.includes(name));
-  const active = routed.filter((s) => s.pullingFrom === name);
-  const failing = routed.flatMap((s) => {
-    const attempt = s.attempts.find((a) => a.registry === name);
+export function resolveDeployments(data: OCIStorageData): DeploymentStatus[] {
+  return data.gitRepos.flatMap((gitRepo) => gitRepo.bundles.flatMap((bundle) => gitRepo.clusters.flatMap((name) => {
+    const cluster = data.clusters.find((c) => c.name === name);
+    const status = cluster ? resolveDeployment(data, gitRepo, bundle, cluster) : null;
 
-    return attempt?.outcome === 'failed' && attempt.access !== 'notReplicated' ? [{ name: s.cluster.name, access: attempt.access as RegistryAccess }] : [];
-  });
-  const pendingArtifacts = data.artifacts.filter((a) => a.pendingOn[name] !== undefined);
-  const hosted = registry.role === 'source' ? data.artifacts : data.artifacts.filter((a) => {
-    return a.pendingOn[name] === undefined && a.clusters.some((c) => active.some((s) => s.cluster.name === c));
-  });
-  const pullTimes = active.map((s) => s.cluster.lastPullMinutesAgo).filter((m): m is number => m !== null);
+    return status ? [status] : [];
+  })));
+}
 
-  let state: RegistryStatus['state'] = 'active';
+export function resolveSecret(data: OCIStorageData, secret: OCIStorageSecret, deployments: DeploymentStatus[]): SecretStatus {
+  const gitRepos = data.gitRepos.filter((g) => secretFor(data, g)?.name === secret.name).map((g) => g.name);
+  const own = deployments.filter((d) => d.secret.name === secret.name);
+  const failing = own.filter((d) => d.state === 'failed').length;
+  let state: SecretState = 'active';
 
-  if (!routed.length && registry.role !== 'source') {
+  if (!gitRepos.length) {
     state = 'unused';
-  } else if (routed.length && failing.length === routed.length) {
+  } else if (failing) {
     state = 'error';
-  } else if (failing.length) {
-    state = 'degraded';
-  } else if (pendingArtifacts.length) {
-    state = 'replicating';
   }
 
   return {
-    registry,
+    secret,
     state,
-    routedClusters:     routed.map((s) => s.cluster.name),
-    activeClusters:     active.map((s) => s.cluster.name),
-    failingClusters:    failing,
-    pendingArtifacts,
-    artifactCount:      hosted.length,
-    sizeBytes:          hosted.reduce((sum, a) => sum + a.sizeBytes, 0),
-    lastPullMinutesAgo: pullTimes.length ? Math.min(...pullTimes) : null,
+    isDefault:   secret.name === FALLBACK_SECRET,
+    gitRepos,
+    deployments: own,
+    failing,
   };
-}
-
-export function resolveArtifact(data: OCIStorageData, statuses: ClusterStatus[], artifact: OCIArtifact): ArtifactStatus {
-  const pulls = statuses.flatMap((s) => s.pulls.filter((p) => p.artifact.bundle === artifact.bundle));
-  const source = artifact.pinnedRegistry || data.registries.find((r) => r.role === 'source')?.name || null;
-  const names = new Set<string>(source ? [source] : []);
-
-  if (!artifact.pinnedRegistry) {
-    pulls.forEach((p) => p.registry && names.add(p.registry));
-  }
-
-  const registries: ArtifactRegistryStatus[] = [...names].map((registry) => {
-    const here = pulls.filter((p) => p.registry === registry);
-    const pulled = here.filter((p) => p.state === 'pulled').length;
-    const pendingMinutes = artifact.pendingOn[registry] ?? null;
-    let availability: ArtifactRegistryStatus['availability'] = 'unknown';
-
-    if (registry === source) {
-      availability = 'pushed';
-    } else if (pendingMinutes !== null) {
-      availability = 'pending';
-    } else if (pulled) {
-      availability = 'available';
-    }
-
-    return {
-      registry,
-      availability,
-      pulled,
-      total: here.length,
-      pendingMinutes,
-    };
-  });
-
-  let state: ArtifactStatus['state'] = 'available';
-
-  if (pulls.some((p) => p.state === 'failed')) {
-    state = 'failed';
-  } else if (pulls.some((p) => p.state === 'waiting' || p.state === 'behind')) {
-    state = 'replicating';
-  }
-
-  return {
-    artifact,
-    state,
-    pulls,
-    registries,
-    pulledCount: pulls.filter((p) => p.state === 'pulled').length,
-  };
-}
-
-export function connectionChecks(draft: OCIRegistry, access: RegistryAccess, from: string, fromController: boolean): ConnectionCheck[] {
-  const checks: ConnectionCheck[] = [];
-  const reachable = access !== 'unreachable';
-  const tlsOk = reachable && access !== 'tls';
-  const user = draft.agentUsername || draft.username;
-
-  checks.push({
-    key:     'connect',
-    outcome: reachable ? 'ok' : 'error',
-    params:  { host: draft.host, from },
-  });
-
-  checks.push({
-    key:     draft.tlsMode === 'skipVerify' || draft.basicHTTP ? 'tlsSkipped' : 'tls',
-    outcome: !reachable ? 'skipped' : (draft.tlsMode === 'skipVerify' || draft.basicHTTP ? 'warning' : (tlsOk ? 'ok' : 'error')),
-    params:  {},
-  });
-
-  const authOk = tlsOk && access !== 'auth';
-
-  checks.push({
-    key:     user ? 'agentAuth' : 'anonymous',
-    outcome: !tlsOk ? 'skipped' : (authOk ? (user ? 'ok' : 'warning') : 'error'),
-    params:  { user },
-  });
-
-  if (draft.role === 'source') {
-    checks.push({
-      key:     draft.agentUsername ? 'agentReadOnly' : 'agentHasPush',
-      outcome: !authOk ? 'skipped' : (draft.agentUsername ? 'ok' : 'warning'),
-      params:  {},
-    });
-
-    // Only the controller side pushes, so an agent's view of push rights says nothing useful
-    if (fromController) {
-      checks.push({
-        key:     'pushAuth',
-        outcome: !authOk ? 'skipped' : 'ok',
-        params:  { user: draft.username || '-' },
-      });
-    }
-  }
-
-  checks.push({
-    key:     'namespace',
-    outcome: !authOk ? 'skipped' : 'ok',
-    params:  { namespace: draft.namespace || '/' },
-  });
-
-  return checks;
 }

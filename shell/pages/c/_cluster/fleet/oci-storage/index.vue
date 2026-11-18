@@ -10,72 +10,61 @@ import FleetStatus from '@shell/components/fleet/FleetStatus';
 import { Banner } from '@components/Banner';
 import { RcButton } from '@components/RcButton';
 import PrototypeBanner from '@shell/components/fleet/FleetOCIStorage/PrototypeBanner.vue';
-import RegistriesTable from '@shell/components/fleet/FleetOCIStorage/RegistriesTable.vue';
-import RoutesTable from '@shell/components/fleet/FleetOCIStorage/RoutesTable.vue';
-import ClustersTable from '@shell/components/fleet/FleetOCIStorage/ClustersTable.vue';
-import ArtifactsTable from '@shell/components/fleet/FleetOCIStorage/ArtifactsTable.vue';
-import ClusterDrawer from '@shell/components/fleet/FleetOCIStorage/ClusterDrawer.vue';
+import SecretsTable from '@shell/components/fleet/FleetOCIStorage/SecretsTable.vue';
+import DeploymentsTable from '@shell/components/fleet/FleetOCIStorage/DeploymentsTable.vue';
+import DeploymentDrawer from '@shell/components/fleet/FleetOCIStorage/DeploymentDrawer.vue';
 import { SCENARIO_WORKSPACE } from '@shell/components/fleet/FleetOCIStorage/mock';
-import { isFailing, needsAttention } from '@shell/components/fleet/FleetOCIStorage/resolve';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
-import { ClusterStatus } from '@shell/components/fleet/FleetOCIStorage/types';
+import { DeploymentStatus } from '@shell/components/fleet/FleetOCIStorage/types';
 
 const ROOT = 'fleet.ociStorage';
 
 const store = useStore();
 const { t } = useFleetOCIStorageLabels();
 const {
-  workspace, data, statuses, artifactStatuses, forceUpdate
+  workspace, data, deployments, secretStatuses
 } = useFleetOCIStorage();
 
 const tabs = useTemplateRef<{ select:(name: string) => void }>('tabs');
-const activeTab = ref('registries');
-const clustersTable = useTemplateRef<{ showAttention:() => void }>('clustersTable');
+const activeTab = ref('secrets');
+const deploymentsTable = useTemplateRef<{ showFailing:() => void }>('deploymentsTable');
 
-const addRegistryLocation = { name: 'c-cluster-fleet-oci-storage-registry-create', params: { cluster: BLANK_CLUSTER } };
-const addRouteLocation = { name: 'c-cluster-fleet-oci-storage-route-create', params: { cluster: BLANK_CLUSTER } };
+const createLocation = { name: 'c-cluster-fleet-oci-storage-secret-create', params: { cluster: BLANK_CLUSTER } };
 
-const hasRegistries = computed(() => data.value.registries.length > 0);
-const failingCount = computed(() => statuses.value.filter((s) => isFailing(s.state)).length);
-const updatePending = computed(() => statuses.value.filter((s) => s.state === 'updatePending').map((s) => s.cluster.name));
-const showPendingBanner = computed(() => updatePending.value.length > 0 && ['routing', 'clusters'].includes(activeTab.value));
-const attentionCount = computed(() => statuses.value.filter((s) => needsAttention(s.state)).length);
+const hasSecrets = computed(() => data.value.secrets.length > 0);
+const failingCount = computed(() => deployments.value.filter((d) => d.state === 'failed').length);
 
-const clusterCounts = computed(() => {
+const deploymentCounts = computed(() => {
   const entry = (state: string, color: string, status: string) => {
-    const count = statuses.value.filter((s) => s.state === state).length;
+    const count = deployments.value.filter((d) => d.state === state).length;
 
     return {
-      label: t(`${ ROOT }.clusters.state.${ state }`), color, status, count, value: count
+      label: t(`${ ROOT }.deployments.state.${ state }`), color, status, count, value: count
     };
   };
 
   return [
-    entry('pulled', 'success', 'ready'),
-    entry('updatePending', 'info', 'updatePending'),
-    entry('waiting', 'info', 'waiting'),
-    entry('failover', 'warning', 'failover'),
-    entry('authFailed', 'error', 'authFailed'),
-    entry('tlsError', 'error', 'tlsError'),
-    entry('unreachable', 'error', 'unreachable'),
-    entry('noRoute', 'error', 'noRoute'),
+    entry('ready', 'success', 'ready'),
+    entry('fallback', 'warning', 'fallback'),
+    entry('retrying', 'info', 'retrying'),
+    entry('failed', 'error', 'failed'),
   ];
 });
 
-const artifactCounts = computed(() => {
+const secretCounts = computed(() => {
   const entry = (state: string, color: string, status: string) => {
-    const count = artifactStatuses.value.filter((a) => a.state === state).length;
+    const count = secretStatuses.value.filter((s) => s.state === state).length;
 
     return {
-      label: t(`${ ROOT }.artifacts.state.${ state }`), color, status, count, value: count
+      label: t(`${ ROOT }.secrets.state.${ state }`), color, status, count, value: count
     };
   };
 
   return [
-    entry('available', 'success', 'ready'),
-    entry('replicating', 'info', 'replicating'),
-    entry('failed', 'error', 'failed'),
+    entry('active', 'success', 'ready'),
+    entry('unused', 'darker', 'unused'),
+    entry('error', 'error', 'error'),
   ];
 });
 
@@ -83,16 +72,16 @@ function showSampleData() {
   store.commit('updateWorkspace', { value: SCENARIO_WORKSPACE, getters: store.getters });
 }
 
-function showFailingClusters() {
-  tabs.value?.select('clusters');
-  clustersTable.value?.showAttention();
+function showFailing() {
+  tabs.value?.select('deployments');
+  deploymentsTable.value?.showFailing();
 }
 
-function openCluster(status: ClusterStatus) {
+function openDeployment(status: DeploymentStatus) {
   store.commit('slideInPanel/open', {
-    component:      ClusterDrawer,
+    component:      DeploymentDrawer,
     componentProps: {
-      clusterName:        status.cluster.name,
+      deploymentKey:      status.key,
       initial:            status,
       onClose:            () => store.commit('slideInPanel/close'),
       width:              'wide',
@@ -124,22 +113,13 @@ onMounted(() => {
       </template>
       <template #createButton>
         <RcButton
-          v-if="hasRegistries && activeTab === 'routing'"
+          v-if="hasSecrets && activeTab === 'secrets'"
           variant="primary"
           size="large"
-          :to="addRouteLocation"
-          data-testid="fleet-oci-add-route"
+          :to="createLocation"
+          data-testid="fleet-oci-create-secret"
         >
-          {{ t(`${ ROOT }.actions.addRoute`) }}
-        </RcButton>
-        <RcButton
-          v-else-if="hasRegistries && activeTab === 'registries'"
-          variant="primary"
-          size="large"
-          :to="addRegistryLocation"
-          data-testid="fleet-oci-add-registry"
-        >
-          {{ t(`${ ROOT }.actions.addRegistry`) }}
+          {{ t('generic.create') }}
         </RcButton>
       </template>
     </Masthead>
@@ -147,7 +127,7 @@ onMounted(() => {
     <PrototypeBanner />
 
     <div
-      v-if="!hasRegistries"
+      v-if="!hasSecrets"
       class="empty-state"
       data-testid="fleet-oci-empty"
     >
@@ -162,10 +142,10 @@ onMounted(() => {
       <RcButton
         variant="primary"
         size="large"
-        :to="addRegistryLocation"
-        data-testid="fleet-oci-empty-add"
+        :to="createLocation"
+        data-testid="fleet-oci-empty-create"
       >
-        {{ t(`${ ROOT }.actions.addRegistry`) }}
+        {{ t(`${ ROOT }.actions.createSecret`) }}
       </RcButton>
       <a
         v-if="workspace !== SCENARIO_WORKSPACE"
@@ -181,13 +161,13 @@ onMounted(() => {
         data-testid="fleet-oci-summary"
       >
         <FleetStatus
-          :title="t(`${ ROOT }.summary.clusters`)"
-          :values="clusterCounts"
+          :title="t(`${ ROOT }.summary.secrets`)"
+          :values="secretCounts"
           value-key="count"
         />
         <FleetStatus
-          :title="t(`${ ROOT }.summary.artifacts`)"
-          :values="artifactCounts"
+          :title="t(`${ ROOT }.summary.deployments`)"
+          :values="deploymentCounts"
           value-key="count"
         />
       </div>
@@ -203,27 +183,9 @@ onMounted(() => {
             variant="link"
             size="small"
             data-testid="fleet-oci-show-failing"
-            @click="showFailingClusters"
+            @click="showFailing"
           >
-            {{ t(`${ ROOT }.actions.showClusters`) }}
-          </RcButton>
-        </div>
-      </Banner>
-
-      <Banner
-        v-if="showPendingBanner"
-        color="info"
-        data-testid="fleet-oci-pending-banner"
-      >
-        <div class="banner-with-action">
-          <span>{{ t(`${ ROOT }.banners.updatePending`, { count: updatePending.length }) }}</span>
-          <RcButton
-            variant="link"
-            size="small"
-            data-testid="fleet-oci-force-update-all"
-            @click="forceUpdate(updatePending)"
-          >
-            {{ t(`${ ROOT }.actions.forceUpdateAll`) }}
+            {{ t(`${ ROOT }.actions.showFailing`) }}
           </RcButton>
         </div>
       </Banner>
@@ -231,41 +193,27 @@ onMounted(() => {
       <Tabbed
         ref="tabs"
         class="mt-20"
-        default-tab="registries"
+        default-tab="secrets"
         :use-hash="true"
         @changed="({ selectedName }) => activeTab = selectedName"
       >
         <Tab
-          name="registries"
-          :label="t(`${ ROOT }.tabs.registries`)"
-          :weight="4"
-        >
-          <RegistriesTable />
-        </Tab>
-        <Tab
-          name="routing"
-          :label="t(`${ ROOT }.tabs.routing`)"
-          :weight="3"
-        >
-          <RoutesTable @open-cluster="openCluster" />
-        </Tab>
-        <Tab
-          name="clusters"
-          :label="t(`${ ROOT }.tabs.clusters`)"
+          name="secrets"
+          :label="t(`${ ROOT }.tabs.secrets`)"
           :weight="2"
-          :display-alert-icon="attentionCount > 0"
         >
-          <ClustersTable
-            ref="clustersTable"
-            @open-cluster="openCluster"
-          />
+          <SecretsTable />
         </Tab>
         <Tab
-          name="artifacts"
-          :label="t(`${ ROOT }.tabs.artifacts`)"
+          name="deployments"
+          :label="t(`${ ROOT }.tabs.deployments`)"
           :weight="1"
+          :display-alert-icon="failingCount > 0"
         >
-          <ArtifactsTable />
+          <DeploymentsTable
+            ref="deploymentsTable"
+            @open-deployment="openDeployment"
+          />
         </Tab>
       </Tabbed>
     </template>

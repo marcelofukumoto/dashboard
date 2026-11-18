@@ -2,14 +2,14 @@
 import { computed, ref } from 'vue';
 import LabeledSelect from '@shell/components/form/LabeledSelect';
 import FleetOCIStorageSecret from '@shell/components/fleet/FleetOCIStorageSecret.vue';
-import RadioGroup from '@components/Form/Radio/RadioGroup.vue';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
-import RegistryChain from '@shell/components/fleet/FleetOCIStorage/RegistryChain.vue';
-import { reference } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { FALLBACK_SECRET } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import CredentialSetList from '@shell/components/fleet/FleetOCIStorage/CredentialSetList.vue';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 
 const ROOT = 'fleet.ociStorage.gitRepo';
+const DEFAULT = '';
 
 const props = defineProps<{
   secret?: string;
@@ -20,99 +20,79 @@ const props = defineProps<{
 const emit = defineEmits<{(e: 'update:value', value: string | undefined): void}>();
 
 const { t } = useFleetOCIStorageLabels();
-const { data, sourceRegistry } = useFleetOCIStorage();
+const { data } = useFleetOCIStorage();
 
-const hasMockRegistries = computed(() => data.value.registries.length > 0);
-const storageMode = ref(props.secret ? 'pinned' : 'routing');
-const pinnedRegistry = ref<string>();
+const hasMockSecrets = computed(() => data.value.secrets.length > 0);
+const selected = ref<string>(DEFAULT);
 
-const modeOptions = computed(() => [
-  { label: t(`${ ROOT }.routing`), value: 'routing' },
-  { label: t(`${ ROOT }.pinned`), value: 'pinned' },
-]);
+const hasFallback = computed(() => data.value.secrets.some((s) => s.name === FALLBACK_SECRET));
 
-const registryOptions = computed(() => data.value.registries.map((r) => ({ label: `${ r.name } (${ reference(r) })`, value: r.name })));
-
-const routes = computed(() => [
-  ...data.value.routes.map((r) => ({
-    key: r.name, name: r.name, registries: r.registries
-  })),
+const options = computed(() => [
   {
-    key:        'default',
-    name:       t('fleet.ociStorage.routing.defaultRoute'),
-    registries: data.value.defaultRegistries,
+    label: hasFallback.value ? t(`${ ROOT }.useFallback`, { name: FALLBACK_SECRET }) : t(`${ ROOT }.noFallback`, { name: FALLBACK_SECRET }),
+    value: DEFAULT,
   },
+  ...data.value.secrets
+    .filter((s) => s.name !== FALLBACK_SECRET)
+    .map((s) => ({ label: s.name, value: s.name })),
 ]);
 
-const routingLocation = {
-  name:   'c-cluster-fleet-oci-storage',
-  params: { cluster: BLANK_CLUSTER },
-  hash:   '#routing',
-};
+const effective = computed(() => {
+  const name = selected.value || FALLBACK_SECRET;
 
-// The mock registries don't exist as secrets on the server, so writing one to the spec would break the GitRepo
-function selectMode(value: string) {
-  storageMode.value = value;
+  return data.value.secrets.find((s) => s.name === name) || null;
+});
+
+const editLocation = computed(() => ({
+  name:   'c-cluster-fleet-oci-storage-secret-id',
+  params: { cluster: BLANK_CLUSTER, id: effective.value?.name || '' },
+}));
+
+// The mock secrets don't exist on the server, so writing one to the spec would break the GitRepo
+function select(value: string) {
+  selected.value = value;
   emit('update:value', undefined);
 }
 </script>
 
 <template>
   <div
-    v-if="hasMockRegistries"
+    v-if="hasMockSecrets"
     class="gitrepo-storage"
     data-testid="fleet-oci-gitrepo-storage"
   >
-    <RadioGroup
-      :value="storageMode"
-      name="oci-storage-mode"
-      :options="modeOptions"
-      :mode="mode"
-      data-testid="fleet-oci-gitrepo-mode"
-      @update:value="selectMode"
-    />
+    <div class="row">
+      <div class="col span-6">
+        <LabeledSelect
+          :value="selected"
+          :label="t(`${ ROOT }.secret`)"
+          :options="options"
+          :mode="mode"
+          data-testid="fleet-oci-gitrepo-secret"
+          @update:value="select"
+        />
+      </div>
+    </div>
 
-    <template v-if="storageMode === 'routing'">
+    <template v-if="effective">
       <p class="text-deemphasized">
-        {{ t(`${ ROOT }.routingDescription`, { source: sourceRegistry?.name || '' }) }}
-        <router-link :to="routingLocation">
-          {{ t(`${ ROOT }.viewRouting`) }}
+        {{ t(`${ ROOT }.orderIntro`, { name: effective.name }) }}
+        <router-link :to="editLocation">
+          {{ t(`${ ROOT }.edit`) }}
         </router-link>
       </p>
-      <dl
-        class="routes"
-        data-testid="fleet-oci-gitrepo-routes"
-      >
-        <template
-          v-for="route in routes"
-          :key="route.key"
-        >
-          <dt>{{ route.name }}</dt>
-          <dd><RegistryChain :registries="route.registries" /></dd>
-        </template>
-      </dl>
+      <CredentialSetList :secret="effective" />
     </template>
+    <p
+      v-else
+      class="text-deemphasized"
+    >
+      {{ t(`${ ROOT }.etcd`) }}
+    </p>
 
-    <template v-else>
-      <p class="text-deemphasized">
-        {{ t(`${ ROOT }.pinnedDescription`) }}
-      </p>
-      <div class="row">
-        <div class="col span-6">
-          <LabeledSelect
-            v-model:value="pinnedRegistry"
-            :label="t(`${ ROOT }.registry`)"
-            :placeholder="t(`${ ROOT }.registryPlaceholder`)"
-            :options="registryOptions"
-            :mode="mode"
-            data-testid="fleet-oci-gitrepo-pinned"
-          />
-        </div>
-      </div>
-      <p class="text-muted mock-note">
-        {{ t(`${ ROOT }.mockNote`) }}
-      </p>
-    </template>
+    <p class="text-muted mock-note">
+      {{ t(`${ ROOT }.mockNote`) }}
+    </p>
   </div>
 
   <div
@@ -121,7 +101,7 @@ function selectMode(value: string) {
   >
     <div class="col span-6">
       <FleetOCIStorageSecret
-        :secret="secret"
+        :secret="props.secret"
         :workspace="workspace"
         :mode="mode"
         @update:value="emit('update:value', $event)"
@@ -138,26 +118,6 @@ function selectMode(value: string) {
   margin-top: 20px;
 
   p {
-    margin: 0;
-  }
-}
-
-.routes {
-  display: grid;
-  grid-template-columns: minmax(160px, max-content) 1fr;
-  gap: 8px 24px;
-  margin: 0;
-  max-width: 800px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--border-radius);
-
-  dt {
-    font-weight: normal;
-    color: var(--muted);
-  }
-
-  dd {
     margin: 0;
   }
 }

@@ -1,138 +1,105 @@
 import { Selector } from '@shell/types/fleet';
 
-export type RegistryRole = 'source' | 'mirror';
 export type TlsMode = 'system' | 'customCA' | 'skipVerify';
-export type RegistryAccess = 'ok' | 'unreachable' | 'auth' | 'tls' | 'notReplicated';
-export type ClusterPullState = 'pulled' | 'failover' | 'waiting' | 'updatePending' | 'authFailed' | 'tlsError' | 'unreachable' | 'noRoute';
-export type RegistryState = 'active' | 'replicating' | 'degraded' | 'error' | 'unused';
-export type ArtifactState = 'available' | 'replicating' | 'failed';
-export type ArtifactPullState = 'pulled' | 'waiting' | 'failed' | 'behind';
-export type ArtifactAvailability = 'pushed' | 'available' | 'pending' | 'unknown';
-export type AttemptOutcome = 'active' | 'waiting' | 'failed' | 'standby';
-export type TestOutcome = 'ok' | 'warning' | 'error' | 'skipped';
+// What an agent can tell from one pull. Fleet can't see replication, only that an artifact isn't there
+export type PullResult = 'ok' | 'unreachable' | 'auth' | 'tls' | 'notFound';
+export type DeploymentState = 'ready' | 'fallback' | 'retrying' | 'failed';
+export type SecretState = 'active' | 'error' | 'unused';
 
-export interface OCIRegistry {
-  name: string;
-  description: string;
+export interface RegistryEndpoint {
   host: string;
   namespace: string;
-  role: RegistryRole;
-  username: string;
-  hasPassword: boolean;
   agentUsername: string;
   hasAgentPassword: boolean;
   tlsMode: TlsMode;
   caBundle: string;
   basicHTTP: boolean;
-  controllerAccess: RegistryAccess;
-  lastPushMinutesAgo: number | null;
 }
 
-export interface OCIRoute {
+// The keys an OCI storage secret has today: fleet apply pushes here
+export interface PushRegistry extends RegistryEndpoint {
+  username: string;
+  hasPassword: boolean;
+}
+
+export interface CredentialSet extends RegistryEndpoint {
   name: string;
-  description: string;
   clusterNames: string[];
   clusterGroups: string[];
   selectors: Selector[];
-  registries: string[];
-  replicationWaitMinutes: number;
+}
+
+export interface OCIStorageSecret {
+  name: string;
+  description: string;
+  push: PushRegistry;
+  credentialSets: CredentialSet[];
+  ageMinutes: number;
 }
 
 export interface OCICluster {
   name: string;
   labels: Record<string, string>;
   groups: string[];
-  // What this cluster's agent can reach, which is what the backend would have to report
-  access: Record<string, RegistryAccess>;
-  defaultAccess: RegistryAccess;
+  // What this cluster's agent gets, by credential set name first and registry host second
+  reach: Record<string, PullResult>;
+  defaultReach: PullResult;
   lastPullMinutesAgo: number | null;
-  // First registry of the chain at the last deploy. Fleet only picks up a routing change on the next update
-  appliedPrimary: string | null;
 }
 
-export interface OCIArtifact {
-  bundle: string;
-  sourceKind: string;
-  source: string;
-  id: string;
-  sizeBytes: number;
+export interface OCIBundle {
+  name: string;
+  artifactId: string;
   pushedMinutesAgo: number;
+  // Registry host -> minutes the artifact has been missing there since the push
+  missingOn: Record<string, number>;
+}
+
+export interface OCIGitRepo {
+  name: string;
+  // Null falls back to the secret named ocistorage, like an empty spec.ociRegistrySecret
+  secret: string | null;
+  bundles: OCIBundle[];
   clusters: string[];
-  pinnedRegistry: string | null;
-  // Registry name -> minutes the artifact has been missing there
-  pendingOn: Record<string, number>;
 }
 
 export interface OCIStorageData {
-  registries: OCIRegistry[];
-  routes: OCIRoute[];
-  defaultRegistries: string[];
+  secrets: OCIStorageSecret[];
+  gitRepos: OCIGitRepo[];
   clusters: OCICluster[];
-  artifacts: OCIArtifact[];
   isScenario: boolean;
 }
 
-export interface RegistryAttempt {
-  registry: string;
-  outcome: AttemptOutcome;
-  access: RegistryAccess | null;
+// One step of a cluster's pull order: a credential set, or the push registry at the end
+export interface PullEntry {
+  name: string;
+  isPush: boolean;
+  endpoint: RegistryEndpoint;
 }
 
-export interface ArtifactPull {
-  artifact: OCIArtifact;
-  cluster: string;
-  state: ArtifactPullState;
-  registry: string | null;
-  minutesAgo: number | null;
-  durationMs: number | null;
+export interface PullAttempt {
+  entry: PullEntry;
+  result: PullResult | null;
 }
 
-export interface ClusterStatus {
-  cluster: OCICluster;
-  route: OCIRoute | null;
-  chain: string[];
-  attempts: RegistryAttempt[];
-  state: ClusterPullState;
-  targetRegistry: string | null;
-  pullingFrom: string | null;
-  failedRegistry: string | null;
-  failedAccess: RegistryAccess | null;
-  waitingOn: OCIArtifact[];
-  replicationWaitMinutes: number;
-  pulls: ArtifactPull[];
-  pulledCount: number;
-}
-
-export interface RegistryStatus {
-  registry: OCIRegistry;
-  state: RegistryState;
-  routedClusters: string[];
-  activeClusters: string[];
-  failingClusters: { name: string; access: RegistryAccess }[];
-  pendingArtifacts: OCIArtifact[];
-  artifactCount: number;
-  sizeBytes: number;
-  lastPullMinutesAgo: number | null;
-}
-
-export interface ArtifactRegistryStatus {
-  registry: string;
-  availability: ArtifactAvailability;
-  pulled: number;
-  total: number;
-  pendingMinutes: number | null;
-}
-
-export interface ArtifactStatus {
-  artifact: OCIArtifact;
-  state: ArtifactState;
-  pulls: ArtifactPull[];
-  registries: ArtifactRegistryStatus[];
-  pulledCount: number;
-}
-
-export interface ConnectionCheck {
+export interface DeploymentStatus {
   key: string;
-  outcome: TestOutcome;
-  params: Record<string, string | number>;
+  gitRepo: OCIGitRepo;
+  bundle: OCIBundle;
+  cluster: OCICluster;
+  secret: OCIStorageSecret;
+  attempts: PullAttempt[];
+  state: DeploymentState;
+  pulledFrom: PullEntry | null;
+  firstFailure: PullAttempt | null;
+  retry: { attempt: number, nextMinutes: number } | null;
+}
+
+export interface SecretStatus {
+  secret: OCIStorageSecret;
+  state: SecretState;
+  isDefault: boolean;
+  gitRepos: string[];
+  deployments: DeploymentStatus[];
+  failing: number;
 }

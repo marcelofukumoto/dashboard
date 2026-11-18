@@ -1,39 +1,45 @@
 import { scenarioData } from '@shell/components/fleet/FleetOCIStorage/mock';
-import { backoff } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 import {
-  connectionChecks,
-  resolveArtifact,
-  resolveCluster,
-  resolveRegistry,
-  routeMatches,
+  backoff,
+  FALLBACK_SECRET,
+  PUSH_ENTRY,
+  pullOrder,
+  resolveDeployment,
+  resolveDeployments,
+  resolveSecret,
+  secretFor,
+  setMatches,
 } from '@shell/components/fleet/FleetOCIStorage/resolve';
-import { ClusterStatus, OCICluster, OCIStorageData } from '@shell/components/fleet/FleetOCIStorage/types';
+import { CredentialSet, DeploymentStatus, OCICluster, OCIStorageData } from '@shell/components/fleet/FleetOCIStorage/types';
 
-function allStatuses(data: OCIStorageData): ClusterStatus[] {
-  return data.clusters.map((c) => resolveCluster(data, c));
+function cluster(data: OCIStorageData, name: string): OCICluster {
+  return data.clusters.find((c) => c.name === name) as OCICluster;
 }
 
-function statusOf(data: OCIStorageData, name: string): ClusterStatus {
-  return resolveCluster(data, data.clusters.find((c) => c.name === name)!);
+function deployment(data: OCIStorageData, gitRepoName: string, clusterName: string): DeploymentStatus {
+  const gitRepo = data.gitRepos.find((g) => g.name === gitRepoName)!;
+
+  return resolveDeployment(data, gitRepo, gitRepo.bundles[0], cluster(data, clusterName)) as DeploymentStatus;
 }
 
-describe('fleet OCI storage routing', () => {
+function secret(data: OCIStorageData, name: string) {
+  return data.secrets.find((s) => s.name === name)!;
+}
+
+describe('fleet OCI storage credential sets', () => {
   let data: OCIStorageData;
 
   beforeEach(() => {
     data = scenarioData();
-    data.clusters.forEach((cluster) => {
-      cluster.appliedPrimary = cluster.appliedPrimary || resolveCluster(data, cluster).chain[0] || null;
-    });
   });
 
-  describe('routeMatches', () => {
-    const cluster: OCICluster = {
-      name: 'c1', labels: { region: 'eu' }, groups: ['g1'], access: {}, defaultAccess: 'ok', lastPullMinutesAgo: 1, appliedPrimary: null
+  describe('setMatches', () => {
+    const target: OCICluster = {
+      name: 'c1', labels: { region: 'eu' }, groups: ['g1'], reach: {}, defaultReach: 'ok', lastPullMinutesAgo: 1
     };
-    const route = {
-      name: 'r', description: '', clusterNames: [] as string[], clusterGroups: [] as string[], selectors: [] as object[], registries: [], replicationWaitMinutes: 1
-    };
+    const set = {
+      name: 's', host: 'h', namespace: '', agentUsername: '', hasAgentPassword: false, tlsMode: 'system', caBundle: '', basicHTTP: false, clusterNames: [], clusterGroups: [], selectors: []
+    } as CredentialSet;
 
     it.each([
       ['cluster name', { clusterNames: ['c1'] }, true],
@@ -43,159 +49,119 @@ describe('fleet OCI storage routing', () => {
       ['nothing filled in', {}, false],
       ['empty selector row', { selectors: [{ key: 1 }] }, false],
     ])('%s', (_, fields, expected) => {
-      expect(routeMatches({ ...route, ...fields } as never, cluster)).toBe(expected);
+      expect(setMatches({ ...set, ...fields } as CredentialSet, target)).toBe(expected);
     });
   });
 
-  describe('resolveCluster', () => {
+  describe('pullOrder', () => {
     it.each([
-      ['eu-prod-01', 'pulled', 'harbor-eu', 'eu-clusters'],
-      ['us-prod-02', 'failover', 'harbor-central', 'us-clusters'],
-      ['apac-prod-01', 'waiting', 'harbor-apac', 'apac-clusters'],
-      ['eu-staging-01', 'updatePending', 'harbor-central', 'eu-clusters'],
-      ['edge-store-0187', 'authFailed', null, 'air-gapped-stores'],
-      ['edge-store-0203', 'tlsError', null, 'air-gapped-stores'],
-      ['lab-sandbox', 'unreachable', null, 'lab-sandbox'],
-      ['mgmt-tools', 'pulled', 'harbor-central', undefined],
-    ])('%s is %s, pulling from %s', (name, state, pullingFrom, route) => {
-      const status = statusOf(data, name);
+      ['eu-staging-01', ['eu-staging', 'eu-mirror', PUSH_ENTRY]],
+      ['eu-prod-01', ['eu-mirror', PUSH_ENTRY]],
+      ['apac-prod-01', ['apac-mirror', PUSH_ENTRY]],
+      ['mgmt-tools', [PUSH_ENTRY]],
+    ])('%s gets every matching set in order, then the push registry', (name, expected) => {
+      expect(pullOrder(secret(data, FALLBACK_SECRET), cluster(data, name)).map((e) => e.name)).toStrictEqual(expected);
+    });
+
+    it('follows the order of the sets in the secret', () => {
+      const fallback = secret(data, FALLBACK_SECRET);
+
+      fallback.credentialSets.reverse();
+
+      expect(pullOrder(fallback, cluster(data, 'eu-staging-01')).map((e) => e.name)).toStrictEqual(['eu-mirror', 'eu-staging', PUSH_ENTRY]);
+    });
+  });
+
+  describe('secretFor', () => {
+    it('uses the secret a GitRepo names', () => {
+      expect(secretFor(data, data.gitRepos.find((g) => g.name === 'store-pos')!)?.name).toBe('stores-oci');
+    });
+
+    it('falls back to the secret called ocistorage', () => {
+      expect(secretFor(data, data.gitRepos.find((g) => g.name === 'payments-api')!)?.name).toBe(FALLBACK_SECRET);
+    });
+
+    it('returns nothing without that secret, so the bundle stays in etcd', () => {
+      data.secrets = data.secrets.filter((s) => s.name !== FALLBACK_SECRET);
+
+      expect(secretFor(data, data.gitRepos.find((g) => g.name === 'payments-api')!)).toBeNull();
+      expect(resolveDeployments(data).some((d) => d.gitRepo.name === 'payments-api')).toBe(false);
+    });
+  });
+
+  describe('resolveDeployment', () => {
+    it.each([
+      ['payments-api', 'eu-prod-01', 'ready', 'eu-mirror'],
+      ['payments-api', 'apac-prod-01', 'fallback', PUSH_ENTRY],
+      ['payments-api', 'us-prod-02', 'fallback', PUSH_ENTRY],
+      ['monitoring-stack', 'eu-staging-01', 'fallback', 'eu-mirror'],
+      ['monitoring-stack', 'mgmt-tools', 'ready', PUSH_ENTRY],
+      ['store-pos', 'edge-store-0142', 'retrying', null],
+      ['store-pos', 'edge-store-0187', 'failed', null],
+      ['store-pos', 'edge-store-0203', 'failed', null],
+      ['lab-experiments', 'lab-sandbox', 'failed', null],
+    ])('%s on %s is %s, pulled from %s', (gitRepo, clusterName, state, pulledFrom) => {
+      const status = deployment(data, gitRepo, clusterName);
 
       expect(status.state).toBe(state);
-      expect(status.pullingFrom).toBe(pullingFrom);
-      expect(status.route?.name).toBe(route);
+      expect(status.pulledFrom?.name ?? null).toBe(pulledFrom);
     });
 
-    it('uses the first matching route', () => {
-      data.routes.unshift({
-        name: 'first', description: '', clusterNames: ['eu-prod-01'], clusterGroups: [], selectors: [], registries: ['quay-us'], replicationWaitMinutes: 10
-      });
+    it('reports a missing artifact as not found, not as a replication state', () => {
+      const status = deployment(data, 'payments-api', 'apac-prod-01');
 
-      expect(statusOf(data, 'eu-prod-01').route?.name).toBe('first');
-      expect(statusOf(data, 'eu-prod-02').route?.name).toBe('eu-clusters');
+      expect(status.attempts.map((a) => [a.entry.name, a.result])).toStrictEqual([['apac-mirror', 'notFound'], [PUSH_ENTRY, 'ok']]);
+      expect(status.firstFailure?.result).toBe('notFound');
     });
 
-    it('reports no route when nothing matches and the default route is empty', () => {
-      data.defaultRegistries = [];
+    it('tells credentials apart per set on the same host', () => {
+      const status = deployment(data, 'monitoring-stack', 'eu-staging-01');
 
-      expect(statusOf(data, 'mgmt-tools').state).toBe('noRoute');
+      expect(status.attempts.map((a) => [a.entry.name, a.result])).toStrictEqual([['eu-staging', 'auth'], ['eu-mirror', 'ok'], [PUSH_ENTRY, null]]);
     });
 
-    it('fails over a missing artifact once the replication wait is over', () => {
-      data.routes.find((r) => r.name === 'apac-clusters')!.replicationWaitMinutes = 2;
+    it('retries with back-off while no entry has the artifact', () => {
+      const status = deployment(data, 'store-pos', 'edge-store-0142');
 
-      const status = statusOf(data, 'apac-prod-01');
-
-      expect(status.state).toBe('failover');
-      expect(status.targetRegistry).toBe('harbor-central');
-      expect(status.attempts[0]).toStrictEqual({
-        registry: 'harbor-apac', outcome: 'failed', access: 'notReplicated'
-      });
+      expect(status.attempts.map((a) => a.result)).toStrictEqual(['notFound', 'unreachable']);
+      expect(status.retry).toStrictEqual(backoff(20));
     });
 
-    it('keeps waiting past the replication wait when there is nowhere else to try', () => {
-      const route = data.routes.find((r) => r.name === 'apac-clusters')!;
+    it('never treats the push registry as missing the artifact', () => {
+      const status = deployment(data, 'payments-api', 'apac-prod-01');
 
-      route.replicationWaitMinutes = 2;
-      route.registries = ['harbor-apac'];
+      status.bundle.missingOn['harbor.corp.example.com'] = 1;
 
-      expect(statusOf(data, 'apac-prod-01').state).toBe('waiting');
-    });
-
-    it('treats a routing change as pending until the next update', () => {
-      data.routes.find((r) => r.name === 'eu-clusters')!.registries = ['harbor-central'];
-
-      const status = statusOf(data, 'eu-prod-01');
-
-      expect(status.state).toBe('updatePending');
-      expect(status.pullingFrom).toBe('harbor-eu');
-      expect(status.targetRegistry).toBe('harbor-central');
-    });
-
-    it('counts artifacts pushed after the last pull as not pulled', () => {
-      const status = statusOf(data, 'edge-store-0187');
-
-      expect(status.pulledCount).toBe(1);
-      expect(status.pulls.find((p) => p.artifact.bundle === 'store-pos-app')?.state).toBe('failed');
+      expect(deployment(data, 'payments-api', 'apac-prod-01').attempts[1].result).toBe('ok');
     });
   });
 
-  describe('resolveRegistry', () => {
-    const stateOf = (name: string) => resolveRegistry(data, allStatuses(data), data.registries.find((r) => r.name === name)!).state;
-
+  describe('resolveSecret', () => {
     it.each([
-      ['harbor-central', 'active'],
-      ['harbor-eu', 'active'],
-      ['harbor-apac', 'replicating'],
-      ['quay-us', 'degraded'],
-      ['zot-stores', 'degraded'],
-      ['harbor-lab', 'error'],
-    ])('%s is %s', (name, state) => {
-      expect(stateOf(name)).toBe(state);
+      [FALLBACK_SECRET, 'active', true, ['payments-api', 'monitoring-stack', 'security-baseline', 'ingress-core']],
+      ['stores-oci', 'error', false, ['store-pos']],
+      ['lab-oci', 'error', false, ['lab-experiments']],
+      ['quay-legacy', 'unused', false, []],
+    ])('%s is %s', (name, state, isDefault, gitRepos) => {
+      const status = resolveSecret(data, secret(data, name), resolveDeployments(data));
+
+      expect(status.state).toBe(state);
+      expect(status.isDefault).toBe(isDefault);
+      expect(status.gitRepos).toStrictEqual(gitRepos);
     });
 
-    it('is unused when no route lists it', () => {
-      data.registries.push({ ...data.registries[1], name: 'spare' });
-
-      expect(stateOf('spare')).toBe('unused');
-    });
-  });
-
-  describe('resolveArtifact', () => {
-    const artifactOf = (bundle: string) => resolveArtifact(data, allStatuses(data), data.artifacts.find((a) => a.bundle === bundle)!);
-
-    it('shows an artifact as replicating while a mirror is missing it', () => {
-      const status = artifactOf('payments-api-deployment');
-
-      expect(status.state).toBe('replicating');
-      expect(status.registries.find((r) => r.registry === 'harbor-apac')).toStrictEqual({
-        registry: 'harbor-apac', availability: 'pending', pulled: 0, total: 2, pendingMinutes: 4
-      });
-      expect(status.registries.find((r) => r.registry === 'harbor-central')?.availability).toBe('pushed');
-    });
-
-    it('shows an artifact as failed when a target can not pull it', () => {
-      expect(artifactOf('store-pos-app').state).toBe('failed');
-      expect(artifactOf('store-pos-app').pulledCount).toBe(3);
-    });
-
-    it('lists only the pinned registry for a pinned artifact', () => {
-      const status = artifactOf('security-baseline-policies');
-
-      expect(status.registries.map((r) => r.registry)).toStrictEqual(['harbor-central']);
-      expect(status.state).toBe('available');
+    it('counts the deployments that can\'t pull from anything', () => {
+      expect(resolveSecret(data, secret(data, 'stores-oci'), resolveDeployments(data)).failing).toBe(2);
     });
   });
 
-  describe('connectionChecks', () => {
-    const source = () => data.registries.find((r) => r.name === 'harbor-central')!;
-    const outcomes = (checks: ReturnType<typeof connectionChecks>) => Object.fromEntries(checks.map((c) => [c.key, c.outcome]));
-
-    it('skips everything after a failed connection', () => {
-      expect(outcomes(connectionChecks(source(), 'unreachable', 'controller', true))).toStrictEqual({
-        connect: 'error', tls: 'skipped', agentAuth: 'skipped', agentReadOnly: 'skipped', pushAuth: 'skipped', namespace: 'skipped'
-      });
+  describe('backoff', () => {
+    it.each([
+      [0.5, 1, 1],
+      [4, 3, 4],
+      [20, 5, 12],
+    ])('after %s min it is on attempt %s, next in %s min', (minutes, attempt, nextMinutes) => {
+      expect(backoff(minutes)).toStrictEqual({ attempt, nextMinutes });
     });
-
-    it('warns when agents would receive the push credentials', () => {
-      expect(outcomes(connectionChecks({ ...source(), agentUsername: '' }, 'ok', 'controller', true)).agentHasPush).toBe('warning');
-    });
-
-    it('reports a rejected login', () => {
-      expect(outcomes(connectionChecks(source(), 'auth', 'c1', false)).agentAuth).toBe('error');
-    });
-
-    it('does not check push rights from a downstream cluster', () => {
-      expect(outcomes(connectionChecks(source(), 'ok', 'c1', false)).pushAuth).toBeUndefined();
-    });
-  });
-});
-
-describe('backoff', () => {
-  it.each([
-    [1, 1, 1],
-    [4, 3, 4],
-    [16, 5, 16],
-  ])('after %d minutes it is on attempt %d, %d minutes from the next retry', (minutes, attempt, nextMinutes) => {
-    expect(backoff(minutes)).toStrictEqual({ attempt, nextMinutes });
   });
 });

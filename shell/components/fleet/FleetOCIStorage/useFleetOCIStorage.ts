@@ -2,37 +2,21 @@ import { computed, reactive } from 'vue';
 import { useStore } from 'vuex';
 import { FLEET } from '@shell/config/types';
 import { emptyData, scenarioData, SCENARIO_WORKSPACE } from '@shell/components/fleet/FleetOCIStorage/mock';
+import { FALLBACK_SECRET, pullOrder, resolveDeployments, resolveSecret } from '@shell/components/fleet/FleetOCIStorage/resolve';
 import {
-  connectionChecks,
-  resolveArtifact,
-  resolveCluster,
-  resolveRegistry,
-} from '@shell/components/fleet/FleetOCIStorage/resolve';
-import {
-  ClusterStatus,
-  ConnectionCheck,
+  DeploymentStatus,
   OCICluster,
-  OCIRegistry,
-  OCIRoute,
   OCIStorageData,
-  RegistryAccess,
+  OCIStorageSecret,
+  PullEntry,
+  SecretStatus,
 } from '@shell/components/fleet/FleetOCIStorage/types';
 
-const STORAGE_KEY = 'fleet-oci-storage-prototype';
-
-// Records the chain each cluster last deployed with, so a later routing change shows up as a pending update
-function stampApplied(data: OCIStorageData): OCIStorageData {
-  data.clusters.forEach((cluster) => {
-    if (!cluster.appliedPrimary) {
-      cluster.appliedPrimary = resolveCluster(data, cluster).chain[0] || null;
-    }
-  });
-
-  return data;
-}
+// v2: secrets with credential sets; the v1 data (registries and routes) is a different shape
+const STORAGE_KEY = 'fleet-oci-storage-prototype-v2';
 
 function seed(): Record<string, OCIStorageData> {
-  return { [SCENARIO_WORKSPACE]: stampApplied(scenarioData()) };
+  return { [SCENARIO_WORKSPACE]: scenarioData() };
 }
 
 function load(): Record<string, OCIStorageData> {
@@ -81,10 +65,8 @@ export function useFleetOCIStorage() {
     return stored.isScenario ? stored : { ...stored, clusters: realClusters.value };
   });
 
-  const statuses = computed<ClusterStatus[]>(() => data.value.clusters.map((c) => resolveCluster(data.value, c)));
-  const registryStatuses = computed(() => data.value.registries.map((r) => resolveRegistry(data.value, statuses.value, r)));
-  const artifactStatuses = computed(() => data.value.artifacts.map((a) => resolveArtifact(data.value, statuses.value, a)));
-  const sourceRegistry = computed(() => data.value.registries.find((r) => r.role === 'source') || null);
+  const deployments = computed<DeploymentStatus[]>(() => resolveDeployments(data.value));
+  const secretStatuses = computed<SecretStatus[]>(() => data.value.secrets.map((s) => resolveSecret(data.value, s, deployments.value)));
 
   function stored(): OCIStorageData {
     if (!state.workspaces[workspace.value]) {
@@ -94,165 +76,51 @@ export function useFleetOCIStorage() {
     return state.workspaces[workspace.value];
   }
 
-  function forceUpdate(clusterNames?: string[]) {
+  function saveSecret(secret: OCIStorageSecret, originalName?: string) {
     const target = stored();
+    const index = target.secrets.findIndex((s) => s.name === (originalName || secret.name));
 
-    target.clusters.forEach((cluster) => {
-      if (clusterNames && !clusterNames.includes(cluster.name)) {
-        return;
-      }
+    if (index >= 0) {
+      target.secrets[index] = secret;
+    } else {
+      target.secrets.push(secret);
+    }
 
-      const status = resolveCluster(target, cluster);
-
-      if (status.targetRegistry && !status.waitingOn.length && cluster.appliedPrimary !== status.chain[0]) {
-        cluster.appliedPrimary = status.chain[0];
-        cluster.lastPullMinutesAgo = 0;
-      }
-    });
-    persist();
-  }
-
-  function saveRegistry(registry: OCIRegistry, originalName?: string) {
-    const target = stored();
-
-    stampApplied(target);
-
-    const index = target.registries.findIndex((r) => r.name === (originalName || registry.name));
-
-    if (registry.role === 'source') {
-      target.registries.forEach((r) => {
-        r.role = r.name === registry.name || r.name === originalName ? r.role : 'mirror';
+    if (originalName && originalName !== secret.name) {
+      target.gitRepos.forEach((g) => {
+        g.secret = g.secret === originalName ? secret.name : g.secret;
       });
     }
 
-    if (index >= 0) {
-      target.registries[index] = registry;
-    } else {
-      target.registries.push(registry);
-    }
-
-    if (originalName && originalName !== registry.name) {
-      const rename = (name: string) => (name === originalName ? registry.name : name);
-
-      target.routes.forEach((route) => {
-        route.registries = route.registries.map(rename);
-      });
-      target.defaultRegistries = target.defaultRegistries.map(rename);
-    }
-
-    if (registry.role === 'source' && !target.defaultRegistries.length) {
-      target.defaultRegistries = [registry.name];
-    }
-
     persist();
   }
 
-  function setSource(name: string) {
+  function deleteSecret(name: string) {
     const target = stored();
 
-    target.registries.forEach((r) => {
-      r.role = r.name === name ? 'source' : 'mirror';
-    });
+    target.secrets = target.secrets.filter((s) => s.name !== name);
     persist();
   }
 
-  function deleteRegistry(name: string) {
-    const target = stored();
+  // For a real Fleet cluster: the order its agent would try for each secret in the workspace
+  function ordersForCluster(name: string, labels?: Record<string, string>): { secret: OCIStorageSecret, isDefault: boolean, entries: PullEntry[] }[] {
+    const cluster = data.value.clusters.find((c) => c.name === name) || adHocCluster(name, labels);
 
-    stampApplied(target);
-    target.registries = target.registries.filter((r) => r.name !== name);
-    target.routes.forEach((route) => {
-      route.registries = route.registries.filter((r) => r !== name);
-    });
-    target.defaultRegistries = target.defaultRegistries.filter((r) => r !== name);
-    persist();
-  }
-
-  function saveRoute(route: OCIRoute, originalName?: string) {
-    const target = stored();
-
-    stampApplied(target);
-
-    const index = target.routes.findIndex((r) => r.name === (originalName || route.name));
-
-    if (index >= 0) {
-      target.routes[index] = route;
-    } else {
-      target.routes.push(route);
-    }
-    persist();
-  }
-
-  function saveDefaultRegistries(registries: string[]) {
-    const target = stored();
-
-    stampApplied(target);
-    target.defaultRegistries = registries;
-    persist();
-  }
-
-  function deleteRoute(name: string) {
-    const target = stored();
-
-    stampApplied(target);
-    target.routes = target.routes.filter((r) => r.name !== name);
-    persist();
-  }
-
-  function moveRoute(name: string, delta: number) {
-    const target = stored();
-
-    stampApplied(target);
-
-    const from = target.routes.findIndex((r) => r.name === name);
-    const to = from + delta;
-
-    if (from < 0 || to < 0 || to >= target.routes.length) {
-      return;
-    }
-
-    const [route] = target.routes.splice(from, 1);
-
-    target.routes.splice(to, 0, route);
-    persist();
-  }
-
-  function statusForRealCluster(name: string, labels?: Record<string, string>): ClusterStatus {
-    const known = data.value.clusters.find((c) => c.name === name);
-
-    return resolveCluster(data.value, known || adHocCluster(name, labels));
-  }
-
-  function testConnection(draft: OCIRegistry, from: string): ConnectionCheck[] {
-    const cluster = data.value.clusters.find((c) => c.name === from);
-    let access: RegistryAccess = 'ok';
-
-    if (cluster) {
-      access = cluster.access[draft.name] || cluster.defaultAccess;
-    } else {
-      access = draft.host.includes('.local') ? 'unreachable' : draft.controllerAccess;
-    }
-
-    return connectionChecks(draft, access, from, !cluster);
+    return data.value.secrets.map((secret) => ({
+      secret,
+      isDefault: secret.name === FALLBACK_SECRET,
+      entries:   pullOrder(secret, cluster),
+    }));
   }
 
   return {
     workspace,
     data,
-    statuses,
-    registryStatuses,
-    artifactStatuses,
-    sourceRegistry,
-    saveRegistry,
-    setSource,
-    deleteRegistry,
-    saveRoute,
-    saveDefaultRegistries,
-    deleteRoute,
-    moveRoute,
-    forceUpdate,
-    statusForRealCluster,
-    testConnection,
+    deployments,
+    secretStatuses,
+    saveSecret,
+    deleteSecret,
+    ordersForCluster,
   };
 }
 
@@ -261,9 +129,8 @@ function adHocCluster(name: string, labels?: Record<string, string>): OCICluster
     name,
     labels:             labels || {},
     groups:             [],
-    access:             {},
-    defaultAccess:      'ok',
+    reach:              {},
+    defaultReach:       'ok',
     lastPullMinutesAgo: null,
-    appliedPrimary:     null,
   };
 }

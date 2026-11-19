@@ -1,49 +1,43 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import SortableTable from '@shell/components/SortableTable';
 import { Banner } from '@components/Banner';
-import { BadgeState } from '@components/BadgeState';
-import { RcButton } from '@components/RcButton';
 import { RcTag } from '@components/Pill';
-import { BLANK_CLUSTER } from '@shell/store/store-types.js';
+import PullStatusTable from '@shell/components/fleet/FleetOCIStorage/PullStatusTable.vue';
 import RegistryChain from '@shell/components/fleet/FleetOCIStorage/RegistryChain.vue';
-import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
+import { FALLBACK_SECRET, pullOrder } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { secretLocation } from '@shell/components/fleet/FleetOCIStorage/locations';
+import { SCENARIO_WORKSPACE } from '@shell/components/fleet/FleetOCIStorage/mock';
+import { sampleWorkspaceData, useSampleDeployments } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
+import { OCICluster } from '@shell/components/fleet/FleetOCIStorage/types';
 
 const ROOT = 'fleet.ociStorage.clusterTab';
 
-const props = defineProps<{ cluster: { metadata: { name: string, labels?: Record<string, string> } } }>();
+const props = defineProps<{ cluster: { metadata: { name: string, namespace?: string, labels?: Record<string, string> }, nameDisplay?: string } }>();
 
-const {
-  t, entryLabel, deploymentStateDisplay, deploymentMessage
-} = useFleetOCIStorageLabels();
-const { data, deployments, ordersForCluster } = useFleetOCIStorage();
+const { t, entryLabel } = useFleetOCIStorageLabels();
+const { deployments } = useSampleDeployments();
 
-const listLocation = { name: 'c-cluster-fleet-oci-storage', params: { cluster: BLANK_CLUSTER } };
+const inScenario = computed(() => props.cluster.metadata.namespace === SCENARIO_WORKSPACE);
+const data = computed(() => sampleWorkspaceData());
 
-const orders = computed(() => ordersForCluster(props.cluster.metadata.name, props.cluster.metadata.labels).map((order) => ({
-  ...order,
-  labels: order.entries.map(entryLabel),
+// The scenario's view of this cluster; another workspace's cluster is matched on its own labels only
+const scenarioCluster = computed<OCICluster>(() => data.value.clusters.find((c) => (c.fleetName || c.name) === props.cluster.metadata.name) || {
+  name:               props.cluster.nameDisplay || props.cluster.metadata.name,
+  labels:             props.cluster.metadata.labels || {},
+  groups:             [],
+  reach:              {},
+  defaultReach:       'ok',
+  lastPullMinutesAgo: null,
+});
+
+const orders = computed(() => (inScenario.value ? data.value.secrets : []).map((secret) => ({
+  secret,
+  isDefault: secret.name === FALLBACK_SECRET,
+  labels:    pullOrder(secret, scenarioCluster.value).map(entryLabel),
 })));
 
-const headers = [
-  {
-    name: 'bundle', labelKey: 'fleet.ociStorage.deployments.headers.bundle', value: 'bundle', sort: ['bundle']
-  },
-  {
-    name: 'state', labelKey: 'tableHeaders.state', width: 130
-  },
-  { name: 'message', labelKey: `${ ROOT }.headers.message` },
-];
-
-const rows = computed(() => deployments.value
-  .filter((d) => d.cluster.name === props.cluster.metadata.name)
-  .map((d) => ({
-    key:     d.key,
-    bundle:  d.bundle.name,
-    badge:   deploymentStateDisplay(d.state),
-    message: deploymentMessage(d) || t(`${ ROOT }.pulledFrom`, { entry: d.pulledFrom ? entryLabel(d.pulledFrom) : '' }),
-  })));
+const rows = computed(() => deployments.value.filter((d) => d.cluster.name === scenarioCluster.value.name));
 </script>
 
 <template>
@@ -54,24 +48,15 @@ const rows = computed(() => deployments.value
     <Banner
       color="warning"
       class="m-0"
-      :label="t('fleet.ociStorage.prototype.label')"
+      :label="t('fleet.ociStorage.prototype.mockPage')"
     />
 
-    <div
-      v-if="!data.secrets.length"
-      class="empty"
+    <p
+      v-if="!orders.length"
+      class="text-deemphasized"
     >
-      <p class="text-deemphasized">
-        {{ t('fleet.ociStorage.empty.title') }}
-      </p>
-      <RcButton
-        variant="secondary"
-        size="small"
-        :to="listLocation"
-      >
-        {{ t('fleet.ociStorage.workspace.open') }}
-      </RcButton>
-    </div>
+      {{ t('fleet.ociStorage.empty.title') }}
+    </p>
 
     <template v-else>
       <section>
@@ -88,7 +73,9 @@ const rows = computed(() => deployments.value
             :key="order.secret.name"
           >
             <dt>
-              {{ order.secret.name }}
+              <router-link :to="secretLocation(order.secret.name)">
+                {{ order.secret.name }}
+              </router-link>
               <RcTag
                 v-if="order.isDefault"
                 type="active"
@@ -103,20 +90,10 @@ const rows = computed(() => deployments.value
 
       <section>
         <h3>{{ t(`${ ROOT }.deploymentsTitle`) }}</h3>
-        <SortableTable
-          :headers="headers"
-          :rows="rows"
-          :search="false"
-          :row-actions="false"
-          :table-actions="false"
-          :paging="false"
-          :no-rows-key="`${ ROOT }.noDeployments`"
-          key-field="key"
-        >
-          <template #cell:state="{ row }">
-            <BadgeState :value="row.badge" />
-          </template>
-        </SortableTable>
+        <PullStatusTable
+          :deployments="rows"
+          :columns="['bundle', 'pulledFrom']"
+        />
       </section>
     </template>
   </div>
@@ -137,13 +114,6 @@ const rows = computed(() => deployments.value
   }
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-}
-
 .orders {
   display: grid;
   grid-template-columns: minmax(160px, max-content) 1fr;
@@ -156,7 +126,6 @@ const rows = computed(() => deployments.value
     align-items: center;
     gap: 8px;
     font-weight: normal;
-    color: var(--muted);
   }
 
   dd {

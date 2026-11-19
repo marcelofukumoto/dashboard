@@ -5,7 +5,8 @@ import type { Store } from 'vuex';
 // A guided tour for prototypes: each step spotlights part of the page and explains it. The state lives at module
 // level, so a tour that moves between pages keeps going when one page's host unmounts and the next one mounts.
 
-export type GuideTarget = string | (() => Element | null | undefined);
+/** A selector, or a function for anything a selector can't reach; several elements are spotlighted together */
+export type GuideTarget = string | (() => Element | Element[] | null | undefined);
 
 export interface GuideContext {
   router: Router;
@@ -17,9 +18,15 @@ export interface GuideContext {
   go(location: RouteLocationRaw, arrived: (route: RouteLocationNormalizedLoaded) => boolean): Promise<void>;
 }
 
+/** How the page a step is on relates to the product today, so reviewers see where the change lands */
+export type GuidePageChange = 'new' | 'changed' | 'existing';
+
 export interface GuideStep {
   /** Also the i18n key: `${ keyPrefix }.${ id }.title`, `.body`, and the optional `.design` and `.backend` */
   id: string;
+  /** i18n key of the page's name, shown with `change` on the card */
+  page?: string;
+  change?: GuidePageChange;
   /** What to spotlight. Without one, the card shows in the middle of the page */
   target?: GuideTarget;
   /** Gets the page into the state the step talks about. It must work from any other step, going back or forward */
@@ -50,12 +57,18 @@ let nextHost = 1;
 
 export const guideState = readonly(state);
 
-export function resolveTarget(target?: GuideTarget): Element | null {
+export function resolveTargets(target?: GuideTarget): Element[] {
   if (!target) {
-    return null;
+    return [];
   }
 
-  return (typeof target === 'string' ? document.querySelector(target) : target()) || null;
+  const found = typeof target === 'string' ? document.querySelector(target) : target();
+
+  return (Array.isArray(found) ? found : [found]).filter((el): el is Element => !!el);
+}
+
+export function resolveTarget(target?: GuideTarget): Element | null {
+  return resolveTargets(target)[0] || null;
 }
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -119,7 +132,8 @@ async function show(index: number) {
     context.store.commit('slideInPanel/close');
     await step.prepare?.(context);
     if (step.target) {
-      await waitFor(step.target);
+      // Generous, because a step can land on a page that still has to load its resources
+      await waitFor(step.target, 10000);
     }
   } catch {
     // A step that can't set itself up still shows its card, in the middle of the page

@@ -55,10 +55,10 @@ describe('fleet OCI storage credential sets', () => {
 
   describe('pullOrder', () => {
     it.each([
-      ['eu-staging-01', ['eu-staging', 'eu-mirror', PUSH_ENTRY]],
-      ['eu-prod-01', ['eu-mirror', PUSH_ENTRY]],
-      ['apac-prod-01', ['apac-mirror', PUSH_ENTRY]],
-      ['mgmt-tools', [PUSH_ENTRY]],
+      ['test-k3s', ['eu-staging', 'eu-mirror', PUSH_ENTRY]],
+      ['created-dashboard-2', ['eu-mirror', PUSH_ENTRY]],
+      ['longhorn', ['apac-mirror', PUSH_ENTRY]],
+      ['harvester-11-2', [PUSH_ENTRY]],
     ])('%s gets every matching set in order, then the push registry', (name, expected) => {
       expect(pullOrder(secret(data, FALLBACK_SECRET), cluster(data, name)).map((e) => e.name)).toStrictEqual(expected);
     });
@@ -68,7 +68,7 @@ describe('fleet OCI storage credential sets', () => {
 
       fallback.credentialSets.reverse();
 
-      expect(pullOrder(fallback, cluster(data, 'eu-staging-01')).map((e) => e.name)).toStrictEqual(['eu-mirror', 'eu-staging', PUSH_ENTRY]);
+      expect(pullOrder(fallback, cluster(data, 'test-k3s')).map((e) => e.name)).toStrictEqual(['eu-mirror', 'eu-staging', PUSH_ENTRY]);
     });
   });
 
@@ -91,15 +91,15 @@ describe('fleet OCI storage credential sets', () => {
 
   describe('resolveDeployment', () => {
     it.each([
-      ['payments-api', 'eu-prod-01', 'ready', 'eu-mirror'],
-      ['payments-api', 'apac-prod-01', 'fallback', PUSH_ENTRY],
-      ['payments-api', 'us-prod-02', 'fallback', PUSH_ENTRY],
-      ['monitoring-stack', 'eu-staging-01', 'fallback', 'eu-mirror'],
-      ['monitoring-stack', 'mgmt-tools', 'ready', PUSH_ENTRY],
-      ['store-pos', 'edge-store-0142', 'retrying', null],
-      ['store-pos', 'edge-store-0187', 'failed', null],
-      ['store-pos', 'edge-store-0203', 'failed', null],
-      ['lab-experiments', 'lab-sandbox', 'failed', null],
+      ['payments-api', 'created-dashboard-2', 'ready', 'eu-mirror'],
+      ['payments-api', 'longhorn', 'fallback', PUSH_ENTRY],
+      ['payments-api', 'rolestest', 'fallback', PUSH_ENTRY],
+      ['monitoring-stack', 'test-k3s', 'fallback', 'eu-mirror'],
+      ['monitoring-stack', 'longhorn', 'ready', 'apac-mirror'],
+      ['store-pos', 'harvester-11-2', 'retrying', null],
+      ['store-pos', 'harvester-118', 'failed', null],
+      ['store-pos', 'harvester-test', 'failed', null],
+      ['lab-experiments', 'test-k3s', 'failed', null],
     ])('%s on %s is %s, pulled from %s', (gitRepo, clusterName, state, pulledFrom) => {
       const status = deployment(data, gitRepo, clusterName);
 
@@ -108,50 +108,51 @@ describe('fleet OCI storage credential sets', () => {
     });
 
     it('reports a missing artifact as not found, not as a replication state', () => {
-      const status = deployment(data, 'payments-api', 'apac-prod-01');
+      const status = deployment(data, 'payments-api', 'longhorn');
 
       expect(status.attempts.map((a) => [a.entry.name, a.result])).toStrictEqual([['apac-mirror', 'notFound'], [PUSH_ENTRY, 'ok']]);
       expect(status.firstFailure?.result).toBe('notFound');
     });
 
     it('tells credentials apart per set on the same host', () => {
-      const status = deployment(data, 'monitoring-stack', 'eu-staging-01');
+      const status = deployment(data, 'monitoring-stack', 'test-k3s');
 
       expect(status.attempts.map((a) => [a.entry.name, a.result])).toStrictEqual([['eu-staging', 'auth'], ['eu-mirror', 'ok'], [PUSH_ENTRY, null]]);
     });
 
     it('retries with back-off while no entry has the artifact', () => {
-      const status = deployment(data, 'store-pos', 'edge-store-0142');
+      const status = deployment(data, 'store-pos', 'harvester-11-2');
 
       expect(status.attempts.map((a) => a.result)).toStrictEqual(['notFound', 'unreachable']);
       expect(status.retry).toStrictEqual(backoff(20));
     });
 
     it('never treats the push registry as missing the artifact', () => {
-      const status = deployment(data, 'payments-api', 'apac-prod-01');
+      const status = deployment(data, 'payments-api', 'longhorn');
 
       status.bundle.missingOn['harbor.corp.example.com'] = 1;
 
-      expect(deployment(data, 'payments-api', 'apac-prod-01').attempts[1].result).toBe('ok');
+      expect(deployment(data, 'payments-api', 'longhorn').attempts[1].result).toBe('ok');
     });
   });
 
   describe('resolveSecret', () => {
     it.each([
-      [FALLBACK_SECRET, 'active', true, ['payments-api', 'monitoring-stack', 'security-baseline', 'ingress-core']],
-      ['stores-oci', 'error', false, ['store-pos']],
-      ['lab-oci', 'error', false, ['lab-experiments']],
+      [FALLBACK_SECRET, 'active', true, ['payments-api', 'monitoring-stack']],
+      ['stores-oci', 'active', false, ['store-pos']],
+      ['lab-oci', 'active', false, ['lab-experiments']],
       ['quay-legacy', 'unused', false, []],
     ])('%s is %s', (name, state, isDefault, gitRepos) => {
-      const status = resolveSecret(data, secret(data, name), resolveDeployments(data));
+      const status = resolveSecret(data, secret(data, name));
 
       expect(status.state).toBe(state);
       expect(status.isDefault).toBe(isDefault);
       expect(status.gitRepos).toStrictEqual(gitRepos);
     });
 
-    it('counts the deployments that can\'t pull from anything', () => {
-      expect(resolveSecret(data, secret(data, 'stores-oci'), resolveDeployments(data)).failing).toBe(2);
+    it('stays active while its deployments fail, because their state belongs to the workloads', () => {
+      expect(resolveDeployments(data).filter((d) => d.secret.name === 'stores-oci' && d.state === 'failed')).toHaveLength(2);
+      expect(resolveSecret(data, secret(data, 'stores-oci')).state).toBe('active');
     });
   });
 

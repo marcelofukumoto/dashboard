@@ -4,24 +4,26 @@ import { BLANK_CLUSTER } from '@shell/store/store-types.js';
 import { createGuideContext, startGuide } from '@shell/components/PrototypeGuide/useGuide';
 import type { Guide, GuideContext } from '@shell/components/PrototypeGuide/useGuide';
 import { FALLBACK_SECRET } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import {
+  APPLICATIONS_ROUTE, OCI_STORAGE_ROUTE, SECRET_ROUTE, bundleLocation, fleetClusterLocation, gitRepoLocation, secretLocation,
+} from '@shell/components/fleet/FleetOCIStorage/locations';
 
-const LIST = 'c-cluster-fleet-oci-storage';
-const FORM = 'c-cluster-fleet-oci-storage-secret-id';
-const SHOWCASE_DEPLOYMENT = 'monitoring-stack/monitoring-stack-grafana/eu-staging-01';
-const RETRYING_DEPLOYMENT = 'store-pos/store-pos-app/edge-store-0142';
+const PAGES = 'fleet.ociStorage.guide.pages';
+const FAILING_REPO = 'store-pos';
+const RETRYING_PULL = 'store-pos/store-pos-app/harvester-11-2';
+const FALLBACK_BUNDLE = 'payments-api-deployment';
+// test-k3s: its Fleet Cluster object is named after the imported cluster's id
+const SHOWCASE_CLUSTER = 'c-p2bmg';
 
-async function onList(ctx: GuideContext, tab: 'secrets' | 'deployments') {
-  await ctx.go({
-    name: LIST, params: { cluster: BLANK_CLUSTER }, hash: `#${ tab }`
-  }, (route) => route.name === LIST);
-  await ctx.click(`[data-testid="btn-${ tab }"]`);
+async function onList(ctx: GuideContext) {
+  await ctx.go({ name: OCI_STORAGE_ROUTE, params: { cluster: BLANK_CLUSTER } }, (route) => route.name === OCI_STORAGE_ROUTE);
 }
 
 const secretRow = (name: string) => document.querySelector(`[data-testid="fleet-oci-secret-${ name }"]`)?.closest('tr') || null;
 const setList = (name: string) => secretRow(name)?.nextElementSibling?.querySelector('[data-testid="fleet-oci-set-list"]') || null;
 
 async function expandSecret(ctx: GuideContext, name: string) {
-  await onList(ctx, 'secrets');
+  await onList(ctx);
   await ctx.waitFor(() => secretRow(name));
   if (!setList(name)) {
     await ctx.click(() => secretRow(name)?.querySelector('td.row-expand i'));
@@ -29,68 +31,135 @@ async function expandSecret(ctx: GuideContext, name: string) {
 }
 
 async function onForm(ctx: GuideContext, name: string) {
-  await ctx.go({ name: FORM, params: { cluster: BLANK_CLUSTER, id: name } }, (route) => route.name === FORM && route.params.id === name);
+  await ctx.go(secretLocation(name), (route) => route.name === SECRET_ROUTE && route.params.id === name);
 }
+
+/** A Fleet detail page, on its OCI Storage tab */
+async function onTab(ctx: GuideContext, location: { name: string, params: Record<string, string> }) {
+  await ctx.go(location, (route) => route.name === location.name && route.params.id === location.params.id);
+  await ctx.click('[data-testid="btn-oci-storage"]');
+}
+
+// A row's reason is the line the table draws under it
+const reasonRow = (testId: string) => () => document.querySelector(`[data-testid="${ testId }"]`)?.closest('tr')?.nextElementSibling;
+
+// The GitRepo's row and the state message the table draws under it
+const appRow = (name: string) => () => {
+  const link = Array.from(document.querySelectorAll('table tbody tr.main-row a')).find((a) => a.textContent?.trim() === name);
+  const row = link?.closest('tr');
+  const message = row?.nextElementSibling?.classList.contains('state-description') ? row.nextElementSibling : null;
+
+  return row ? [row, ...(message ? [message] : [])] : null;
+};
 
 export const OCI_STORAGE_GUIDE: Guide = {
   id:        'fleet-oci-storage',
   keyPrefix: 'fleet.ociStorage.guide.steps',
   steps:     [
-    { id: 'intro', prepare: (ctx) => onList(ctx, 'secrets') },
     {
-      id: 'summary', target: '[data-testid="fleet-oci-summary"]', prepare: (ctx) => onList(ctx, 'secrets')
+      id: 'intro', page: `${ PAGES }.ociStorage`, change: 'new', prepare: onList
     },
     {
-      id: 'failing', target: '[data-testid="fleet-oci-failing-banner"]', prepare: (ctx) => onList(ctx, 'secrets')
+      id: 'secrets', page: `${ PAGES }.ociStorage`, change: 'new', target: '[data-testid="fleet-oci-secrets-table"]', prepare: onList
     },
     {
-      id: 'secrets', target: '[data-testid="fleet-oci-secrets-table"]', prepare: (ctx) => onList(ctx, 'secrets')
+      id: 'fallback', page: `${ PAGES }.ociStorage`, change: 'new', target: '[data-testid="fleet-oci-default-tag"]', prepare: onList
     },
     {
-      id: 'fallback', target: '[data-testid="fleet-oci-default-tag"]', prepare: (ctx) => onList(ctx, 'secrets')
+      id: 'push', page: `${ PAGES }.ociStorage`, change: 'new', target: `[data-testid="fleet-oci-push-${ FALLBACK_SECRET }"]`, prepare: onList
     },
     {
-      id: 'push', target: `[data-testid="fleet-oci-push-${ FALLBACK_SECRET }"]`, prepare: (ctx) => onList(ctx, 'secrets')
-    },
-    {
-      id: 'sets', target: () => setList(FALLBACK_SECRET), prepare: (ctx) => expandSecret(ctx, FALLBACK_SECRET)
+      id:      'sets',
+      page:    `${ PAGES }.ociStorage`,
+      change:  'new',
+      target:  () => setList(FALLBACK_SECRET),
+      prepare: (ctx) => expandSecret(ctx, FALLBACK_SECRET),
     },
     {
       id:      'matches',
+      page:    `${ PAGES }.ociStorage`,
+      change:  'new',
       target:  () => setList(FALLBACK_SECRET)?.querySelector('[data-testid="fleet-oci-set-matches-eu-staging"]'),
       prepare: (ctx) => expandSecret(ctx, FALLBACK_SECRET),
     },
     {
-      id: 'formPush', target: '[data-testid="fleet-oci-form-push"]', prepare: (ctx) => onForm(ctx, FALLBACK_SECRET)
+      id: 'usedBy', page: `${ PAGES }.ociStorage`, change: 'new', target: `[data-testid="fleet-oci-used-by-${ FALLBACK_SECRET }"]`, prepare: onList
     },
     {
-      id: 'formSet', target: '[data-testid="fleet-oci-set-0"]', prepare: (ctx) => onForm(ctx, FALLBACK_SECRET)
+      id:      'formPush',
+      page:    `${ PAGES }.secretForm`,
+      change:  'new',
+      target:  '[data-testid="fleet-oci-form-push"]',
+      prepare: (ctx) => onForm(ctx, FALLBACK_SECRET),
     },
     {
-      id: 'formPreview', target: '[data-testid="fleet-oci-form-preview"]', prepare: (ctx) => onForm(ctx, FALLBACK_SECRET)
+      id: 'formSet', page: `${ PAGES }.secretForm`, change: 'new', target: '[data-testid="fleet-oci-set-0"]', prepare: (ctx) => onForm(ctx, FALLBACK_SECRET)
     },
     {
-      id: 'formYaml', target: '[data-testid="fleet-oci-form-yaml"]', prepare: (ctx) => onForm(ctx, FALLBACK_SECRET)
+      id:      'formPreview',
+      page:    `${ PAGES }.secretForm`,
+      change:  'new',
+      target:  '[data-testid="fleet-oci-form-preview"]',
+      prepare: (ctx) => onForm(ctx, FALLBACK_SECRET),
     },
     {
-      id: 'deployments', target: '[data-testid="fleet-oci-deployments-table"]', prepare: (ctx) => onList(ctx, 'deployments')
+      id:      'formYaml',
+      page:    `${ PAGES }.secretForm`,
+      change:  'new',
+      target:  '[data-testid="fleet-oci-form-yaml"]',
+      prepare: (ctx) => onForm(ctx, FALLBACK_SECRET),
+    },
+    {
+      id:      'appBundles',
+      page:    `${ PAGES }.appBundles`,
+      change:  'existing',
+      target:  appRow(FAILING_REPO),
+      prepare: (ctx) => ctx.go({ name: APPLICATIONS_ROUTE, params: { cluster: BLANK_CLUSTER } }, (route) => route.name === APPLICATIONS_ROUTE),
+    },
+    {
+      id:      'gitRepoTab',
+      page:    `${ PAGES }.gitRepo`,
+      change:  'changed',
+      target:  '[data-testid="fleet-oci-workload-tab"]',
+      prepare: (ctx) => onTab(ctx, gitRepoLocation(FAILING_REPO)),
     },
     {
       id:      'retrying',
-      // The reason line the table draws under the row
-      target:  () => document.querySelector(`[data-testid="fleet-oci-deployment-${ RETRYING_DEPLOYMENT }"]`)?.closest('tr')?.nextElementSibling,
-      prepare: (ctx) => onList(ctx, 'deployments'),
+      page:    `${ PAGES }.gitRepo`,
+      change:  'changed',
+      target:  reasonRow(`fleet-oci-pull-${ RETRYING_PULL }`),
+      prepare: (ctx) => onTab(ctx, gitRepoLocation(FAILING_REPO)),
     },
     {
       id:      'drawer',
+      page:    `${ PAGES }.gitRepo`,
+      change:  'changed',
       target:  '[data-testid="fleet-oci-deployment-panel"] ol.attempts',
       prepare: async(ctx) => {
-        await onList(ctx, 'deployments');
-        await ctx.click(`[data-testid="fleet-oci-deployment-${ SHOWCASE_DEPLOYMENT }"]`);
+        await onTab(ctx, gitRepoLocation(FAILING_REPO));
+        await ctx.click(`[data-testid="fleet-oci-pull-${ RETRYING_PULL }"]`);
       },
     },
-    { id: 'elsewhere', prepare: (ctx) => onList(ctx, 'secrets') },
-    { id: 'questions', prepare: (ctx) => onList(ctx, 'secrets') },
+    {
+      id:      'bundleTab',
+      page:    `${ PAGES }.bundle`,
+      change:  'changed',
+      target:  '[data-testid="fleet-oci-workload-tab"]',
+      prepare: (ctx) => onTab(ctx, bundleLocation(FALLBACK_BUNDLE)),
+    },
+    {
+      id:      'clusterTab',
+      page:    `${ PAGES }.cluster`,
+      change:  'changed',
+      target:  '[data-testid="fleet-oci-cluster-tab"]',
+      prepare: (ctx) => onTab(ctx, fleetClusterLocation(SHOWCASE_CLUSTER)),
+    },
+    {
+      id: 'forms', page: `${ PAGES }.forms`, change: 'changed', prepare: onList
+    },
+    {
+      id: 'questions', page: `${ PAGES }.ociStorage`, change: 'new', prepare: onList
+    },
   ],
 };
 

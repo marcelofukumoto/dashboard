@@ -2,7 +2,6 @@
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { Banner } from '@components/Banner';
-import PrototypeGuide from '@shell/components/PrototypeGuide/PrototypeGuide.vue';
 import { startOCIStorageGuide } from '@shell/components/fleet/FleetOCIStorage/guide';
 import { resetMockData } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
@@ -38,8 +37,6 @@ const { t } = useFleetOCIStorageLabels();
       >{{ t('fleet.ociStorage.prototype.reset') }}</a>
     </div>
   </Banner>
-  <!-- Every page with this banner hosts the guide, so a tour that moves between pages keeps going -->
-  <PrototypeGuide />
 </template>
 
 <style lang="scss" scoped>

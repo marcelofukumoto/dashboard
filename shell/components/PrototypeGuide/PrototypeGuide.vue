@@ -5,9 +5,17 @@ import {
 import { useStore } from 'vuex';
 import { useI18n } from '@shell/composables/useI18n';
 import { RcButton } from '@components/RcButton';
+import { RcStatusBadge } from '@components/Pill';
 import {
-  guideState, nextStep, previousStep, registerHost, resolveTarget, stopGuide, unregisterHost
+  guideState, nextStep, previousStep, registerHost, resolveTargets, stopGuide, unregisterHost
 } from '@shell/components/PrototypeGuide/useGuide';
+import type { GuidePageChange } from '@shell/components/PrototypeGuide/useGuide';
+
+const CHANGE_STATUS: Record<GuidePageChange, 'success' | 'info' | 'none'> = {
+  new:      'success',
+  changed:  'info',
+  existing: 'none',
+};
 
 const PADDING = 6;
 const GAP = 16;
@@ -97,10 +105,11 @@ const same = (a: Box | null, b: Box | null) => a === b || (!!a && !!b &&
 
 // The target moves when the page scrolls, a row expands or the drawer slides in, so follow it every frame
 function track() {
-  const found = resolveTarget(step.value?.target);
-  const rect = found?.getBoundingClientRect();
-  const next = rect && rect.width && rect.height ? {
-    top: rect.top, left: rect.left, width: rect.width, height: rect.height
+  const rects = resolveTargets(step.value?.target).map((el) => el.getBoundingClientRect()).filter((r) => r.width && r.height);
+  const top = Math.min(...rects.map((r) => r.top));
+  const left = Math.min(...rects.map((r) => r.left));
+  const next = rects.length ? {
+    top, left, width: Math.max(...rects.map((r) => r.right)) - left, height: Math.max(...rects.map((r) => r.bottom)) - top
   } : null;
 
   if (!same(target.value, next)) {
@@ -133,17 +142,56 @@ function onKey(event: KeyboardEvent) {
   }
 }
 
+// A short page can't scroll a target to the top, so while a tour runs its scroll area gets room at the bottom
+const padded = new Map<HTMLElement, string>();
+
+function scrollArea(el: Element): HTMLElement {
+  for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) {
+      return node;
+    }
+  }
+
+  return (document.scrollingElement || document.documentElement) as HTMLElement;
+}
+
+function makeRoom(el: Element) {
+  const area = scrollArea(el);
+
+  if (!padded.has(area)) {
+    padded.set(area, area.style.paddingBottom);
+    area.style.paddingBottom = `${ Math.round(window.innerHeight * 0.7) }px`;
+  }
+}
+
+function releaseRoom() {
+  padded.forEach((value, area) => {
+    area.style.paddingBottom = value;
+  });
+  padded.clear();
+}
+
+watch(visible, (now) => {
+  if (!now) {
+    releaseRoom();
+  }
+});
+
 watch(() => [guideState.ready, guideState.index, visible.value], async([ready]) => {
   if (!ready || !visible.value) {
     return;
   }
 
-  const found = resolveTarget(step.value?.target);
+  const found = resolveTargets(step.value?.target)[0];
 
+  // A small target goes to the middle; anything bigger goes to the top, which leaves room for the card below it
   if (found) {
-    const tall = found.getBoundingClientRect().height > window.innerHeight * 0.6;
+    const small = (target.value?.height ?? found.getBoundingClientRect().height) < 160;
 
-    found.scrollIntoView({ block: tall ? 'start' : 'center', behavior: 'smooth' });
+    if (!small) {
+      makeRoom(found);
+    }
+    found.scrollIntoView({ block: small ? 'center' : 'start', behavior: 'smooth' });
   }
 
   await nextTick();
@@ -156,6 +204,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  releaseRoom();
   cancelAnimationFrame(frame);
   document.removeEventListener('keydown', onKey, true);
   unregisterHost(host);
@@ -204,6 +253,20 @@ onBeforeUnmount(() => {
             />
           </RcButton>
         </header>
+
+        <div
+          v-if="step.page"
+          class="guide-page"
+          data-testid="prototype-guide-page"
+        >
+          <span class="text-muted">{{ t(step.page) }}</span>
+          <RcStatusBadge
+            v-if="step.change"
+            :status="CHANGE_STATUS[step.change]"
+          >
+            {{ t(`prototypeGuide.change.${ step.change }`) }}
+          </RcStatusBadge>
+        </div>
 
         <h3 :id="titleId">
           {{ text('title') }}
@@ -315,6 +378,14 @@ $guide-layer: 1000;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-size: 12px;
+}
+
+.guide-page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   font-size: 12px;
 }
 

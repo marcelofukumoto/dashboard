@@ -2,7 +2,9 @@ import { computed, reactive } from 'vue';
 import { useStore } from 'vuex';
 import { FLEET } from '@shell/config/types';
 import { emptyData, scenarioData, SCENARIO_WORKSPACE } from '@shell/components/fleet/FleetOCIStorage/mock';
-import { FALLBACK_SECRET, pullOrder, resolveDeployments, resolveSecret } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import {
+  FALLBACK_SECRET, pullOrder, resolveDeployments, resolveSecret, secretFor
+} from '@shell/components/fleet/FleetOCIStorage/resolve';
 import {
   DeploymentStatus,
   OCICluster,
@@ -12,8 +14,8 @@ import {
   SecretStatus,
 } from '@shell/components/fleet/FleetOCIStorage/types';
 
-// v2: secrets with credential sets; the v1 data (registries and routes) is a different shape
-const STORAGE_KEY = 'fleet-oci-storage-prototype-v2';
+// v3: the scenario runs on the real fleet-default clusters; v2 used made-up ones, v1 had registries and routes
+const STORAGE_KEY = 'fleet-oci-storage-prototype-v3';
 
 function seed(): Record<string, OCIStorageData> {
   return { [SCENARIO_WORKSPACE]: scenarioData() };
@@ -37,6 +39,38 @@ function persist() {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.workspaces));
   } catch {}
+}
+
+/** The sample workspace as it is now, for the API mock that feeds the Fleet pages */
+export function sampleWorkspaceData(): OCIStorageData {
+  return state.workspaces[SCENARIO_WORKSPACE] || scenarioData();
+}
+
+/**
+ * The sample workspace's bundle deployments, for the Fleet pages. They don't follow the workspace selector: a Bundle
+ * page can be open while another workspace is selected
+ */
+export function useSampleDeployments() {
+  const deployments = computed<DeploymentStatus[]>(() => resolveDeployments(sampleWorkspaceData()));
+  const secretOf = (gitRepoName: string) => {
+    const data = sampleWorkspaceData();
+    const gitRepo = data.gitRepos.find((g) => g.name === gitRepoName);
+
+    return gitRepo ? secretFor(data, gitRepo) : null;
+  };
+
+  return { deployments, secretOf };
+}
+
+/** For the Fleet detail pages: whether a GitRepo or Bundle stores its bundles in OCI storage, and how many can't pull */
+export function ociStorageFor({ namespace, gitRepo, bundle }: { namespace?: string, gitRepo?: string, bundle?: string }) {
+  if (namespace !== SCENARIO_WORKSPACE) {
+    return { used: false, failing: 0 };
+  }
+
+  const own = resolveDeployments(sampleWorkspaceData()).filter((d) => (gitRepo ? d.gitRepo.name === gitRepo : d.bundle.name === bundle));
+
+  return { used: own.length > 0, failing: own.filter((d) => d.state === 'failed').length };
 }
 
 export function resetMockData() {
@@ -66,7 +100,7 @@ export function useFleetOCIStorage() {
   });
 
   const deployments = computed<DeploymentStatus[]>(() => resolveDeployments(data.value));
-  const secretStatuses = computed<SecretStatus[]>(() => data.value.secrets.map((s) => resolveSecret(data.value, s, deployments.value)));
+  const secretStatuses = computed<SecretStatus[]>(() => data.value.secrets.map((s) => resolveSecret(data.value, s)));
 
   function stored(): OCIStorageData {
     if (!state.workspaces[workspace.value]) {

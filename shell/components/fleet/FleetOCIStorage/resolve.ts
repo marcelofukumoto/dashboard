@@ -32,7 +32,6 @@ export const DEPLOYMENT_STATE_COLORS: Record<DeploymentState, string> = {
 
 export const SECRET_STATE_COLORS: Record<SecretState, string> = {
   active: 'bg-success',
-  error:  'bg-error',
   unused: 'bg-darker',
 };
 
@@ -152,24 +151,14 @@ export function resolveDeployments(data: OCIStorageData): DeploymentStatus[] {
   })));
 }
 
-export function resolveSecret(data: OCIStorageData, secret: OCIStorageSecret, deployments: DeploymentStatus[]): SecretStatus {
+// Only what the secrets and GitRepo specs say. How deployments went belongs to the workloads, not to the secret
+export function resolveSecret(data: OCIStorageData, secret: OCIStorageSecret): SecretStatus {
   const gitRepos = data.gitRepos.filter((g) => secretFor(data, g)?.name === secret.name).map((g) => g.name);
-  const own = deployments.filter((d) => d.secret.name === secret.name);
-  const failing = own.filter((d) => d.state === 'failed').length;
-  let state: SecretState = 'active';
-
-  if (!gitRepos.length) {
-    state = 'unused';
-  } else if (failing) {
-    state = 'error';
-  }
 
   return {
     secret,
-    state,
-    isDefault:   secret.name === FALLBACK_SECRET,
+    state:     gitRepos.length ? 'active' : 'unused',
+    isDefault: secret.name === FALLBACK_SECRET,
     gitRepos,
-    deployments: own,
-    failing,
   };
 }

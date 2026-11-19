@@ -34,31 +34,37 @@ const set = (fields: Partial<CredentialSet> & Pick<CredentialSet, 'name' | 'host
   ...fields,
 });
 
-const regionalCluster = (name: string, region: string, env: string, lastPullMinutesAgo: number, reach: Record<string, PullResult> = {}): OCICluster => ({
+// The scenario runs on the real fleet-default clusters of the shared Rancher; the API mock gives them these labels.
+// `fleetName` is the Fleet Cluster object's name, which differs from the display name for imported clusters.
+const regionalCluster = (name: string, fleetName: string, region: string, env: string, reach: Record<string, PullResult> = {}): OCICluster => ({
   name,
-  labels:       { region, env },
-  groups:       [],
-  reach:        { [STORE]: 'unreachable', ...reach },
-  defaultReach: 'ok',
-  lastPullMinutesAgo,
+  fleetName,
+  labels:             { region, env },
+  groups:             [],
+  reach:              { [STORE]: 'unreachable', ...reach },
+  defaultReach:       'ok',
+  lastPullMinutesAgo: 3,
 });
 
 // Stores reach only their local registry
-const storeCluster = (name: string, local: PullResult, lastPullMinutesAgo: number): OCICluster => ({
+const storeCluster = (name: string, fleetName: string, local: PullResult): OCICluster => ({
   name,
-  labels:       { site: 'store', airgap: 'true' },
-  groups:       ['airgap-stores'],
-  reach:        { [STORE]: local },
-  defaultReach: 'unreachable',
-  lastPullMinutesAgo,
+  fleetName,
+  labels:             { site: 'store' },
+  groups:             [],
+  reach:              { [STORE]: local },
+  defaultReach:       'unreachable',
+  lastPullMinutesAgo: 94,
 });
 
 const bundle = (name: string, artifactId: string, pushedMinutesAgo: number, missingOn: Record<string, number> = {}): OCIBundle => ({
   name, artifactId, pushedMinutesAgo, missingOn
 });
 
-const PROD = ['eu-prod-01', 'eu-prod-02', 'eu-prod-03', 'apac-prod-01', 'apac-prod-02', 'us-prod-01', 'us-prod-02', 'us-prod-03'];
-const STORES = ['edge-store-0142', 'edge-store-0144', 'edge-store-0145', 'edge-store-0187', 'edge-store-0203'];
+const PROD = ['created-dashboard-2', 'longhorn', 'rolestest'];
+const REGIONAL = ['created-dashboard-2', 'test-k3s', 'longhorn', 'rolestest'];
+const STORES = ['harvester-11-2', 'harvester-118', 'harvester-test'];
+const EXAMPLES = 'https://github.com/rancher/fleet-examples';
 
 export function emptyData(): OCIStorageData {
   return {
@@ -147,7 +153,7 @@ export function scenarioData(): OCIStorageData {
             hasAgentPassword: true,
             tlsMode:          'customCA',
             caBundle:         '-----BEGIN CERTIFICATE-----\n(store fleet CA)\n-----END CERTIFICATE-----',
-            clusterGroups:    ['airgap-stores'],
+            selectors:        [{ key: 0, matchLabels: { site: 'store' } }],
           }),
         ],
       },
@@ -184,75 +190,52 @@ export function scenarioData(): OCIStorageData {
       {
         name:     'payments-api',
         secret:   null,
+        repo:     EXAMPLES,
+        paths:    ['single-cluster/helm'],
+        targets:  [{ clusterSelector: { matchLabels: { env: 'prod' } } }],
         clusters: PROD,
         bundles:  [bundle('payments-api-deployment', 's-4f1d7ab2c90e6b3358aa17c4d2e09f6163bc8e7145d0a92fb7316ce08d4a1b5', 4, { [APAC]: 4 })],
       },
       {
         name:     'monitoring-stack',
         secret:   null,
-        clusters: [...PROD, 'eu-staging-01', 'mgmt-tools'],
+        repo:     EXAMPLES,
+        paths:    ['multi-cluster/helm-kustomize'],
+        targets:  [{ clusterSelector: { matchExpressions: [{ key: 'region', operator: 'Exists' }] } }],
+        clusters: REGIONAL,
         bundles:  [
           bundle('monitoring-stack-grafana', 's-1b7e92c4a06d3f58e2c17ab940d6638f51ce07d2ba948c6e3f105d7a82c6e49', 340),
           bundle('monitoring-stack-prometheus', 's-d3506ea18f2c79b40c6ae513d7f0829b64e1a7c35d9f28b06c174ea9d30b8f2', 340),
         ],
       },
       {
-        name:     'security-baseline',
-        secret:   null,
-        clusters: PROD.filter((c) => !c.startsWith('apac')),
-        bundles:  [bundle('security-baseline-policies', 's-72c8fd0316ab94e5d07b2c1e8f36a4d95b01ce7a3f6682d4e9a0b7c5138fd26', 720)],
-      },
-      {
-        name:     'ingress-core',
-        secret:   null,
-        clusters: [...PROD, 'eu-staging-01', 'mgmt-tools'],
-        bundles:  [bundle('ingress-core-traefik', 's-a60e47d2b5c1938f7e24d06bc8a1f37592d4ec60b1a78f3c9e5d2074b6c183a', 1500)],
-      },
-      {
         name:     'store-pos',
         secret:   'stores-oci',
+        repo:     EXAMPLES,
+        paths:    ['simple'],
+        targets:  [{ clusterSelector: { matchLabels: { site: 'store' } } }],
         clusters: STORES,
         bundles:  [bundle('store-pos-app', 's-9ac03e51d7b2486f0e1dd3a95c7740be26f18a3c6d49e07b15a2fc8d3e6b071', 20, { [STORE]: 20 })],
       },
       {
         name:     'lab-experiments',
         secret:   'lab-oci',
-        clusters: ['lab-sandbox'],
+        repo:     EXAMPLES,
+        paths:    ['single-cluster/manifests'],
+        targets:  [{ clusterSelector: { matchLabels: { env: 'staging' } } }],
+        clusters: ['test-k3s'],
         bundles:  [bundle('lab-experiments-app', 's-e31b07c95d4a26f8b1c0e97d3a5f6248c1d09b7e3a52f64c8d1e0a97b3f52c6', 90)],
       },
     ],
 
     clusters: [
-      regionalCluster('eu-prod-01', 'eu', 'prod', 3),
-      regionalCluster('eu-prod-02', 'eu', 'prod', 3),
-      regionalCluster('eu-prod-03', 'eu', 'prod', 3),
-      regionalCluster('eu-staging-01', 'eu', 'staging', 340, { 'eu-staging': 'auth' }),
-      regionalCluster('apac-prod-01', 'apac', 'prod', 4),
-      regionalCluster('apac-prod-02', 'apac', 'prod', 4),
-      regionalCluster('us-prod-01', 'us', 'prod', 3),
-      regionalCluster('us-prod-02', 'us', 'prod', 3, { [US]: 'unreachable' }),
-      regionalCluster('us-prod-03', 'us', 'prod', 3),
-      storeCluster('edge-store-0142', 'ok', 94),
-      storeCluster('edge-store-0144', 'ok', 94),
-      storeCluster('edge-store-0145', 'ok', 94),
-      storeCluster('edge-store-0187', 'auth', 1499),
-      storeCluster('edge-store-0203', 'tls', 1499),
-      {
-        name:               'mgmt-tools',
-        labels:             {},
-        groups:             [],
-        reach:              { [STORE]: 'unreachable' },
-        defaultReach:       'ok',
-        lastPullMinutesAgo: 339,
-      },
-      {
-        name:               'lab-sandbox',
-        labels:             { env: 'lab' },
-        groups:             [],
-        reach:              { [LAB]: 'unreachable', [STORE]: 'unreachable' },
-        defaultReach:       'ok',
-        lastPullMinutesAgo: null,
-      },
+      regionalCluster('created-dashboard-2', 'created-dashboard-2', 'eu', 'prod'),
+      regionalCluster('test-k3s', 'c-p2bmg', 'eu', 'staging', { 'eu-staging': 'auth', [LAB]: 'unreachable' }),
+      regionalCluster('longhorn', 'longhorn', 'apac', 'prod'),
+      regionalCluster('rolestest', 'c-bxz84', 'us', 'prod', { [US]: 'unreachable' }),
+      storeCluster('harvester-11-2', 'c-fwtnp', 'ok'),
+      storeCluster('harvester-118', 'harvester-118', 'auth'),
+      storeCluster('harvester-test', 'c-w2f7r', 'tls'),
     ],
   };
 }

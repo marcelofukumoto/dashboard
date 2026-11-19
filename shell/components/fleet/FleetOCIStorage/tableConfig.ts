@@ -1,10 +1,7 @@
 const ROOT = 'fleet.ociStorage';
 
 // Table views key saved views on the schema id. These lists have no real type behind them yet
-export const OCI_TABLE_SCHEMAS = {
-  secret:     { id: 'fleet.cattle.io.ocistorage.secret' },
-  deployment: { id: 'fleet.cattle.io.ocistorage.bundledeployment' },
-};
+export const OCI_TABLE_SCHEMAS = { secret: { id: 'fleet.cattle.io.ocistorage.secret' } };
 
 const column = (root: string, name: string, value: string, sortable = true) => ({
   header: {
@@ -23,19 +20,10 @@ export const OCI_OPTIONAL_HEADERS = {
     column('secrets', 'agentUser', 'agentUser'),
     column('secrets', 'tls', 'tlsLabel'),
     column('secrets', 'setNames', 'setNames'),
-    column('secrets', 'gitRepos', 'gitReposLabel'),
     {
       header: {
         name: 'age', labelKey: 'tableHeaders.age', value: 'ageLabel', sort: ['ageMinutes']
       }
     },
-  ],
-  [OCI_TABLE_SCHEMAS.deployment.id]: [
-    column('deployments', 'pullOrder', 'orderLabel'),
-    column('deployments', 'failure', 'failureLabel'),
-    column('deployments', 'reference', 'reference'),
-    column('deployments', 'artifact', 'artifactId'),
-    column('deployments', 'attempt', 'attempt'),
-    column('deployments', 'nextRetry', 'nextRetryLabel', false),
   ],
 };

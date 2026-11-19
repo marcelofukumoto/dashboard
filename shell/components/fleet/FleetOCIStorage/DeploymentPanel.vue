@@ -5,7 +5,7 @@ import { Banner } from '@components/Banner';
 import { RcButton } from '@components/RcButton';
 import { RcStatusIndicator } from '@components/Pill';
 import { copyTextToClipboard } from '@shell/utils/clipboard';
-import { BLANK_CLUSTER } from '@shell/store/store-types.js';
+import { bundleLocation, fleetClusterLocation, gitRepoLocation, secretLocation } from '@shell/components/fleet/FleetOCIStorage/locations';
 import { reference } from '@shell/components/fleet/FleetOCIStorage/resolve';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
 import { DeploymentStatus, PullResult } from '@shell/components/fleet/FleetOCIStorage/types';
@@ -46,12 +46,9 @@ function outcome(result: PullResult | null): string {
   return result === 'ok' ? t(`${ ROOT }.outcome.pulled`) : reason(result);
 }
 
-function editSecret() {
+function go(location: object) {
   emit('navigate');
-  router.push({
-    name:   'c-cluster-fleet-oci-storage-secret-id',
-    params: { cluster: BLANK_CLUSTER, id: props.status.secret.name },
-  });
+  router.push(location);
 }
 </script>
 
@@ -71,20 +68,35 @@ function editSecret() {
       <h3>{{ t(`${ ROOT }.details`) }}</h3>
       <dl class="details">
         <dt>{{ t(`${ ROOT }.gitRepo`) }}</dt>
-        <dd>{{ status.gitRepo.name }}</dd>
+        <dd>
+          <a
+            href="#"
+            @click.prevent="go(gitRepoLocation(status.gitRepo.name, '#oci-storage'))"
+          >{{ status.gitRepo.name }}</a>
+        </dd>
 
         <dt>{{ t(`${ ROOT }.bundle`) }}</dt>
-        <dd>{{ status.bundle.name }}</dd>
+        <dd>
+          <a
+            href="#"
+            @click.prevent="go(bundleLocation(status.bundle.name, '#oci-storage'))"
+          >{{ status.bundle.name }}</a>
+        </dd>
 
         <dt>{{ t(`${ ROOT }.cluster`) }}</dt>
-        <dd>{{ status.cluster.name }}</dd>
+        <dd>
+          <a
+            href="#"
+            @click.prevent="go(fleetClusterLocation(status.cluster.fleetName || status.cluster.name, '#oci-storage'))"
+          >{{ status.cluster.name }}</a>
+        </dd>
 
         <dt>{{ t(`${ ROOT }.secret`) }}</dt>
         <dd>
           <a
             href="#"
             data-testid="fleet-oci-panel-secret"
-            @click.prevent="editSecret"
+            @click.prevent="go(secretLocation(status.secret.name))"
           >{{ status.secret.name }}</a>
           <span
             v-if="!status.gitRepo.secret"

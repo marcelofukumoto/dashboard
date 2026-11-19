@@ -8,6 +8,8 @@ import Tab from '@shell/components/Tabbed/Tab';
 import { FLEET } from '@shell/config/types';
 import { isHarvesterCluster } from '@shell/utils/cluster';
 import FleetBundles from '@shell/components/fleet/FleetBundles.vue';
+import WorkloadStorageTab from '@shell/components/fleet/FleetOCIStorage/WorkloadStorageTab.vue';
+import { ociStorageFor } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { checkSchemasForFindAllHash } from '@shell/utils/auth';
 import DetailPage from '@shell/components/Resource/Detail/Page.vue';
 import Masthead from '@shell/components/Resource/Detail/Masthead/index.vue';
@@ -30,6 +32,7 @@ export default {
     ResourceTabs,
     Tab,
     FleetBundles,
+    WorkloadStorageTab,
     DetailPage,
     Masthead,
     ViewOptions,
@@ -68,6 +71,11 @@ export default {
 
   computed: {
     ...mapState(['workspace']),
+    // Prototype: the GitRepo's OCI storage pulls, per bundle and cluster
+    ociStorage() {
+      return ociStorageFor({ namespace: this.value.metadata?.namespace, gitRepo: this.value.metadata?.name });
+    },
+
     gitRepoHasClusters() {
       return this.value.status?.desiredReadyClusters;
     },
@@ -169,6 +177,15 @@ export default {
             :weight="30"
           >
             <FleetBundles :value="value" />
+          </Tab>
+          <Tab
+            v-if="ociStorage.used"
+            :label="t('fleet.ociStorage.workload.tab')"
+            name="oci-storage"
+            :weight="25"
+            :display-alert-icon="ociStorage.failing > 0"
+          >
+            <WorkloadStorageTab :git-repo="value.metadata.name" />
           </Tab>
           <Tab
             label="Resources"

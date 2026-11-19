@@ -8,6 +8,7 @@ import { STATE } from '@shell/config/table-headers';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
 import CredentialSetList from '@shell/components/fleet/FleetOCIStorage/CredentialSetList.vue';
 import { SECRET_STATE_COLORS, reference } from '@shell/components/fleet/FleetOCIStorage/resolve';
+import { gitRepoLocation } from '@shell/components/fleet/FleetOCIStorage/locations';
 import { OCI_TABLE_SCHEMAS } from '@shell/components/fleet/FleetOCIStorage/tableConfig';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
@@ -19,9 +20,7 @@ const router = useRouter();
 const { t, age, tlsLabel } = useFleetOCIStorageLabels();
 const { workspace, secretStatuses, deleteSecret } = useFleetOCIStorage();
 
-const STATE_SORT = {
-  error: 0, active: 1, unused: 2
-};
+const STATE_SORT = { active: 0, unused: 1 };
 
 const headers = [
   STATE,
@@ -35,10 +34,7 @@ const headers = [
     name: 'sets', labelKey: `${ ROOT }.headers.sets`, value: 'setCount', sort: ['setCount'], align: 'right', width: 110
   },
   {
-    name: 'usedBy', labelKey: `${ ROOT }.headers.usedBy`, value: 'usedByLabel', sort: ['gitRepoCount'], width: 110
-  },
-  {
-    name: 'deployments', labelKey: `${ ROOT }.headers.deployments`, value: 'deploymentsLabel', sort: ['failing', 'name'], width: 150
+    name: 'usedBy', labelKey: `${ ROOT }.headers.usedBy`, value: 'gitReposLabel', sort: ['gitRepoCount'], width: 220
   },
 ];
 
@@ -63,7 +59,6 @@ const rows = computed(() => secretStatuses.value.map((status) => {
     name:   'c-cluster-fleet-oci-storage-secret-id',
     params: { cluster: BLANK_CLUSTER, id: secret.name },
   };
-  const pulled = status.deployments.filter((d) => d.state === 'ready' || d.state === 'fallback').length;
 
   // No stateDescription: with one, the table renders the sub-row slot for collapsed rows too
   return {
@@ -75,7 +70,7 @@ const rows = computed(() => secretStatuses.value.map((status) => {
     stateSort:        STATE_SORT[status.state],
     stateDisplay:     t(`${ ROOT }.state.${ status.state }`),
     stateBackground:  SECRET_STATE_COLORS[status.state],
-    stateObj:         { error: status.state === 'error' },
+    stateObj:         { error: false },
     secret,
     status,
     isDefault:        status.isDefault,
@@ -91,9 +86,7 @@ const rows = computed(() => secretStatuses.value.map((status) => {
     setNames:         secret.credentialSets.map((s) => s.name).join(', '),
     gitRepoCount:     status.gitRepos.length,
     gitReposLabel:    status.gitRepos.join(', '),
-    usedByLabel:      t(`${ ROOT }.gitRepoCount`, { count: status.gitRepos.length }),
-    failing:          status.failing,
-    deploymentsLabel: status.deployments.length ? t(`${ ROOT }.deployed`, { pulled, total: status.deployments.length }) : '',
+    gitRepoLinks:     status.gitRepos.map((name) => ({ name, location: gitRepoLocation(name) })),
     ageMinutes:       secret.ageMinutes,
     ageLabel:         age(secret.ageMinutes),
     availableActions: [
@@ -197,27 +190,23 @@ const rows = computed(() => secretStatuses.value.map((status) => {
         >{{ t(`${ ROOT }.noSets`) }}</span>
       </template>
 
+      <!-- How the deployments went is on each GitRepo's page, so this links there -->
       <template #cell:usedBy="{ row }">
         <span
-          v-clean-tooltip="row.gitReposLabel"
-          :class="{ 'text-muted': !row.gitRepoCount }"
-        >{{ row.usedByLabel }}</span>
-      </template>
-
-      <template #cell:deployments="{ row }">
-        <template v-if="row.deploymentsLabel">
-          <span class="no-wrap">{{ row.deploymentsLabel }}</span>
-          <div
-            v-if="row.failing"
-            class="text-error cell-description"
-          >
-            {{ t(`${ ROOT }.failingCount`, { count: row.failing }) }}
-          </div>
-        </template>
+          v-if="row.gitRepoCount"
+          class="git-repos"
+          :data-testid="`fleet-oci-used-by-${ row.name }`"
+        >
+          <router-link
+            v-for="repo in row.gitRepoLinks"
+            :key="repo.name"
+            :to="repo.location"
+          >{{ repo.name }}</router-link>
+        </span>
         <span
           v-else
           class="text-muted"
-        >&mdash;</span>
+        >{{ t(`${ ROOT }.noGitRepos`) }}</span>
       </template>
 
       <template #sub-row="{ row, fullColspan, onRowMouseEnter, onRowMouseLeave }">
@@ -256,8 +245,10 @@ const rows = computed(() => secretStatuses.value.map((status) => {
   overflow-wrap: break-word;
 }
 
-.no-wrap {
-  white-space: nowrap;
+.git-repos {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
 }
 
 .sets {

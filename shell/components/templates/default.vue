@@ -9,6 +9,7 @@ import ActionMenu from '@shell/components/ActionMenu';
 import GrowlManager from '@shell/components/GrowlManager';
 import ModalManager from '@shell/components/ModalManager';
 import SlideInPanelManager from '@shell/components/SlideInPanelManager';
+import PrototypeGuide from '@shell/components/PrototypeGuide/PrototypeGuide.vue';
 import PromptRemove from '@shell/components/PromptRemove';
 import PromptModal from '@shell/components/PromptModal';
 import Header from '@shell/components/nav/Header';
@@ -37,6 +38,7 @@ export default {
     GrowlManager,
     ModalManager,
     SlideInPanelManager,
+    PrototypeGuide,
     FixedBanner,
     Inactivity,
     SideNav,
@@ -246,6 +248,8 @@ export default {
     <FixedBanner :footer="true" />
     <GrowlManager />
     <SlideInPanelManager />
+    <!-- Prototype: hosts guided tours, which can move across any page -->
+    <PrototypeGuide />
     <Inactivity />
   </div>
 </template>

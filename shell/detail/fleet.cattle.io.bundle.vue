@@ -7,12 +7,14 @@ import Loading from '@shell/components/Loading.vue';
 import { FLEET as FLEET_ANNOTATIONS } from '@shell/config/labels-annotations';
 import ResourceTabs from '@shell/components/form/ResourceTabs';
 import Tab from '@shell/components/Tabbed/Tab';
+import WorkloadStorageTab from '@shell/components/fleet/FleetOCIStorage/WorkloadStorageTab.vue';
+import { ociStorageFor } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 
 export default {
   name: 'FleetBundleDetail',
 
   components: {
-    Loading, FleetResources, ResourceTabs, Tab
+    Loading, FleetResources, ResourceTabs, Tab, WorkloadStorageTab
   },
   props: {
     value: {
@@ -47,6 +49,11 @@ export default {
   },
 
   computed: {
+    // Prototype: where each target cluster pulled this bundle from
+    ociStorage() {
+      return ociStorageFor({ namespace: this.value.metadata?.namespace, bundle: this.value.metadata?.name });
+    },
+
     bundleResources() {
       if (!this.allBundleDeployments) {
         return [];
@@ -99,6 +106,15 @@ export default {
     mode="view"
     :need-related="false"
   >
+    <Tab
+      v-if="ociStorage.used"
+      :label="t('fleet.ociStorage.workload.tab')"
+      name="oci-storage"
+      :weight="25"
+      :display-alert-icon="ociStorage.failing > 0"
+    >
+      <WorkloadStorageTab :bundle="value.metadata.name" />
+    </Tab>
     <Tab
       label="Resources"
       name="resources"

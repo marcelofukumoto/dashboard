@@ -4,7 +4,7 @@ export type TlsMode = 'system' | 'customCA' | 'skipVerify';
 // What an agent can tell from one pull. Fleet can't see replication, only that an artifact isn't there
 export type PullResult = 'ok' | 'unreachable' | 'auth' | 'tls' | 'notFound';
 export type DeploymentState = 'ready' | 'fallback' | 'retrying' | 'failed';
-export type SecretState = 'active' | 'error' | 'unused';
+export type SecretState = 'active' | 'unused';
 
 export interface RegistryEndpoint {
   host: string;
@@ -38,7 +38,10 @@ export interface OCIStorageSecret {
 }
 
 export interface OCICluster {
+  /** Display name, which is what people see and what the scenario is written in */
   name: string;
+  /** Name of the Fleet Cluster object, when the cluster exists on the server */
+  fleetName?: string;
   labels: Record<string, string>;
   groups: string[];
   // What this cluster's agent gets, by credential set name first and registry host second
@@ -59,6 +62,10 @@ export interface OCIGitRepo {
   name: string;
   // Null falls back to the secret named ocistorage, like an empty spec.ociRegistrySecret
   secret: string | null;
+  repo?: string;
+  paths?: string[];
+  /** spec.targets as Fleet has them; `clusters` is what they resolve to */
+  targets?: Record<string, unknown>[];
   bundles: OCIBundle[];
   clusters: string[];
 }
@@ -100,6 +107,4 @@ export interface SecretStatus {
   state: SecretState;
   isDefault: boolean;
   gitRepos: string[];
-  deployments: DeploymentStatus[];
-  failing: number;
 }

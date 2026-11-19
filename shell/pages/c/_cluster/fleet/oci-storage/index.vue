@@ -1,24 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import { FLEET } from '@shell/config/types';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
 import Masthead from '@shell/components/ResourceList/Masthead.vue';
-import Tabbed from '@shell/components/Tabbed';
-import Tab from '@shell/components/Tabbed/Tab';
-import FleetStatus from '@shell/components/fleet/FleetStatus';
-import { Banner } from '@components/Banner';
 import { RcButton } from '@components/RcButton';
 import PrototypeBanner from '@shell/components/fleet/FleetOCIStorage/PrototypeBanner.vue';
 import SecretsTable from '@shell/components/fleet/FleetOCIStorage/SecretsTable.vue';
-import DeploymentsTable from '@shell/components/fleet/FleetOCIStorage/DeploymentsTable.vue';
-import DeploymentDrawer from '@shell/components/fleet/FleetOCIStorage/DeploymentDrawer.vue';
 import { SCENARIO_WORKSPACE } from '@shell/components/fleet/FleetOCIStorage/mock';
 import { startOCIStorageGuide } from '@shell/components/fleet/FleetOCIStorage/guide';
 import { useFleetOCIStorage } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorage';
 import { useFleetOCIStorageLabels } from '@shell/components/fleet/FleetOCIStorage/useFleetOCIStorageLabels';
-import { DeploymentStatus } from '@shell/components/fleet/FleetOCIStorage/types';
+
+// Configuration only. How each bundle pulled lives with the workload: on its GitRepo, Bundle and cluster pages
 
 const ROOT = 'fleet.ociStorage';
 
@@ -26,74 +21,14 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const { t } = useFleetOCIStorageLabels();
-const {
-  workspace, data, deployments, secretStatuses
-} = useFleetOCIStorage();
-
-const tabs = useTemplateRef<{ select:(name: string) => void }>('tabs');
-const activeTab = ref('secrets');
-const deploymentsTable = useTemplateRef<{ showFailing:() => void }>('deploymentsTable');
+const { workspace, data } = useFleetOCIStorage();
 
 const createLocation = { name: 'c-cluster-fleet-oci-storage-secret-create', params: { cluster: BLANK_CLUSTER } };
 
 const hasSecrets = computed(() => data.value.secrets.length > 0);
-const failingCount = computed(() => deployments.value.filter((d) => d.state === 'failed').length);
-
-const deploymentCounts = computed(() => {
-  const entry = (state: string, color: string, status: string) => {
-    const count = deployments.value.filter((d) => d.state === state).length;
-
-    return {
-      label: t(`${ ROOT }.deployments.state.${ state }`), color, status, count, value: count
-    };
-  };
-
-  return [
-    entry('ready', 'success', 'ready'),
-    entry('fallback', 'warning', 'fallback'),
-    entry('retrying', 'info', 'retrying'),
-    entry('failed', 'error', 'failed'),
-  ];
-});
-
-const secretCounts = computed(() => {
-  const entry = (state: string, color: string, status: string) => {
-    const count = secretStatuses.value.filter((s) => s.state === state).length;
-
-    return {
-      label: t(`${ ROOT }.secrets.state.${ state }`), color, status, count, value: count
-    };
-  };
-
-  return [
-    entry('active', 'success', 'ready'),
-    entry('unused', 'darker', 'unused'),
-    entry('error', 'error', 'error'),
-  ];
-});
 
 function showSampleData() {
   store.commit('updateWorkspace', { value: SCENARIO_WORKSPACE, getters: store.getters });
-}
-
-function showFailing() {
-  tabs.value?.select('deployments');
-  deploymentsTable.value?.showFailing();
-}
-
-function openDeployment(status: DeploymentStatus) {
-  store.commit('slideInPanel/open', {
-    component:      DeploymentDrawer,
-    componentProps: {
-      deploymentKey:      status.key,
-      initial:            status,
-      onClose:            () => store.commit('slideInPanel/close'),
-      width:              'wide',
-      height:             'full',
-      closeOnRouteChange: ['name', 'params', 'query'],
-      triggerFocusTrap:   true,
-    },
-  });
 }
 
 onMounted(() => {
@@ -122,7 +57,7 @@ onMounted(() => {
       </template>
       <template #createButton>
         <RcButton
-          v-if="hasSecrets && activeTab === 'secrets'"
+          v-if="hasSecrets"
           variant="primary"
           size="large"
           :to="createLocation"
@@ -164,88 +99,14 @@ onMounted(() => {
       >{{ t(`${ ROOT }.prototype.sample`, { workspace: SCENARIO_WORKSPACE }) }}</a>
     </div>
 
-    <template v-else>
-      <div
-        class="summary"
-        data-testid="fleet-oci-summary"
-      >
-        <FleetStatus
-          :title="t(`${ ROOT }.summary.secrets`)"
-          :values="secretCounts"
-          value-key="count"
-        />
-        <FleetStatus
-          :title="t(`${ ROOT }.summary.deployments`)"
-          :values="deploymentCounts"
-          value-key="count"
-        />
-      </div>
-
-      <Banner
-        v-if="failingCount"
-        color="error"
-        data-testid="fleet-oci-failing-banner"
-      >
-        <div class="banner-with-action">
-          <span>{{ t(`${ ROOT }.banners.failing`, { count: failingCount }) }}</span>
-          <RcButton
-            variant="link"
-            size="small"
-            data-testid="fleet-oci-show-failing"
-            @click="showFailing"
-          >
-            {{ t(`${ ROOT }.actions.showFailing`) }}
-          </RcButton>
-        </div>
-      </Banner>
-
-      <Tabbed
-        ref="tabs"
-        class="mt-20"
-        default-tab="secrets"
-        :use-hash="true"
-        @changed="({ selectedName }) => activeTab = selectedName"
-      >
-        <Tab
-          name="secrets"
-          :label="t(`${ ROOT }.tabs.secrets`)"
-          :weight="2"
-        >
-          <SecretsTable />
-        </Tab>
-        <Tab
-          name="deployments"
-          :label="t(`${ ROOT }.tabs.deployments`)"
-          :weight="1"
-          :display-alert-icon="failingCount > 0"
-        >
-          <DeploymentsTable
-            ref="deploymentsTable"
-            @open-deployment="openDeployment"
-          />
-        </Tab>
-      </Tabbed>
-    </template>
+    <SecretsTable
+      v-else
+      class="mt-20"
+    />
   </div>
 </template>
 
 <style lang="scss" scoped>
-.summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.banner-with-action {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  width: 100%;
-}
-
 .empty-state {
   display: flex;
   flex-direction: column;

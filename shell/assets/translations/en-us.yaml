@@ -3937,13 +3937,14 @@ fleet:
   ociStorage:
     menuLabel: OCI Storage
     title: OCI Storage
-    subtitle: OCI storage secrets in this workspace. Each one sets where Fleet pushes bundles and which registries each cluster pulls them from.
+    subtitle: OCI storage secrets in this workspace. Each one sets where Fleet pushes bundles and which registries each cluster pulls them from. How each bundle pulled shows on its GitRepo, Bundle and cluster pages.
     prototype:
       label: "Prototype: everything here is mock data kept in your browser. Fleet doesn't support credential sets yet."
       notes: Design notes
       reset: Reset mock data
-      sample: "See the sample data in {workspace}"
+      sample: See the sample data in {workspace}
       guide: Take the guided tour
+      mockPage: "Prototype: this tab is new, and its data is mock data kept in your browser."
     actions:
       createSecret: Create OCI Storage Secret
       edit: Edit
@@ -3951,22 +3952,9 @@ fleet:
       moveUp: Move Up
       moveDown: Move Down
       viewDetails: View Details
-      showFailing: Show them
     empty:
       title: This workspace stores bundles in etcd
       description: Create an OCI storage secret to keep bundle contents in a registry. Call it ocistorage and every GitRepo in the workspace uses it.
-    summary:
-      secrets: OCI Storage Secrets
-      deployments: Bundle Deployments
-    banners:
-      failing: |-
-        {count, plural,
-        one {# bundle deployment can't pull from any registry its cluster tries. Fleet never falls back to etcd, so it won't deploy.}
-        other {# bundle deployments can't pull from any registry their cluster tries. Fleet never falls back to etcd, so they won't deploy.}
-        }
-    tabs:
-      secrets: Secrets
-      deployments: Bundle Deployments
     age:
       never: Never
       now: Just now
@@ -3996,31 +3984,21 @@ fleet:
         credentials: Agent Credentials
       everyCluster: Every cluster, last
     secrets:
-      intro: "OCI storage secrets in {workspace}. A GitRepo uses the one it names, or the one called ocistorage. Expand a secret to see the order its agents try."
+      intro: OCI storage secrets in {workspace}. A GitRepo uses the one it names, or the one called ocistorage. Expand a secret to see the order its agents try.
       headers:
         push: Push Registry
         sets: Credential Sets
         usedBy: Used By
-        deployments: Bundle Deployments
       default: Workspace default
       defaultTooltip: GitRepos that don't name a secret use this one, because it's called ocistorage.
       agentGetsPush: Agents get the push credentials
       agentGetsPushTooltip: No agent user is set, so every downstream cluster receives the push credentials. Add a read-only user.
       insecureTooltip: Agents accept any certificate from this registry, or connect without TLS.
       noSets: None
-      gitRepoCount: |-
-        {count, plural,
-        =0 {No GitRepos}
-        one {# GitRepo}
-        other {# GitRepos}
-        }
-      deployed: "{pulled} of {total} deployed"
       setsIntro: Agents try the sets that match their cluster from the top, then the push registry.
       state:
         active: Active
-        error: Error
         unused: Unused
-      failingCount: "{count} can't pull"
       delete:
         title: Delete {name}?
         body: Deletes the secret. The registries and their artifacts are not touched.
@@ -4031,17 +4009,13 @@ fleet:
         agentUser: Agent User
         tls: TLS
         setNames: Credential Set Names
-        gitRepos: GitRepos
+      noGitRepos: No GitRepos
     deployments:
-      intro: One row per bundle per cluster, from BundleDeployment status. Each row says which registry the agent pulled from and why the ones before it failed.
       headers:
         bundle: Bundle
         cluster: Cluster
-        secret: Secret
         pulledFrom: Pulled From
-      gitRepo: "GitRepo {name}"
       nothingPulled: Nothing pulled
-      nextRetry: "in {minutes} min"
       state:
         ready: Ready
         fallback: Fallback
@@ -4052,13 +4026,7 @@ fleet:
         fallback: "{failures} Pulled from {target} instead."
         retrying: "Artifact not found on {entry}. Retrying with back-off: attempt {attempt}, next in {next} min."
         noneLeft: No other registry left for this cluster.
-      optional:
-        pullOrder: Pull Order
-        failure: First Failure
-        reference: Pulled From Reference
-        artifact: Artifact ID
-        attempt: Attempt
-        nextRetry: Next Retry
+      none: No bundle deployment uses OCI storage here.
     panel:
       title: "{bundle} on {cluster}"
       details: Details
@@ -4075,22 +4043,18 @@ fleet:
         notTried: Not tried, an earlier entry worked
         pulled: Pulled
       hint:
-        retrying: "This clears once your registry's replication copies the artifact to {entry}. Fleet doesn't copy artifacts between registries."
-        fallback: "The bundle still deploys. Fix {failed} to move back to it, or change the order."
-        auth: "Check the agent credentials of {entry}. A cluster that needs its own account gets its own credential set."
-        tls: "Add the issuing CA to {entry}, or check the certificate the registry serves."
-        unreachable: "Check the network path from this cluster to {entry}, or add a credential set it can reach."
+        retrying: This clears once your registry's replication copies the artifact to {entry}. Fleet doesn't copy artifacts between registries.
+        fallback: The bundle still deploys. Fix {failed} to move back to it, or change the order.
+        auth: Check the agent credentials of {entry}. A cluster that needs its own account gets its own credential set.
+        tls: Add the issuing CA to {entry}, or check the certificate the registry serves.
+        unreachable: Check the network path from this cluster to {entry}, or add a credential set it can reach.
     clusterTab:
-      headers:
-        message: Message
-      pulledFrom: "Pulled from {entry}."
       ordersTitle: Pull Order for This Cluster
       ordersIntro: What this cluster's agent would try for each OCI storage secret in the workspace, based on its labels and groups.
       deploymentsTitle: Bundle Deployments
-      noDeployments: No bundle deployment on this cluster uses OCI storage.
     form:
       createTitle: Create OCI Storage Secret
-      editTitle: "Edit {name}"
+      editTitle: Edit {name}
       name: Name
       description: Description
       workspace: Workspace
@@ -4098,8 +4062,8 @@ fleet:
       nameTaken: A secret with this name already exists
       setNameReserved: "{name} is reserved for the push registry"
       setNameTaken: Another credential set has this name
-      fallbackInfo: "This secret is called {name}, so every GitRepo in the workspace that doesn't name a secret uses it."
-      namedInfo: "GitRepos use this secret only when they name it. The one called {name} is the fallback for the rest."
+      fallbackInfo: This secret is called {name}, so every GitRepo in the workspace that doesn't name a secret uses it.
+      namedInfo: GitRepos use this secret only when they name it. The one called {name} is the fallback for the rest.
       pushTitle: Push Registry
       pushIntro: fleet apply pushes every bundle here. These are the keys the secret has today, so an existing secret keeps working. Agents also try it last, after the credential sets.
       pushUser: Push username
@@ -4131,7 +4095,7 @@ fleet:
       namespace: Namespace
       namespacePlaceholder: e.g. fleet/bundles
       namespaceTooltip: Path inside the registry. It can differ from one registry to the next.
-      resolvesTo: "Artifacts resolve to oci://{reference}/ARTIFACT_ID:latest"
+      resolvesTo: Artifacts resolve to oci://{reference}/ARTIFACT_ID:latest
       agentUser: Agent username
       agentUserTooltip: Read-only account the downstream agents use
       agentPassword: Agent password
@@ -4148,7 +4112,7 @@ fleet:
       secret: OCI storage secret
       useFallback: "{name} (used when none is set)"
       noFallback: "None: bundles stay in etcd (no secret called {name})"
-      orderIntro: "Each target cluster tries the entries of {name} that match it, in this order."
+      orderIntro: Each target cluster tries the entries of {name} that match it, in this order.
       edit: Edit secret
       etcd: Bundles stay in etcd.
       mockNote: "Prototype: this selection isn't saved with the GitRepo."
@@ -4156,25 +4120,23 @@ fleet:
       manage: OCI storage secrets and their credential sets for this workspace live in OCI Storage.
       open: Open OCI Storage
     guide:
+      pages:
+        ociStorage: OCI Storage
+        secretForm: OCI storage secret form
+        appBundles: App Bundles list
+        gitRepo: GitRepo page
+        bundle: Bundle page
+        cluster: Fleet cluster page
+        forms: GitRepo and workspace forms
       steps:
         intro:
           title: "Guided tour: OCI storage, iteration 2"
-          body: This tour walks through the prototype and explains why each part works the way it does. It moves around the page for you. Use Next and Back or the arrow keys, and Esc to leave.
-          design: Built from the shell's own components (the standard table, form, cluster target fields and drawer), so it behaves like the rest of Rancher.
-          backend: Reworked after the Fleet backend feedback. Everything is mock data in your browser; nothing here talks to Fleet.
-        summary:
-          title: Two summaries
-          body: OCI storage secrets by state, and bundle deployments by state.
-          design: The same status cards as Fleet's other lists, in the colors the tables below use.
-          backend: Both are worked out in the UI. A secret's state comes from the bundle deployments that use it, so it needs no status field of its own.
-        failing:
-          title: Only blocking problems get a banner
-          body: It appears when a bundle deployment can't pull from any registry its cluster tries. Show them opens Bundle Deployments filtered to Failed.
-          design: "Fallback and Retrying stay out of the banner: the bundle deploys anyway, or will once the artifact arrives."
-          backend: Once a GitRepo has a secret, Fleet doesn't fall back to etcd, so a failed pull means the bundle doesn't deploy.
+          body: "This tour follows the change across Continuous Delivery: the new OCI Storage page and secret form, then the GitRepo, Bundle and cluster pages that now show how each pull went. Each card names the page and says whether it is new, changed or as it is today."
+          design: Configuration lives on the OCI Storage page. Status lives with the workloads, where people already look when something fails.
+          backend: Reworked after the Fleet backend feedback. Everything is mock data in your browser, including the GitRepos and bundles on the Fleet pages.
         secrets:
           title: The secrets in this workspace
-          body: Each row is a Secret of type fleet.cattle.io/bundle-oci-storage/v1alpha1 in the workspace's namespace. Expand a row to see the order its agents try.
+          body: Each row is a Secret of type fleet.cattle.io/bundle-oci-storage/v1alpha1 in the workspace's namespace. This page is configuration only.
           design: A list of the object people already create, not a new concept. It's the standard table, so saved views, the query box, Group By, Columns and export work as on other lists.
           backend: "Namespace-scoped, as the backend design proposes: the page lists secrets of this type in the workspace namespace and nothing else."
         fallback:
@@ -4194,9 +4156,14 @@ fleet:
           backend: "The backend's model: one secret holding several credential sets, each with a cluster selector, where the first match has the highest priority."
         matches:
           title: Which clusters a set applies to
-          body: Cluster names, cluster groups and label selectors. eu-staging-01 matches both EU sets, so it tries the staging namespace first, then the EU mirror, then the push registry.
+          body: Cluster names, cluster groups and label selectors. test-k3s matches both EU sets, so it tries the staging namespace first, then the EU mirror, then the push registry.
           design: Edited with the same fields as a GitRepo's targets, so the form feels familiar.
           backend: Assumes the selector has the same shape as bundle targets (clusterName, clusterGroup, clusterSelector).
+        usedBy:
+          title: From a secret to the workloads that use it
+          body: Used By lists the GitRepos whose bundles this secret stores, and links to them. Each one's page shows how its pulls went.
+          design: "No status here on purpose: a list of every bundle on every cluster would repeat what each GitRepo's page already shows."
+          backend: Worked out from the GitRepo specs (spec.ociRegistrySecret, or the ocistorage name), so it needs nothing from BundleDeployments.
         formPush:
           title: "Editing a secret: the push registry"
           body: Host and namespace, push credentials, agent credentials and TLS. The resulting reference shows under the host.
@@ -4217,29 +4184,50 @@ fleet:
           body: The Secret that saving would write, with passwords masked.
           design: Lets reviewers check the form against the object it produces.
           backend: The credentialSets key is a guess until the backend design defines the format.
-        deployments:
-          title: Status per workload
-          body: "One row per bundle per cluster: Ready, Fallback, Retrying or Failed, with the reason under each row."
-          design: Replaces iteration 1's Clusters and Artifacts tabs. View > Group By > Cluster gives the per-cluster view.
-          backend: Read from BundleDeployment status, which is where the backend reports per workload.
+        appBundles:
+          title: Problems show where they always have
+          body: store-pos is red in the App Bundles list, and the line under it says which clusters can't pull and why. This page is unchanged; only its data is mocked.
+          design: "No new UI for the first signal: a GitRepo's state and message already carry it."
+          backend: Fleet already rolls BundleDeployment errors up into the GitRepo's state. The prototype assumes an OCI pull error reaches it the same way.
+        gitRepoTab:
+          title: A new tab on the GitRepo
+          body: "OCI Storage, next to Bundles and Resources: the secret this GitRepo uses, and one row per bundle per cluster with the registry it pulled from."
+          design: This is where people go when a GitRepo turns red. The tab shows a warning icon when a pull fails.
+          backend: Only this GitRepo's BundleDeployments, found by their labels, so there's no page-wide rollup to build.
         retrying:
           title: Artifact not found
-          body: The registry answered, but it doesn't have the artifact yet. The agent tries the next entry, and retries with back-off when no entry has it.
+          body: On harvester-11-2 the store registry answered, but it doesn't have the artifact yet. The agent tries the next entry, and retries with back-off when no entry has it.
           design: "Retrying is blue, not red: it usually clears on its own once replication catches up."
           backend: "Fleet can only see \"reachable but not found\", not replication. Assumption to confirm: not found moves on to the next entry."
         drawer:
           title: Which entry worked, and why
-          body: Every entry the agent tried, in order, with the result. Entries after the one that worked weren't tried.
+          body: Every entry the agent tried, in order, with the result. Entries after the one that worked weren't tried. The links lead to the GitRepo, Bundle, cluster and secret.
           design: Each state says what happens next and what to do about it.
-          backend: "This needs two fields on BundleDeployment status: the entry used, and the error for each entry tried."
-        elsewhere:
-          title: Also in the prototype
-          body: A Fleet cluster's detail page has an OCI Storage tab with that cluster's pull order for each secret, and the GitRepo form's Advanced step shows the order of the secret it uses.
-          design: "Each answer sits where people already look: on the cluster, and on the GitRepo."
-          backend: The cluster tab is worked out from the secrets and the cluster's labels, so it needs nothing new from Fleet.
+          backend: "This needs two fields on BundleDeployment status: the entry used, and the error for each entry tried. The mock objects carry them as status.ociStorage."
+        bundleTab:
+          title: The same view on a Bundle
+          body: payments-api-deployment, cluster by cluster. On longhorn the APAC mirror doesn't have the artifact yet, so it pulled from the push registry.
+          design: A Bundle's page answers the same question for one bundle, without the GitRepo's other bundles.
+          backend: The Bundle page already loads its BundleDeployments for the Resources tab, so this needs no new request.
+        clusterTab:
+          title: And on the cluster
+          body: "test-k3s: the order its agent tries for each secret, from its labels, and how each of its bundles pulled. Monitoring falls back to the EU mirror, and the lab bundle fails."
+          design: Answers "why can't this cluster deploy" in one place, which is often the first question for an edge cluster.
+          backend: The order comes from the secrets and the cluster's labels. The rows are this cluster's BundleDeployments, which live in its own namespace.
+        forms:
+          title: Two forms changed as well
+          body: The GitRepo form's Advanced step picks the OCI storage secret and shows its order. The workspace form links here from its OCI section.
+          design: Each sits where the setting is made today, so nothing moves for people who know Fleet.
+          backend: spec.ociRegistrySecret stays as it is; the GitRepo gets nothing new.
         questions:
           title: What the backend design needs to confirm
           body: "The prototype assumes three things: the push registry is every cluster's last fallback, \"not found\" moves on to the next entry, and a new order applies on the next pull. Each one changes what the UI shows."
+    workload:
+      tab: OCI Storage
+      named: Bundles are stored with the OCI storage secret
+      fallback: No OCI storage secret is named, so bundles are stored with the workspace fallback,
+      order: Each cluster tries the credential sets that match it, then the push registry.
+      open: See all secrets
   fdc:
     id: ID
     type: Type
@@ -10723,3 +10711,7 @@ prototypeGuide:
   close: Close the guide
   design: Design
   backend: Backend
+  change:
+    new: New page
+    changed: Changed page
+    existing: Existing page

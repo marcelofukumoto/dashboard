@@ -3,6 +3,7 @@ import { FLEET } from '@shell/config/types';
 import { STATE, NAME as NAME_COL, AGE, FLEET_APPLICATION_TYPE } from '@shell/config/table-headers';
 import { FLEET as FLEET_FEATURE } from '@shell/store/features';
 import { BLANK_CLUSTER } from '@shell/store/store-types.js';
+import { installOCIStorageMockApi } from '@shell/components/fleet/FleetOCIStorage/mockApi';
 
 export const SOURCE_TYPE = {
   REPO:    'repo',
@@ -14,6 +15,9 @@ export const NAME = 'fleet';
 export const CHART_NAME = 'fleet';
 
 export function init(store) {
+  // Prototype: feeds the Fleet pages the OCI storage scenario (mock GitRepos, Bundles, BundleDeployments)
+  installOCIStorageMockApi(store);
+
   const {
     product,
     basicType,

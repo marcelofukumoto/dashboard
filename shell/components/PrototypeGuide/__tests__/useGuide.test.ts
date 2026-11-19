@@ -7,6 +7,7 @@ import {
   previousStep,
   registerHost,
   resolveTarget,
+  resolveTargets,
   startGuide,
   stopGuide,
   unregisterHost,
@@ -158,5 +159,14 @@ describe('prototype guide', () => {
     expect(resolveTarget(() => document.body.firstElementChild)).toBe(document.body.firstElementChild);
     expect(resolveTarget('[data-testid="missing"]')).toBeNull();
     expect(resolveTarget()).toBeNull();
+  });
+
+  it('spotlights several elements from one target', () => {
+    document.body.innerHTML = '<p id="a"></p><p id="b"></p>';
+    const [a, b] = Array.from(document.body.children);
+
+    expect(resolveTargets(() => [a, b])).toStrictEqual([a, b]);
+    expect(resolveTarget(() => [a, b])).toBe(a);
+    expect(resolveTargets(() => null)).toStrictEqual([]);
   });
 });

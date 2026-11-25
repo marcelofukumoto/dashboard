@@ -55,3 +55,4 @@ None
 - 2026-10-02: Stood down — memory signal unchanged; no action taken.
 - 2026-10-08: Stood down — memory signal unchanged; no action taken.
 - 2026-11-24: Stood down — memory signal unchanged; 0 open bot issues; no action taken.
+- 2026-11-25: Stood down — memory signal unchanged; no action taken.
